@@ -1,4 +1,4 @@
-baseURL = "https://eddycjy.com"
+baseURL = "http://go.aabbccm.com"
 languageCode = "zh-hans"
 defaultContentLanguage = "en"
 title = "吴亲库里的深夜食堂"
@@ -26,7 +26,7 @@ googleAnalytics = "UA-166045776-1"
   # Categories are disabled by default.
 
 [params]
-  since = "2018"
+  since = "2021"
   toc = true
 
   dateform        = "Jan 2, 2006"
@@ -44,7 +44,7 @@ googleAnalytics = "UA-166045776-1"
   # bgImg = ""  # Homepage background-image URL
 
   # Prefix of link to the git commit detail page. GitInfo must be enabled.
-  gitUrl = "https://github.com/eddycjy/blog/commit/"
+  gitUrl = "https://github.com/wuqinqiang/blog/commit/"
 
   # Toggling this option needs to rebuild SCSS, requires Hugo extended version
   justifyContent = false  # Set "text-align: justify" to `.content`.
@@ -61,7 +61,7 @@ googleAnalytics = "UA-166045776-1"
 
   [[params.social]]
     name = "github"
-    url = "https://github.com/eddycjy"
+    url = "https://github.com/wuqinqiang"
 
 [menu]
 
