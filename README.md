@@ -1,20 +1,16 @@
-# 煎鱼的迷之博客
+# 吴亲库里的深夜食堂
 
-写写代码，喝喝茶，搞搞 Go，一起吧，这是我的项目地址：https://github.com/eddycjy/blog
+分享一些奇奇怪怪的技术,分享一些面试题。项目blog地址：https://github.com/wuqinqaing/blog
 
 ## 在线阅读
 
-- https://eddycjy.com/
+- https://go.aabbccm.com/
 
 ## 我的公众号
 
-![image](https://image.eddycjy.com/7074be90379a121746146bc4229819f8.jpg)
+![image](static/image/wechat-qr.png)
 
 ## ？
-
-如果有任何疑问或错误，欢迎在 issues 进行提问或给予修正意见
-
-如果喜欢或对你有所帮助，欢迎 Star，对作者是一种鼓励和推进 😀
 
 ## License
 
