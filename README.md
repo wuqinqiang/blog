@@ -4,7 +4,7 @@
 
 ## 在线阅读
 
-- https://go.aabbccm.com/
+- https://aabbccm.com/
 
 ## 我的公众号
 

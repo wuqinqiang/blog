@@ -1,7 +1,7 @@
-baseURL = "http://go.aabbccm.com"
+baseURL = "http://aabbccm.com"
 languageCode = "zh-hans"
 defaultContentLanguage = "en"
-title = "吴亲库里的深夜食堂"
+title = "关于体育的收藏"
 theme = "hermit"
 # enableGitInfo = true
 pygmentsCodefences  = true
