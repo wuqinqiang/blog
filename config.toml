@@ -93,8 +93,8 @@ googleAnalytics = "UA-166045776-1"
 
 
    [[menu.nav]]
-    name = "Go面试"
-    url = "interview/"
+    name = "Go面试题集锦"
+    url = "https://go.aabbccm.com"
     weight = 12
 
 #   [[menu.nav]]
