@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>go on 关于体育的收藏</title>
+    <link>https://aabbccm.com/tags/go/</link>
+    <description>Recent content in go on 关于体育的收藏</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>zh-hans</language>
+    <copyright>This work is licensed under a Creative Commons Attribution-NonCommercial 4.0 International License.</copyright>
+    <lastBuildDate>Mon, 05 Apr 2021 22:25:52 +0800</lastBuildDate><atom:link href="https://aabbccm.com/tags/go/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>使用 Go 每分钟处理百万请求 </title>
+      <link>https://aabbccm.com/posts/go/handle-million-requests/</link>
+      <pubDate>Mon, 05 Apr 2021 22:25:52 +0800</pubDate>
+      
+      <guid>https://aabbccm.com/posts/go/handle-million-requests/</guid>
+      <description>介绍 偶然间看到一篇写于15年的文章，说实话，标题确实吸引了我，不过看了几遍之后，确实精彩。 关于这篇文章，我就不直接翻译了。 项目的需求就是 客户端发送请求，服务端接收请求处理数据(原文是把资源上传至 Amazon S3 资源中)。
+我稍微改动了原文的业务代码，但是并不影响核心模块。第一版是每收到一个 Request,开启一个 G 进行处理，快速响应，很常规的操作。 代码如下
+初版 package main import ( &amp;#34;fmt&amp;#34; &amp;#34;log&amp;#34; &amp;#34;net/http&amp;#34; &amp;#34;time&amp;#34; ) type Payload struct { // 传啥不重要 } func (p *Payload) UpdateToS3() error { //存储逻辑,模拟操作耗时 	time.Sleep(500 * time.Millisecond) fmt.Println(&amp;#34;上传成功&amp;#34;) return nil } func payloadHandler(w http.ResponseWriter, r *http.Request) { // 业务过滤 	// 请求body解析...... 	var p Payload go p.UpdateToS3() w.Write([]byte(&amp;#34;操作成功&amp;#34;)) } func main() { http.HandleFunc(&amp;#34;/payload&amp;#34;, payloadHandler) log.Fatal(http.ListenAndServe(&amp;#34;:8099&amp;#34;, nil)) } 这样存在什么问题呢？一般情况下，没什么问题。但是如果是高并发的场景下，不对G数进行控制，你的 CPU 使用率暴涨，内存占用暴涨，直至程序奔溃。如果此操作落地至数据库，例如mysql,那么相应的，你数据库的服务器磁盘IO、网络带宽 、CPU负载、内存消耗都会达到非常高的情况，一并奔溃。所以，一旦程序中出现不可控的事物，往往是危险的信号。</description>
+    </item>
+    
+  </channel>
+</rss>

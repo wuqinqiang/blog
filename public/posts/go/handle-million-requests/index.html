@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="zh-hans">
+
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<meta http-equiv="X-UA-Compatible" content="ie=edge">
+	<meta name="theme-color" content="#494f5c">
+	<meta name="msapplication-TileColor" content="#494f5c">
+<meta itemprop="name" content="使用 Go 每分钟处理百万请求 ">
+<meta itemprop="description" content="介绍 偶然间看到一篇写于15年的文章，说实话，标题确实吸引了我，不过看了几遍之后，确实精彩。 关于这篇文章，我就不直接翻译了。 项目的需求就是 客户端发送请求，服务端接收请求处理数据(原文是把资源上传至 Amazon S3 资源中)。
+我稍微改动了原文的业务代码，但是并不影响核心模块。第一版是每收到一个 Request,开启一个 G 进行处理，快速响应，很常规的操作。 代码如下
+初版 package main import ( &#34;fmt&#34; &#34;log&#34; &#34;net/http&#34; &#34;time&#34; ) type Payload struct { // 传啥不重要 } func (p *Payload) UpdateToS3() error { //存储逻辑,模拟操作耗时 	time.Sleep(500 * time.Millisecond) fmt.Println(&#34;上传成功&#34;) return nil } func payloadHandler(w http.ResponseWriter, r *http.Request) { // 业务过滤 	// 请求body解析...... 	var p Payload go p.UpdateToS3() w.Write([]byte(&#34;操作成功&#34;)) } func main() { http.HandleFunc(&#34;/payload&#34;, payloadHandler) log.Fatal(http.ListenAndServe(&#34;:8099&#34;, nil)) } 这样存在什么问题呢？一般情况下，没什么问题。但是如果是高并发的场景下，不对G数进行控制，你的 CPU 使用率暴涨，内存占用暴涨，直至程序奔溃。如果此操作落地至数据库，例如mysql,那么相应的，你数据库的服务器磁盘IO、网络带宽 、CPU负载、内存消耗都会达到非常高的情况，一并奔溃。所以，一旦程序中出现不可控的事物，往往是危险的信号。">
+<meta itemprop="datePublished" content="2021-04-05T22:25:52+08:00" />
+<meta itemprop="dateModified" content="2021-04-05T22:25:52+08:00" />
+<meta itemprop="wordCount" content="569">
+
+
+
+<meta itemprop="keywords" content="go," />
+<meta property="og:title" content="使用 Go 每分钟处理百万请求 " />
+<meta property="og:description" content="介绍 偶然间看到一篇写于15年的文章，说实话，标题确实吸引了我，不过看了几遍之后，确实精彩。 关于这篇文章，我就不直接翻译了。 项目的需求就是 客户端发送请求，服务端接收请求处理数据(原文是把资源上传至 Amazon S3 资源中)。
+我稍微改动了原文的业务代码，但是并不影响核心模块。第一版是每收到一个 Request,开启一个 G 进行处理，快速响应，很常规的操作。 代码如下
+初版 package main import ( &#34;fmt&#34; &#34;log&#34; &#34;net/http&#34; &#34;time&#34; ) type Payload struct { // 传啥不重要 } func (p *Payload) UpdateToS3() error { //存储逻辑,模拟操作耗时 	time.Sleep(500 * time.Millisecond) fmt.Println(&#34;上传成功&#34;) return nil } func payloadHandler(w http.ResponseWriter, r *http.Request) { // 业务过滤 	// 请求body解析...... 	var p Payload go p.UpdateToS3() w.Write([]byte(&#34;操作成功&#34;)) } func main() { http.HandleFunc(&#34;/payload&#34;, payloadHandler) log.Fatal(http.ListenAndServe(&#34;:8099&#34;, nil)) } 这样存在什么问题呢？一般情况下，没什么问题。但是如果是高并发的场景下，不对G数进行控制，你的 CPU 使用率暴涨，内存占用暴涨，直至程序奔溃。如果此操作落地至数据库，例如mysql,那么相应的，你数据库的服务器磁盘IO、网络带宽 、CPU负载、内存消耗都会达到非常高的情况，一并奔溃。所以，一旦程序中出现不可控的事物，往往是危险的信号。" />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="https://aabbccm.com/posts/go/handle-million-requests/" />
+<meta property="article:published_time" content="2021-04-05T22:25:52+08:00" />
+<meta property="article:modified_time" content="2021-04-05T22:25:52+08:00" />
+<meta name="twitter:card" content="summary"/>
+<meta name="twitter:title" content="使用 Go 每分钟处理百万请求 "/>
+<meta name="twitter:description" content="介绍 偶然间看到一篇写于15年的文章，说实话，标题确实吸引了我，不过看了几遍之后，确实精彩。 关于这篇文章，我就不直接翻译了。 项目的需求就是 客户端发送请求，服务端接收请求处理数据(原文是把资源上传至 Amazon S3 资源中)。
+我稍微改动了原文的业务代码，但是并不影响核心模块。第一版是每收到一个 Request,开启一个 G 进行处理，快速响应，很常规的操作。 代码如下
+初版 package main import ( &#34;fmt&#34; &#34;log&#34; &#34;net/http&#34; &#34;time&#34; ) type Payload struct { // 传啥不重要 } func (p *Payload) UpdateToS3() error { //存储逻辑,模拟操作耗时 	time.Sleep(500 * time.Millisecond) fmt.Println(&#34;上传成功&#34;) return nil } func payloadHandler(w http.ResponseWriter, r *http.Request) { // 业务过滤 	// 请求body解析...... 	var p Payload go p.UpdateToS3() w.Write([]byte(&#34;操作成功&#34;)) } func main() { http.HandleFunc(&#34;/payload&#34;, payloadHandler) log.Fatal(http.ListenAndServe(&#34;:8099&#34;, nil)) } 这样存在什么问题呢？一般情况下，没什么问题。但是如果是高并发的场景下，不对G数进行控制，你的 CPU 使用率暴涨，内存占用暴涨，直至程序奔溃。如果此操作落地至数据库，例如mysql,那么相应的，你数据库的服务器磁盘IO、网络带宽 、CPU负载、内存消耗都会达到非常高的情况，一并奔溃。所以，一旦程序中出现不可控的事物，往往是危险的信号。"/>
+
+	<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+	<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+	<link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+	<link rel="manifest" href="/site.webmanifest">
+	<link rel="mask-icon" href="/safari-pinned-tab.svg" color="">
+	<link rel="shortcut icon" href="/favicon.ico">
+
+	<title>使用 Go 每分钟处理百万请求 </title>
+	<link rel="stylesheet" href="https://aabbccm.com/css/style.min.d3141168199607bf3a517216ce3c263814eecdbc8fca72a9a88700799a838219.css">
+	
+</head>
+
+<body id="page">
+	
+	<header id="site-header" class="animated slideInUp faster">
+		<div class="hdr-wrapper section-inner">
+			<div class="hdr-left">
+				<div class="site-branding">
+					<a href="https://aabbccm.com">关于体育的收藏</a>
+				</div>
+				<nav class="site-nav hide-in-mobile">
+					<a href="https://aabbccm.com/posts/">文章</a>
+					<a href="https://aabbccm.com/lives/">生活</a>
+					<a href="https://go.aabbccm.com">Go面试题集锦</a>
+					<a href="https://aabbccm.com/k8s-categories/">Kubernetes系列</a>
+				</nav>
+			</div>
+			<div class="hdr-right hdr-icons">
+				<button id="toc-btn" class="hdr-btn desktop-only-ib" title="Table of Contents"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-list"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3" y2="6"></line><line x1="3" y1="12" x2="3" y2="12"></line><line x1="3" y1="18" x2="3" y2="18"></line></svg></button><span class="hdr-social hide-in-mobile"><a href="https://github.com/wuqinqiang" target="_blank" rel="noopener me" title="Github"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-github"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"></path></svg></a></span><button id="menu-btn" class="hdr-btn" title="Menu"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-menu"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg></button>
+			</div>
+		</div>
+	</header>
+	<div id="mobile-menu" class="animated fast">
+		<ul>
+			<li><a href="https://aabbccm.com/posts/">文章</a></li>
+			<li><a href="https://aabbccm.com/tags/">标签</a></li>
+			<li><a href="https://aabbccm.com/about/">关于</a></li>
+		</ul>
+	</div>
+
+
+	<main class="site-main section-inner animated fadeIn faster">
+		<article class="thin">
+			<header class="post-header">
+				<div class="post-meta"><span>Apr 5, 2021</span></div>
+				<h1>使用 Go 每分钟处理百万请求 </h1>
+			</header>
+			<div class="content">
+				<h3 id="介绍">介绍<a href="#介绍" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h3>
+<p>偶然间看到一篇写于15年的文章，说实话，标题确实吸引了我，不过看了几遍之后，确实精彩。 关于这篇文章，我就不直接翻译了。 项目的需求就是 客户端发送请求，服务端接收请求处理数据(原文是把资源上传至 Amazon S3 资源中)。</p>
+<p>我稍微改动了原文的业务代码，但是并不影响核心模块。第一版是每收到一个 Request,开启一个 G 进行处理，快速响应，很常规的操作。 代码如下</p>
+<h3 id="初版">初版<a href="#初版" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h3>
+<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go">
+<span class="kn">package</span> <span class="nx">main</span>
+
+<span class="kn">import</span> <span class="p">(</span>
+	<span class="s">&#34;fmt&#34;</span>
+	<span class="s">&#34;log&#34;</span>
+	<span class="s">&#34;net/http&#34;</span>
+	<span class="s">&#34;time&#34;</span>
+<span class="p">)</span>
+
+<span class="kd">type</span> <span class="nx">Payload</span> <span class="kd">struct</span> <span class="p">{</span>
+	<span class="c1">// 传啥不重要
+</span><span class="c1"></span><span class="p">}</span>
+
+<span class="kd">func</span> <span class="p">(</span><span class="nx">p</span> <span class="o">*</span><span class="nx">Payload</span><span class="p">)</span> <span class="nf">UpdateToS3</span><span class="p">()</span> <span class="kt">error</span> <span class="p">{</span>
+	<span class="c1">//存储逻辑,模拟操作耗时
+</span><span class="c1"></span>	<span class="nx">time</span><span class="p">.</span><span class="nf">Sleep</span><span class="p">(</span><span class="mi">500</span> <span class="o">*</span> <span class="nx">time</span><span class="p">.</span><span class="nx">Millisecond</span><span class="p">)</span>
+	<span class="nx">fmt</span><span class="p">.</span><span class="nf">Println</span><span class="p">(</span><span class="s">&#34;上传成功&#34;</span><span class="p">)</span>
+	<span class="k">return</span> <span class="kc">nil</span>
+<span class="p">}</span>
+
+<span class="kd">func</span> <span class="nf">payloadHandler</span><span class="p">(</span><span class="nx">w</span> <span class="nx">http</span><span class="p">.</span><span class="nx">ResponseWriter</span><span class="p">,</span> <span class="nx">r</span> <span class="o">*</span><span class="nx">http</span><span class="p">.</span><span class="nx">Request</span><span class="p">)</span> <span class="p">{</span>
+	<span class="c1">// 业务过滤
+</span><span class="c1"></span>	<span class="c1">// 请求body解析......
+</span><span class="c1"></span>	<span class="kd">var</span> <span class="nx">p</span> <span class="nx">Payload</span>
+	<span class="k">go</span> <span class="nx">p</span><span class="p">.</span><span class="nf">UpdateToS3</span><span class="p">()</span>
+	<span class="nx">w</span><span class="p">.</span><span class="nf">Write</span><span class="p">([]</span><span class="nb">byte</span><span class="p">(</span><span class="s">&#34;操作成功&#34;</span><span class="p">))</span>
+<span class="p">}</span>
+
+<span class="kd">func</span> <span class="nf">main</span><span class="p">()</span> <span class="p">{</span>
+	<span class="nx">http</span><span class="p">.</span><span class="nf">HandleFunc</span><span class="p">(</span><span class="s">&#34;/payload&#34;</span><span class="p">,</span> <span class="nx">payloadHandler</span><span class="p">)</span>
+	<span class="nx">log</span><span class="p">.</span><span class="nf">Fatal</span><span class="p">(</span><span class="nx">http</span><span class="p">.</span><span class="nf">ListenAndServe</span><span class="p">(</span><span class="s">&#34;:8099&#34;</span><span class="p">,</span> <span class="kc">nil</span><span class="p">))</span>
+<span class="p">}</span>
+
+</code></pre></div><p>这样存在什么问题呢？一般情况下，没什么问题。但是如果是高并发的场景下，不对G数进行控制，你的 CPU 使用率暴涨，内存占用暴涨，直至程序奔溃。如果此操作落地至数据库，例如mysql,那么相应的，你数据库的服务器磁盘IO、网络带宽
+、CPU负载、内存消耗都会达到非常高的情况，一并奔溃。所以，一旦程序中出现不可控的事物，往往是危险的信号。</p>
+<h3 id="中版">中版<a href="#中版" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h3>
+<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kn">package</span> <span class="nx">main</span>
+
+<span class="kn">import</span> <span class="p">(</span>
+	<span class="s">&#34;fmt&#34;</span>
+	<span class="s">&#34;log&#34;</span>
+	<span class="s">&#34;net/http&#34;</span>
+	<span class="s">&#34;time&#34;</span>
+<span class="p">)</span>
+
+<span class="kd">const</span> <span class="nx">MaxQueue</span> <span class="p">=</span> <span class="mi">400</span>
+
+<span class="kd">var</span> <span class="nx">Queue</span> <span class="kd">chan</span> <span class="nx">Payload</span>
+
+<span class="kd">func</span> <span class="nf">init</span><span class="p">()</span> <span class="p">{</span>
+	<span class="nx">Queue</span> <span class="p">=</span> <span class="nb">make</span><span class="p">(</span><span class="kd">chan</span> <span class="nx">Payload</span><span class="p">,</span> <span class="nx">MaxQueue</span><span class="p">)</span>
+<span class="p">}</span>
+
+<span class="kd">type</span> <span class="nx">Payload</span> <span class="kd">struct</span> <span class="p">{</span>
+	<span class="c1">// 传啥不重要
+</span><span class="c1"></span><span class="p">}</span>
+
+<span class="kd">func</span> <span class="p">(</span><span class="nx">p</span> <span class="o">*</span><span class="nx">Payload</span><span class="p">)</span> <span class="nf">UpdateToS3</span><span class="p">()</span> <span class="kt">error</span> <span class="p">{</span>
+	<span class="c1">//存储逻辑,模拟操作耗时
+</span><span class="c1"></span>	<span class="nx">time</span><span class="p">.</span><span class="nf">Sleep</span><span class="p">(</span><span class="mi">500</span> <span class="o">*</span> <span class="nx">time</span><span class="p">.</span><span class="nx">Millisecond</span><span class="p">)</span>
+	<span class="nx">fmt</span><span class="p">.</span><span class="nf">Println</span><span class="p">(</span><span class="s">&#34;上传成功&#34;</span><span class="p">)</span>
+	<span class="k">return</span> <span class="kc">nil</span>
+<span class="p">}</span>
+
+<span class="kd">func</span> <span class="nf">payloadHandler</span><span class="p">(</span><span class="nx">w</span> <span class="nx">http</span><span class="p">.</span><span class="nx">ResponseWriter</span><span class="p">,</span> <span class="nx">r</span> <span class="o">*</span><span class="nx">http</span><span class="p">.</span><span class="nx">Request</span><span class="p">)</span> <span class="p">{</span>
+	<span class="c1">// 业务过滤
+</span><span class="c1"></span>	<span class="c1">// 请求body解析......
+</span><span class="c1"></span>	<span class="kd">var</span> <span class="nx">p</span> <span class="nx">Payload</span>
+	<span class="c1">//go p.UpdateToS3()
+</span><span class="c1"></span>	<span class="nx">Queue</span> <span class="o">&lt;-</span> <span class="nx">p</span>
+	<span class="nx">w</span><span class="p">.</span><span class="nf">Write</span><span class="p">([]</span><span class="nb">byte</span><span class="p">(</span><span class="s">&#34;操作成功&#34;</span><span class="p">))</span>
+<span class="p">}</span>
+
+<span class="c1">// 处理任务
+</span><span class="c1"></span><span class="kd">func</span> <span class="nf">StartProcessor</span><span class="p">()</span> <span class="p">{</span>
+	<span class="k">for</span> <span class="p">{</span>
+		<span class="k">select</span> <span class="p">{</span>
+		<span class="k">case</span> <span class="nx">payload</span> <span class="o">:=</span> <span class="o">&lt;-</span><span class="nx">Queue</span><span class="p">:</span>
+			<span class="nx">payload</span><span class="p">.</span><span class="nf">UpdateToS3</span><span class="p">()</span>
+		<span class="p">}</span>
+	<span class="p">}</span>
+<span class="p">}</span>
+
+<span class="kd">func</span> <span class="nf">main</span><span class="p">()</span> <span class="p">{</span>
+	<span class="nx">http</span><span class="p">.</span><span class="nf">HandleFunc</span><span class="p">(</span><span class="s">&#34;/payload&#34;</span><span class="p">,</span> <span class="nx">payloadHandler</span><span class="p">)</span>
+	<span class="c1">//单独开一个g接收与处理任务
+</span><span class="c1"></span>	<span class="k">go</span> <span class="nf">StartProcessor</span><span class="p">()</span>
+	<span class="nx">log</span><span class="p">.</span><span class="nf">Fatal</span><span class="p">(</span><span class="nx">http</span><span class="p">.</span><span class="nf">ListenAndServe</span><span class="p">(</span><span class="s">&#34;:8099&#34;</span><span class="p">,</span> <span class="kc">nil</span><span class="p">))</span>
+<span class="p">}</span>
+</code></pre></div><p>这一版作者借助了带 buffered 的 channel 来完成这个功能，这样控制住了无限制的G，但是依然没有解决问题。 处理请求是一个同步的操作，每次只会处理一个任务，请求进来的速度远远超过了处理的速度。这种情况，一旦channel
+满了之后， 后续的请求全部阻塞，无法再把任务塞入通道中，然后你会发现，响应的时间会大幅度的开始增加， 甚至不再有任何的响应。</p>
+<h3 id="终版">终版<a href="#终版" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h3>
+<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kn">package</span> <span class="nx">main</span>
+
+<span class="kn">package</span> <span class="nx">main</span>
+
+<span class="kn">import</span> <span class="p">(</span>
+<span class="s">&#34;fmt&#34;</span>
+<span class="s">&#34;log&#34;</span>
+<span class="s">&#34;net/http&#34;</span>
+<span class="s">&#34;time&#34;</span>
+<span class="p">)</span>
+
+<span class="kd">const</span> <span class="p">(</span>
+	<span class="nx">MaxWorker</span> <span class="p">=</span> <span class="mi">100</span> <span class="c1">//随便设置值
+</span><span class="c1"></span>	<span class="nx">MaxQueue</span>  <span class="p">=</span> <span class="mi">200</span> <span class="c1">// 随便设置值
+</span><span class="c1"></span><span class="p">)</span>
+
+<span class="c1">// 一个可以发送工作请求的缓冲 channel
+</span><span class="c1"></span><span class="kd">var</span> <span class="nx">JobQueue</span> <span class="kd">chan</span> <span class="nx">Job</span>
+
+<span class="kd">func</span> <span class="nf">init</span><span class="p">()</span> <span class="p">{</span>
+	<span class="nx">JobQueue</span> <span class="p">=</span> <span class="nb">make</span><span class="p">(</span><span class="kd">chan</span> <span class="nx">Job</span><span class="p">,</span> <span class="nx">MaxQueue</span><span class="p">)</span>
+<span class="p">}</span>
+
+<span class="kd">type</span> <span class="nx">Payload</span> <span class="kd">struct</span><span class="p">{}</span>
+
+<span class="kd">type</span> <span class="nx">PayloadCollection</span> <span class="kd">struct</span> <span class="p">{</span>
+	<span class="nx">PayLoad</span> <span class="p">[]</span><span class="nx">Payload</span>
+<span class="p">}</span>
+
+<span class="kd">type</span> <span class="nx">Job</span> <span class="kd">struct</span> <span class="p">{</span>
+	<span class="nx">PayLoad</span> <span class="nx">Payload</span>
+<span class="p">}</span>
+
+<span class="kd">type</span> <span class="nx">Worker</span> <span class="kd">struct</span> <span class="p">{</span>
+	<span class="nx">WorkerPool</span> <span class="kd">chan</span> <span class="kd">chan</span> <span class="nx">Job</span>
+	<span class="nx">JobChannel</span> <span class="kd">chan</span> <span class="nx">Job</span>
+	<span class="nx">quit</span>       <span class="kd">chan</span> <span class="kt">bool</span>
+<span class="p">}</span>
+
+<span class="kd">func</span> <span class="nf">NewWorker</span><span class="p">(</span><span class="nx">workerPool</span> <span class="kd">chan</span> <span class="kd">chan</span> <span class="nx">Job</span><span class="p">)</span> <span class="nx">Worker</span> <span class="p">{</span>
+	<span class="k">return</span> <span class="nx">Worker</span><span class="p">{</span>
+		<span class="nx">WorkerPool</span><span class="p">:</span> <span class="nx">workerPool</span><span class="p">,</span>
+		<span class="nx">JobChannel</span><span class="p">:</span> <span class="nb">make</span><span class="p">(</span><span class="kd">chan</span> <span class="nx">Job</span><span class="p">),</span>
+		<span class="nx">quit</span><span class="p">:</span>       <span class="nb">make</span><span class="p">(</span><span class="kd">chan</span> <span class="kt">bool</span><span class="p">),</span>
+	<span class="p">}</span>
+<span class="p">}</span>
+
+<span class="c1">// Start 方法开启一个 worker 循环，监听退出 channel，可按需停止这个循环
+</span><span class="c1"></span><span class="kd">func</span> <span class="p">(</span><span class="nx">w</span> <span class="nx">Worker</span><span class="p">)</span> <span class="nf">Start</span><span class="p">()</span> <span class="p">{</span>
+	<span class="k">go</span> <span class="kd">func</span><span class="p">()</span> <span class="p">{</span>
+		<span class="k">for</span> <span class="p">{</span>
+			<span class="c1">// 将当前的 worker 注册到 worker 队列中
+</span><span class="c1"></span>			<span class="nx">w</span><span class="p">.</span><span class="nx">WorkerPool</span> <span class="o">&lt;-</span> <span class="nx">w</span><span class="p">.</span><span class="nx">JobChannel</span>
+			<span class="k">select</span> <span class="p">{</span>
+			<span class="k">case</span> <span class="nx">job</span> <span class="o">:=</span> <span class="o">&lt;-</span><span class="nx">w</span><span class="p">.</span><span class="nx">JobChannel</span><span class="p">:</span>
+				<span class="c1">// 	真正业务的地方
+</span><span class="c1"></span>				<span class="c1">//	模拟操作耗时
+</span><span class="c1"></span>				<span class="nx">time</span><span class="p">.</span><span class="nf">Sleep</span><span class="p">(</span><span class="mi">500</span> <span class="o">*</span> <span class="nx">time</span><span class="p">.</span><span class="nx">Millisecond</span><span class="p">)</span>
+				<span class="nx">fmt</span><span class="p">.</span><span class="nf">Printf</span><span class="p">(</span><span class="s">&#34;上传成功:%v\n&#34;</span><span class="p">,</span> <span class="nx">job</span><span class="p">)</span>
+			<span class="k">case</span> <span class="o">&lt;-</span><span class="nx">w</span><span class="p">.</span><span class="nx">quit</span><span class="p">:</span>
+				<span class="k">return</span>
+			<span class="p">}</span>
+		<span class="p">}</span>
+	<span class="p">}()</span>
+<span class="p">}</span>
+
+<span class="kd">func</span> <span class="p">(</span><span class="nx">w</span> <span class="nx">Worker</span><span class="p">)</span> <span class="nf">stop</span><span class="p">()</span> <span class="p">{</span>
+	<span class="k">go</span> <span class="kd">func</span><span class="p">()</span> <span class="p">{</span>
+		<span class="nx">w</span><span class="p">.</span><span class="nx">quit</span> <span class="o">&lt;-</span> <span class="kc">true</span>
+	<span class="p">}()</span>
+<span class="p">}</span>
+
+<span class="c1">// 初始化操作
+</span><span class="c1"></span>
+<span class="kd">type</span> <span class="nx">Dispatcher</span> <span class="kd">struct</span> <span class="p">{</span>
+	<span class="c1">// 注册到 dispatcher 的 worker channel 池
+</span><span class="c1"></span>	<span class="nx">WorkerPool</span> <span class="kd">chan</span> <span class="kd">chan</span> <span class="nx">Job</span>
+<span class="p">}</span>
+
+<span class="kd">func</span> <span class="nf">NewDispatcher</span><span class="p">(</span><span class="nx">maxWorkers</span> <span class="kt">int</span><span class="p">)</span> <span class="o">*</span><span class="nx">Dispatcher</span> <span class="p">{</span>
+	<span class="nx">pool</span> <span class="o">:=</span> <span class="nb">make</span><span class="p">(</span><span class="kd">chan</span> <span class="kd">chan</span> <span class="nx">Job</span><span class="p">,</span> <span class="nx">maxWorkers</span><span class="p">)</span>
+	<span class="k">return</span> <span class="o">&amp;</span><span class="nx">Dispatcher</span><span class="p">{</span><span class="nx">WorkerPool</span><span class="p">:</span> <span class="nx">pool</span><span class="p">}</span>
+<span class="p">}</span>
+
+<span class="kd">func</span> <span class="p">(</span><span class="nx">d</span> <span class="o">*</span><span class="nx">Dispatcher</span><span class="p">)</span> <span class="nf">Run</span><span class="p">()</span> <span class="p">{</span>
+	<span class="c1">// 开始运行 n 个 worker
+</span><span class="c1"></span>	<span class="k">for</span> <span class="nx">i</span> <span class="o">:=</span> <span class="mi">0</span><span class="p">;</span> <span class="nx">i</span> <span class="p">&lt;</span> <span class="nx">MaxWorker</span><span class="p">;</span> <span class="nx">i</span><span class="o">++</span> <span class="p">{</span>
+		<span class="nx">worker</span> <span class="o">:=</span> <span class="nf">NewWorker</span><span class="p">(</span><span class="nx">d</span><span class="p">.</span><span class="nx">WorkerPool</span><span class="p">)</span>
+		<span class="nx">worker</span><span class="p">.</span><span class="nf">Start</span><span class="p">()</span>
+	<span class="p">}</span>
+	<span class="k">go</span> <span class="nx">d</span><span class="p">.</span><span class="nf">dispatch</span><span class="p">()</span>
+<span class="p">}</span>
+
+<span class="kd">func</span> <span class="p">(</span><span class="nx">d</span> <span class="o">*</span><span class="nx">Dispatcher</span><span class="p">)</span> <span class="nf">dispatch</span><span class="p">()</span> <span class="p">{</span>
+	<span class="k">for</span> <span class="p">{</span>
+		<span class="k">select</span> <span class="p">{</span>
+		<span class="k">case</span> <span class="nx">job</span> <span class="o">:=</span> <span class="o">&lt;-</span><span class="nx">JobQueue</span><span class="p">:</span>
+			<span class="k">go</span> <span class="kd">func</span><span class="p">(</span><span class="nx">job</span> <span class="nx">Job</span><span class="p">)</span> <span class="p">{</span>
+				<span class="c1">// 尝试获取一个可用的 worker job channel，阻塞直到有可用的 worker
+</span><span class="c1"></span>				<span class="nx">jobChannel</span> <span class="o">:=</span> <span class="o">&lt;-</span><span class="nx">d</span><span class="p">.</span><span class="nx">WorkerPool</span>
+				<span class="c1">// 分发任务到 worker job channel 中
+</span><span class="c1"></span>				<span class="nx">jobChannel</span> <span class="o">&lt;-</span> <span class="nx">job</span>
+			<span class="p">}(</span><span class="nx">job</span><span class="p">)</span>
+		<span class="p">}</span>
+	<span class="p">}</span>
+<span class="p">}</span>
+
+<span class="c1">// 接收请求，把任务筛入JobQueue。
+</span><span class="c1"></span><span class="kd">func</span> <span class="nf">payloadHandler</span><span class="p">(</span><span class="nx">w</span> <span class="nx">http</span><span class="p">.</span><span class="nx">ResponseWriter</span><span class="p">,</span> <span class="nx">r</span> <span class="o">*</span><span class="nx">http</span><span class="p">.</span><span class="nx">Request</span><span class="p">)</span> <span class="p">{</span>
+	<span class="nx">work</span> <span class="o">:=</span> <span class="nx">Job</span><span class="p">{</span><span class="nx">PayLoad</span><span class="p">:</span> <span class="nx">Payload</span><span class="p">{}}</span>
+	<span class="nx">JobQueue</span> <span class="o">&lt;-</span> <span class="nx">work</span>
+	<span class="nx">_</span><span class="p">,</span> <span class="nx">_</span> <span class="p">=</span> <span class="nx">w</span><span class="p">.</span><span class="nf">Write</span><span class="p">([]</span><span class="nb">byte</span><span class="p">(</span><span class="s">&#34;操作成功&#34;</span><span class="p">))</span>
+<span class="p">}</span>
+
+<span class="kd">func</span> <span class="nf">main</span><span class="p">()</span> <span class="p">{</span>
+	<span class="c1">// 通过调度器创建worker，监听来自 JobQueue的任务
+</span><span class="c1"></span>	<span class="nx">d</span> <span class="o">:=</span> <span class="nf">NewDispatcher</span><span class="p">(</span><span class="nx">MaxWorker</span><span class="p">)</span>
+	<span class="nx">d</span><span class="p">.</span><span class="nf">Run</span><span class="p">()</span>
+	<span class="nx">http</span><span class="p">.</span><span class="nf">HandleFunc</span><span class="p">(</span><span class="s">&#34;/payload&#34;</span><span class="p">,</span> <span class="nx">payloadHandler</span><span class="p">)</span>
+	<span class="nx">log</span><span class="p">.</span><span class="nf">Fatal</span><span class="p">(</span><span class="nx">http</span><span class="p">.</span><span class="nf">ListenAndServe</span><span class="p">(</span><span class="s">&#34;:8099&#34;</span><span class="p">,</span> <span class="kc">nil</span><span class="p">))</span>
+<span class="p">}</span>
+
+
+</code></pre></div><p>最终采用的是两级channel，一级作为任务的队列。另一级用来控制并发处理任务的 worker 数量。</p>
+<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kd">func</span> <span class="nf">payloadHandler</span><span class="p">(</span><span class="nx">w</span> <span class="nx">http</span><span class="p">.</span><span class="nx">ResponseWriter</span><span class="p">,</span> <span class="nx">r</span> <span class="o">*</span><span class="nx">http</span><span class="p">.</span><span class="nx">Request</span><span class="p">)</span> <span class="p">{</span>
+	<span class="nx">work</span> <span class="o">:=</span> <span class="nx">Job</span><span class="p">{</span><span class="nx">PayLoad</span><span class="p">:</span> <span class="nx">Payload</span><span class="p">{}}</span>
+	<span class="nx">JobQueue</span> <span class="o">&lt;-</span> <span class="nx">work</span>
+	<span class="nx">_</span><span class="p">,</span> <span class="nx">_</span> <span class="p">=</span> <span class="nx">w</span><span class="p">.</span><span class="nf">Write</span><span class="p">([]</span><span class="nb">byte</span><span class="p">(</span><span class="s">&#34;操作成功&#34;</span><span class="p">))</span>
+<span class="p">}</span>
+</code></pre></div><p>首先我们再接收到一个请求，创建任务 work，把它放入到任务队列中等待 work 池处理。</p>
+<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kd">func</span> <span class="p">(</span><span class="nx">d</span> <span class="o">*</span><span class="nx">Dispatcher</span><span class="p">)</span> <span class="nf">Run</span><span class="p">()</span> <span class="p">{</span>
+	<span class="c1">// 开始运行 n 个 worker
+</span><span class="c1"></span>	<span class="k">for</span> <span class="nx">i</span> <span class="o">:=</span> <span class="mi">0</span><span class="p">;</span> <span class="nx">i</span> <span class="p">&lt;</span> <span class="nx">MaxWorker</span><span class="p">;</span> <span class="nx">i</span><span class="o">++</span> <span class="p">{</span>
+		<span class="nx">worker</span> <span class="o">:=</span> <span class="nf">NewWorker</span><span class="p">(</span><span class="nx">d</span><span class="p">.</span><span class="nx">WorkerPool</span><span class="p">)</span>
+		<span class="nx">worker</span><span class="p">.</span><span class="nf">Start</span><span class="p">()</span>
+	<span class="p">}</span>
+	<span class="k">go</span> <span class="nx">d</span><span class="p">.</span><span class="nf">dispatch</span><span class="p">()</span>
+<span class="p">}</span>
+
+<span class="kd">func</span> <span class="p">(</span><span class="nx">d</span> <span class="o">*</span><span class="nx">Dispatcher</span><span class="p">)</span> <span class="nf">dispatch</span><span class="p">()</span> <span class="p">{</span>
+	<span class="k">for</span> <span class="p">{</span>
+		<span class="k">select</span> <span class="p">{</span>
+		<span class="k">case</span> <span class="nx">job</span> <span class="o">:=</span> <span class="o">&lt;-</span><span class="nx">JobQueue</span><span class="p">:</span>
+			<span class="k">go</span> <span class="kd">func</span><span class="p">(</span><span class="nx">job</span> <span class="nx">Job</span><span class="p">)</span> <span class="p">{</span>
+				<span class="c1">// 尝试获取一个可用的 worker job channel，阻塞直到有可用的 worker
+</span><span class="c1"></span>				<span class="nx">jobChannel</span> <span class="o">:=</span> <span class="o">&lt;-</span><span class="nx">d</span><span class="p">.</span><span class="nx">WorkerPool</span>
+				<span class="c1">// 分发任务到 worker job channel 中
+</span><span class="c1"></span>				<span class="nx">jobChannel</span> <span class="o">&lt;-</span> <span class="nx">job</span>
+			<span class="p">}(</span><span class="nx">job</span><span class="p">)</span>
+		<span class="p">}</span>
+	<span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div><p>调度器初始化work池后，在 dispatch 中，一旦我们接收到 JobQueue 的任务，就去尝试获取一个可用的 worker，分发任务给work 的 job channel 中。
+注意这个过程不是同步的，而是每接收到一个 job,就开启一个 g 去处理。</p>
+<h3 id="最终方案">最终方案<a href="#最终方案" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h3>
+
+			</div>
+			<div class="content"><br><img src="https://image.eddycjy.com/8c23cb407498f8446af59e43fb95ac62.png"></div>
+			<hr class="post-end">
+			<footer class="post-info">
+				<p>
+					<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-tag meta-icon"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"></path><line x1="7" y1="7" x2="7" y2="7"></line></svg><span class="tag"><a href="https://aabbccm.com/tags/go">go</a></span>
+				</p>
+				<p><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-file-text"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>569 Words</p>
+				<p><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-calendar"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>2021-04-05 22:25 &#43;0800</p>
+			</footer>
+		</article>
+		<aside id="toc" class="show-toc">
+			<div class="toc-title">Table of Contents</div>
+			<nav id="TableOfContents">
+  <ul>
+    <li>
+      <ul>
+        <li><a href="#介绍">介绍</a></li>
+        <li><a href="#初版">初版</a></li>
+        <li><a href="#中版">中版</a></li>
+        <li><a href="#终版">终版</a></li>
+        <li><a href="#最终方案">最终方案</a></li>
+      </ul>
+    </li>
+  </ul>
+</nav>
+		</aside>
+		<div class="post-nav thin">
+			<a class="prev-post" href="https://aabbccm.com/posts/kubernetes/2020-05-01-install/">
+				<span class="post-nav-label">Older&nbsp;<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-arrow-right"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg></span><br><span>Kubernetes 本地快速启动（基于 Docker）</span>
+			</a>
+		</div>
+		<div id="comments" class="thin">
+			<script src="https://utteranc.es/client.js"
+        repo="wuqinqiang/blog"
+        issue-term="pathname"
+        theme="github-light"
+        crossorigin="anonymous"
+        async>
+</script>
+		</div>
+	</main>
+
+	<footer id="site-footer" class="section-inner thin animated fadeIn faster">
+		<p>&copy; 2018 - 2021 <a href="https://aabbccm.com">Remember</a> &#183; <a href="http://beian.miit.gov.cn/">浙ICP备18028603号-1</a></p>
+		<p>
+			Made with <a href="https://gohugo.io/" target="_blank" rel="noopener">Hugo</a> &#183; Theme <a href="https://github.com/Track3/hermit" target="_blank" rel="noopener">Hermit</a> &#183; <a href="https://aabbccm.com/post/index.xml" target="_blank" title="rss"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-rss"><path d="M4 11a9 9 0 0 1 9 9"></path><path d="M4 4a16 16 0 0 1 16 16"></path><circle cx="5" cy="19" r="1"></circle></svg></a>
+		</p>
+	</footer>
+
+
+	<script src="https://aabbccm.com/js/main.min.784417f5847151f848c339cf0acb13a06cbb648b1483435a28ed4556c4ead69b.js"></script>
+<script type="application/javascript">
+var doNotTrack = false;
+if (!doNotTrack) {
+	window.ga=window.ga||function(){(ga.q=ga.q||[]).push(arguments)};ga.l=+new Date;
+	ga('create', 'UA-166045776-1', 'auto');
+	
+	ga('send', 'pageview');
+}
+</script>
+<script async src='https://www.google-analytics.com/analytics.js'></script>
+
+
+</body>
+
+</html>

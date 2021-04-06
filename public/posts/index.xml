@@ -1,0 +1,367 @@
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+	<channel>
+		<title>Posts on 关于体育的收藏</title>
+		<link>https://aabbccm.com/posts/</link>
+		<description>Recent content in Posts on 关于体育的收藏</description>
+		<generator>Hugo -- gohugo.io</generator>
+		<language>zh-hans</language>
+		<copyright>This work is licensed under a Creative Commons Attribution-NonCommercial 4.0 International License.</copyright>
+		<lastBuildDate>Mon, 05 Apr 2021 22:25:52 +0800</lastBuildDate>
+		<atom:link href="https://aabbccm.com/posts/index.xml" rel="self" type="application/rss+xml" />
+		
+		<item>
+			<title>使用 Go 每分钟处理百万请求 </title>
+			<link>https://aabbccm.com/posts/go/handle-million-requests/</link>
+			<pubDate>Mon, 05 Apr 2021 22:25:52 +0800</pubDate>
+			
+			<guid>https://aabbccm.com/posts/go/handle-million-requests/</guid>
+			<description>介绍 偶然间看到一篇写于15年的文章，说实话，标题确实吸引了我，不过看了几遍之后，确实精彩。 关于这篇文章，我就不直接翻译了。 项目的需求就是 客户端发送请求，服务端接收请求处理数据(原文是把资源上传至 Amazon S3 资源中)。
+我稍微改动了原文的业务代码，但是并不影响核心模块。第一版是每收到一个 Request,开启一个 G 进行处理，快速响应，很常规的操作。 代码如下
+初版 package main import ( &amp;#34;fmt&amp;#34; &amp;#34;log&amp;#34; &amp;#34;net/http&amp;#34; &amp;#34;time&amp;#34; ) type Payload struct { // 传啥不重要 } func (p *Payload) UpdateToS3() error { //存储逻辑,模拟操作耗时 	time.Sleep(500 * time.Millisecond) fmt.Println(&amp;#34;上传成功&amp;#34;) return nil } func payloadHandler(w http.ResponseWriter, r *http.Request) { // 业务过滤 	// 请求body解析...... 	var p Payload go p.UpdateToS3() w.Write([]byte(&amp;#34;操作成功&amp;#34;)) } func main() { http.HandleFunc(&amp;#34;/payload&amp;#34;, payloadHandler) log.Fatal(http.ListenAndServe(&amp;#34;:8099&amp;#34;, nil)) } 这样存在什么问题呢？一般情况下，没什么问题。但是如果是高并发的场景下，不对G数进行控制，你的 CPU 使用率暴涨，内存占用暴涨，直至程序奔溃。如果此操作落地至数据库，例如mysql,那么相应的，你数据库的服务器磁盘IO、网络带宽 、CPU负载、内存消耗都会达到非常高的情况，一并奔溃。所以，一旦程序中出现不可控的事物，往往是危险的信号。</description>
+			<content type="html"><![CDATA[<h3 id="介绍">介绍</h3>
+<p>偶然间看到一篇写于15年的文章，说实话，标题确实吸引了我，不过看了几遍之后，确实精彩。 关于这篇文章，我就不直接翻译了。 项目的需求就是 客户端发送请求，服务端接收请求处理数据(原文是把资源上传至 Amazon S3 资源中)。</p>
+<p>我稍微改动了原文的业务代码，但是并不影响核心模块。第一版是每收到一个 Request,开启一个 G 进行处理，快速响应，很常规的操作。 代码如下</p>
+<h3 id="初版">初版</h3>
+<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go">
+<span class="kn">package</span> <span class="nx">main</span>
+
+<span class="kn">import</span> <span class="p">(</span>
+	<span class="s">&#34;fmt&#34;</span>
+	<span class="s">&#34;log&#34;</span>
+	<span class="s">&#34;net/http&#34;</span>
+	<span class="s">&#34;time&#34;</span>
+<span class="p">)</span>
+
+<span class="kd">type</span> <span class="nx">Payload</span> <span class="kd">struct</span> <span class="p">{</span>
+	<span class="c1">// 传啥不重要
+</span><span class="c1"></span><span class="p">}</span>
+
+<span class="kd">func</span> <span class="p">(</span><span class="nx">p</span> <span class="o">*</span><span class="nx">Payload</span><span class="p">)</span> <span class="nf">UpdateToS3</span><span class="p">()</span> <span class="kt">error</span> <span class="p">{</span>
+	<span class="c1">//存储逻辑,模拟操作耗时
+</span><span class="c1"></span>	<span class="nx">time</span><span class="p">.</span><span class="nf">Sleep</span><span class="p">(</span><span class="mi">500</span> <span class="o">*</span> <span class="nx">time</span><span class="p">.</span><span class="nx">Millisecond</span><span class="p">)</span>
+	<span class="nx">fmt</span><span class="p">.</span><span class="nf">Println</span><span class="p">(</span><span class="s">&#34;上传成功&#34;</span><span class="p">)</span>
+	<span class="k">return</span> <span class="kc">nil</span>
+<span class="p">}</span>
+
+<span class="kd">func</span> <span class="nf">payloadHandler</span><span class="p">(</span><span class="nx">w</span> <span class="nx">http</span><span class="p">.</span><span class="nx">ResponseWriter</span><span class="p">,</span> <span class="nx">r</span> <span class="o">*</span><span class="nx">http</span><span class="p">.</span><span class="nx">Request</span><span class="p">)</span> <span class="p">{</span>
+	<span class="c1">// 业务过滤
+</span><span class="c1"></span>	<span class="c1">// 请求body解析......
+</span><span class="c1"></span>	<span class="kd">var</span> <span class="nx">p</span> <span class="nx">Payload</span>
+	<span class="k">go</span> <span class="nx">p</span><span class="p">.</span><span class="nf">UpdateToS3</span><span class="p">()</span>
+	<span class="nx">w</span><span class="p">.</span><span class="nf">Write</span><span class="p">([]</span><span class="nb">byte</span><span class="p">(</span><span class="s">&#34;操作成功&#34;</span><span class="p">))</span>
+<span class="p">}</span>
+
+<span class="kd">func</span> <span class="nf">main</span><span class="p">()</span> <span class="p">{</span>
+	<span class="nx">http</span><span class="p">.</span><span class="nf">HandleFunc</span><span class="p">(</span><span class="s">&#34;/payload&#34;</span><span class="p">,</span> <span class="nx">payloadHandler</span><span class="p">)</span>
+	<span class="nx">log</span><span class="p">.</span><span class="nf">Fatal</span><span class="p">(</span><span class="nx">http</span><span class="p">.</span><span class="nf">ListenAndServe</span><span class="p">(</span><span class="s">&#34;:8099&#34;</span><span class="p">,</span> <span class="kc">nil</span><span class="p">))</span>
+<span class="p">}</span>
+
+</code></pre></div><p>这样存在什么问题呢？一般情况下，没什么问题。但是如果是高并发的场景下，不对G数进行控制，你的 CPU 使用率暴涨，内存占用暴涨，直至程序奔溃。如果此操作落地至数据库，例如mysql,那么相应的，你数据库的服务器磁盘IO、网络带宽
+、CPU负载、内存消耗都会达到非常高的情况，一并奔溃。所以，一旦程序中出现不可控的事物，往往是危险的信号。</p>
+<h3 id="中版">中版</h3>
+<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kn">package</span> <span class="nx">main</span>
+
+<span class="kn">import</span> <span class="p">(</span>
+	<span class="s">&#34;fmt&#34;</span>
+	<span class="s">&#34;log&#34;</span>
+	<span class="s">&#34;net/http&#34;</span>
+	<span class="s">&#34;time&#34;</span>
+<span class="p">)</span>
+
+<span class="kd">const</span> <span class="nx">MaxQueue</span> <span class="p">=</span> <span class="mi">400</span>
+
+<span class="kd">var</span> <span class="nx">Queue</span> <span class="kd">chan</span> <span class="nx">Payload</span>
+
+<span class="kd">func</span> <span class="nf">init</span><span class="p">()</span> <span class="p">{</span>
+	<span class="nx">Queue</span> <span class="p">=</span> <span class="nb">make</span><span class="p">(</span><span class="kd">chan</span> <span class="nx">Payload</span><span class="p">,</span> <span class="nx">MaxQueue</span><span class="p">)</span>
+<span class="p">}</span>
+
+<span class="kd">type</span> <span class="nx">Payload</span> <span class="kd">struct</span> <span class="p">{</span>
+	<span class="c1">// 传啥不重要
+</span><span class="c1"></span><span class="p">}</span>
+
+<span class="kd">func</span> <span class="p">(</span><span class="nx">p</span> <span class="o">*</span><span class="nx">Payload</span><span class="p">)</span> <span class="nf">UpdateToS3</span><span class="p">()</span> <span class="kt">error</span> <span class="p">{</span>
+	<span class="c1">//存储逻辑,模拟操作耗时
+</span><span class="c1"></span>	<span class="nx">time</span><span class="p">.</span><span class="nf">Sleep</span><span class="p">(</span><span class="mi">500</span> <span class="o">*</span> <span class="nx">time</span><span class="p">.</span><span class="nx">Millisecond</span><span class="p">)</span>
+	<span class="nx">fmt</span><span class="p">.</span><span class="nf">Println</span><span class="p">(</span><span class="s">&#34;上传成功&#34;</span><span class="p">)</span>
+	<span class="k">return</span> <span class="kc">nil</span>
+<span class="p">}</span>
+
+<span class="kd">func</span> <span class="nf">payloadHandler</span><span class="p">(</span><span class="nx">w</span> <span class="nx">http</span><span class="p">.</span><span class="nx">ResponseWriter</span><span class="p">,</span> <span class="nx">r</span> <span class="o">*</span><span class="nx">http</span><span class="p">.</span><span class="nx">Request</span><span class="p">)</span> <span class="p">{</span>
+	<span class="c1">// 业务过滤
+</span><span class="c1"></span>	<span class="c1">// 请求body解析......
+</span><span class="c1"></span>	<span class="kd">var</span> <span class="nx">p</span> <span class="nx">Payload</span>
+	<span class="c1">//go p.UpdateToS3()
+</span><span class="c1"></span>	<span class="nx">Queue</span> <span class="o">&lt;-</span> <span class="nx">p</span>
+	<span class="nx">w</span><span class="p">.</span><span class="nf">Write</span><span class="p">([]</span><span class="nb">byte</span><span class="p">(</span><span class="s">&#34;操作成功&#34;</span><span class="p">))</span>
+<span class="p">}</span>
+
+<span class="c1">// 处理任务
+</span><span class="c1"></span><span class="kd">func</span> <span class="nf">StartProcessor</span><span class="p">()</span> <span class="p">{</span>
+	<span class="k">for</span> <span class="p">{</span>
+		<span class="k">select</span> <span class="p">{</span>
+		<span class="k">case</span> <span class="nx">payload</span> <span class="o">:=</span> <span class="o">&lt;-</span><span class="nx">Queue</span><span class="p">:</span>
+			<span class="nx">payload</span><span class="p">.</span><span class="nf">UpdateToS3</span><span class="p">()</span>
+		<span class="p">}</span>
+	<span class="p">}</span>
+<span class="p">}</span>
+
+<span class="kd">func</span> <span class="nf">main</span><span class="p">()</span> <span class="p">{</span>
+	<span class="nx">http</span><span class="p">.</span><span class="nf">HandleFunc</span><span class="p">(</span><span class="s">&#34;/payload&#34;</span><span class="p">,</span> <span class="nx">payloadHandler</span><span class="p">)</span>
+	<span class="c1">//单独开一个g接收与处理任务
+</span><span class="c1"></span>	<span class="k">go</span> <span class="nf">StartProcessor</span><span class="p">()</span>
+	<span class="nx">log</span><span class="p">.</span><span class="nf">Fatal</span><span class="p">(</span><span class="nx">http</span><span class="p">.</span><span class="nf">ListenAndServe</span><span class="p">(</span><span class="s">&#34;:8099&#34;</span><span class="p">,</span> <span class="kc">nil</span><span class="p">))</span>
+<span class="p">}</span>
+</code></pre></div><p>这一版作者借助了带 buffered 的 channel 来完成这个功能，这样控制住了无限制的G，但是依然没有解决问题。 处理请求是一个同步的操作，每次只会处理一个任务，请求进来的速度远远超过了处理的速度。这种情况，一旦channel
+满了之后， 后续的请求全部阻塞，无法再把任务塞入通道中，然后你会发现，响应的时间会大幅度的开始增加， 甚至不再有任何的响应。</p>
+<h3 id="终版">终版</h3>
+<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kn">package</span> <span class="nx">main</span>
+
+<span class="kn">package</span> <span class="nx">main</span>
+
+<span class="kn">import</span> <span class="p">(</span>
+<span class="s">&#34;fmt&#34;</span>
+<span class="s">&#34;log&#34;</span>
+<span class="s">&#34;net/http&#34;</span>
+<span class="s">&#34;time&#34;</span>
+<span class="p">)</span>
+
+<span class="kd">const</span> <span class="p">(</span>
+	<span class="nx">MaxWorker</span> <span class="p">=</span> <span class="mi">100</span> <span class="c1">//随便设置值
+</span><span class="c1"></span>	<span class="nx">MaxQueue</span>  <span class="p">=</span> <span class="mi">200</span> <span class="c1">// 随便设置值
+</span><span class="c1"></span><span class="p">)</span>
+
+<span class="c1">// 一个可以发送工作请求的缓冲 channel
+</span><span class="c1"></span><span class="kd">var</span> <span class="nx">JobQueue</span> <span class="kd">chan</span> <span class="nx">Job</span>
+
+<span class="kd">func</span> <span class="nf">init</span><span class="p">()</span> <span class="p">{</span>
+	<span class="nx">JobQueue</span> <span class="p">=</span> <span class="nb">make</span><span class="p">(</span><span class="kd">chan</span> <span class="nx">Job</span><span class="p">,</span> <span class="nx">MaxQueue</span><span class="p">)</span>
+<span class="p">}</span>
+
+<span class="kd">type</span> <span class="nx">Payload</span> <span class="kd">struct</span><span class="p">{}</span>
+
+<span class="kd">type</span> <span class="nx">PayloadCollection</span> <span class="kd">struct</span> <span class="p">{</span>
+	<span class="nx">PayLoad</span> <span class="p">[]</span><span class="nx">Payload</span>
+<span class="p">}</span>
+
+<span class="kd">type</span> <span class="nx">Job</span> <span class="kd">struct</span> <span class="p">{</span>
+	<span class="nx">PayLoad</span> <span class="nx">Payload</span>
+<span class="p">}</span>
+
+<span class="kd">type</span> <span class="nx">Worker</span> <span class="kd">struct</span> <span class="p">{</span>
+	<span class="nx">WorkerPool</span> <span class="kd">chan</span> <span class="kd">chan</span> <span class="nx">Job</span>
+	<span class="nx">JobChannel</span> <span class="kd">chan</span> <span class="nx">Job</span>
+	<span class="nx">quit</span>       <span class="kd">chan</span> <span class="kt">bool</span>
+<span class="p">}</span>
+
+<span class="kd">func</span> <span class="nf">NewWorker</span><span class="p">(</span><span class="nx">workerPool</span> <span class="kd">chan</span> <span class="kd">chan</span> <span class="nx">Job</span><span class="p">)</span> <span class="nx">Worker</span> <span class="p">{</span>
+	<span class="k">return</span> <span class="nx">Worker</span><span class="p">{</span>
+		<span class="nx">WorkerPool</span><span class="p">:</span> <span class="nx">workerPool</span><span class="p">,</span>
+		<span class="nx">JobChannel</span><span class="p">:</span> <span class="nb">make</span><span class="p">(</span><span class="kd">chan</span> <span class="nx">Job</span><span class="p">),</span>
+		<span class="nx">quit</span><span class="p">:</span>       <span class="nb">make</span><span class="p">(</span><span class="kd">chan</span> <span class="kt">bool</span><span class="p">),</span>
+	<span class="p">}</span>
+<span class="p">}</span>
+
+<span class="c1">// Start 方法开启一个 worker 循环，监听退出 channel，可按需停止这个循环
+</span><span class="c1"></span><span class="kd">func</span> <span class="p">(</span><span class="nx">w</span> <span class="nx">Worker</span><span class="p">)</span> <span class="nf">Start</span><span class="p">()</span> <span class="p">{</span>
+	<span class="k">go</span> <span class="kd">func</span><span class="p">()</span> <span class="p">{</span>
+		<span class="k">for</span> <span class="p">{</span>
+			<span class="c1">// 将当前的 worker 注册到 worker 队列中
+</span><span class="c1"></span>			<span class="nx">w</span><span class="p">.</span><span class="nx">WorkerPool</span> <span class="o">&lt;-</span> <span class="nx">w</span><span class="p">.</span><span class="nx">JobChannel</span>
+			<span class="k">select</span> <span class="p">{</span>
+			<span class="k">case</span> <span class="nx">job</span> <span class="o">:=</span> <span class="o">&lt;-</span><span class="nx">w</span><span class="p">.</span><span class="nx">JobChannel</span><span class="p">:</span>
+				<span class="c1">// 	真正业务的地方
+</span><span class="c1"></span>				<span class="c1">//	模拟操作耗时
+</span><span class="c1"></span>				<span class="nx">time</span><span class="p">.</span><span class="nf">Sleep</span><span class="p">(</span><span class="mi">500</span> <span class="o">*</span> <span class="nx">time</span><span class="p">.</span><span class="nx">Millisecond</span><span class="p">)</span>
+				<span class="nx">fmt</span><span class="p">.</span><span class="nf">Printf</span><span class="p">(</span><span class="s">&#34;上传成功:%v\n&#34;</span><span class="p">,</span> <span class="nx">job</span><span class="p">)</span>
+			<span class="k">case</span> <span class="o">&lt;-</span><span class="nx">w</span><span class="p">.</span><span class="nx">quit</span><span class="p">:</span>
+				<span class="k">return</span>
+			<span class="p">}</span>
+		<span class="p">}</span>
+	<span class="p">}()</span>
+<span class="p">}</span>
+
+<span class="kd">func</span> <span class="p">(</span><span class="nx">w</span> <span class="nx">Worker</span><span class="p">)</span> <span class="nf">stop</span><span class="p">()</span> <span class="p">{</span>
+	<span class="k">go</span> <span class="kd">func</span><span class="p">()</span> <span class="p">{</span>
+		<span class="nx">w</span><span class="p">.</span><span class="nx">quit</span> <span class="o">&lt;-</span> <span class="kc">true</span>
+	<span class="p">}()</span>
+<span class="p">}</span>
+
+<span class="c1">// 初始化操作
+</span><span class="c1"></span>
+<span class="kd">type</span> <span class="nx">Dispatcher</span> <span class="kd">struct</span> <span class="p">{</span>
+	<span class="c1">// 注册到 dispatcher 的 worker channel 池
+</span><span class="c1"></span>	<span class="nx">WorkerPool</span> <span class="kd">chan</span> <span class="kd">chan</span> <span class="nx">Job</span>
+<span class="p">}</span>
+
+<span class="kd">func</span> <span class="nf">NewDispatcher</span><span class="p">(</span><span class="nx">maxWorkers</span> <span class="kt">int</span><span class="p">)</span> <span class="o">*</span><span class="nx">Dispatcher</span> <span class="p">{</span>
+	<span class="nx">pool</span> <span class="o">:=</span> <span class="nb">make</span><span class="p">(</span><span class="kd">chan</span> <span class="kd">chan</span> <span class="nx">Job</span><span class="p">,</span> <span class="nx">maxWorkers</span><span class="p">)</span>
+	<span class="k">return</span> <span class="o">&amp;</span><span class="nx">Dispatcher</span><span class="p">{</span><span class="nx">WorkerPool</span><span class="p">:</span> <span class="nx">pool</span><span class="p">}</span>
+<span class="p">}</span>
+
+<span class="kd">func</span> <span class="p">(</span><span class="nx">d</span> <span class="o">*</span><span class="nx">Dispatcher</span><span class="p">)</span> <span class="nf">Run</span><span class="p">()</span> <span class="p">{</span>
+	<span class="c1">// 开始运行 n 个 worker
+</span><span class="c1"></span>	<span class="k">for</span> <span class="nx">i</span> <span class="o">:=</span> <span class="mi">0</span><span class="p">;</span> <span class="nx">i</span> <span class="p">&lt;</span> <span class="nx">MaxWorker</span><span class="p">;</span> <span class="nx">i</span><span class="o">++</span> <span class="p">{</span>
+		<span class="nx">worker</span> <span class="o">:=</span> <span class="nf">NewWorker</span><span class="p">(</span><span class="nx">d</span><span class="p">.</span><span class="nx">WorkerPool</span><span class="p">)</span>
+		<span class="nx">worker</span><span class="p">.</span><span class="nf">Start</span><span class="p">()</span>
+	<span class="p">}</span>
+	<span class="k">go</span> <span class="nx">d</span><span class="p">.</span><span class="nf">dispatch</span><span class="p">()</span>
+<span class="p">}</span>
+
+<span class="kd">func</span> <span class="p">(</span><span class="nx">d</span> <span class="o">*</span><span class="nx">Dispatcher</span><span class="p">)</span> <span class="nf">dispatch</span><span class="p">()</span> <span class="p">{</span>
+	<span class="k">for</span> <span class="p">{</span>
+		<span class="k">select</span> <span class="p">{</span>
+		<span class="k">case</span> <span class="nx">job</span> <span class="o">:=</span> <span class="o">&lt;-</span><span class="nx">JobQueue</span><span class="p">:</span>
+			<span class="k">go</span> <span class="kd">func</span><span class="p">(</span><span class="nx">job</span> <span class="nx">Job</span><span class="p">)</span> <span class="p">{</span>
+				<span class="c1">// 尝试获取一个可用的 worker job channel，阻塞直到有可用的 worker
+</span><span class="c1"></span>				<span class="nx">jobChannel</span> <span class="o">:=</span> <span class="o">&lt;-</span><span class="nx">d</span><span class="p">.</span><span class="nx">WorkerPool</span>
+				<span class="c1">// 分发任务到 worker job channel 中
+</span><span class="c1"></span>				<span class="nx">jobChannel</span> <span class="o">&lt;-</span> <span class="nx">job</span>
+			<span class="p">}(</span><span class="nx">job</span><span class="p">)</span>
+		<span class="p">}</span>
+	<span class="p">}</span>
+<span class="p">}</span>
+
+<span class="c1">// 接收请求，把任务筛入JobQueue。
+</span><span class="c1"></span><span class="kd">func</span> <span class="nf">payloadHandler</span><span class="p">(</span><span class="nx">w</span> <span class="nx">http</span><span class="p">.</span><span class="nx">ResponseWriter</span><span class="p">,</span> <span class="nx">r</span> <span class="o">*</span><span class="nx">http</span><span class="p">.</span><span class="nx">Request</span><span class="p">)</span> <span class="p">{</span>
+	<span class="nx">work</span> <span class="o">:=</span> <span class="nx">Job</span><span class="p">{</span><span class="nx">PayLoad</span><span class="p">:</span> <span class="nx">Payload</span><span class="p">{}}</span>
+	<span class="nx">JobQueue</span> <span class="o">&lt;-</span> <span class="nx">work</span>
+	<span class="nx">_</span><span class="p">,</span> <span class="nx">_</span> <span class="p">=</span> <span class="nx">w</span><span class="p">.</span><span class="nf">Write</span><span class="p">([]</span><span class="nb">byte</span><span class="p">(</span><span class="s">&#34;操作成功&#34;</span><span class="p">))</span>
+<span class="p">}</span>
+
+<span class="kd">func</span> <span class="nf">main</span><span class="p">()</span> <span class="p">{</span>
+	<span class="c1">// 通过调度器创建worker，监听来自 JobQueue的任务
+</span><span class="c1"></span>	<span class="nx">d</span> <span class="o">:=</span> <span class="nf">NewDispatcher</span><span class="p">(</span><span class="nx">MaxWorker</span><span class="p">)</span>
+	<span class="nx">d</span><span class="p">.</span><span class="nf">Run</span><span class="p">()</span>
+	<span class="nx">http</span><span class="p">.</span><span class="nf">HandleFunc</span><span class="p">(</span><span class="s">&#34;/payload&#34;</span><span class="p">,</span> <span class="nx">payloadHandler</span><span class="p">)</span>
+	<span class="nx">log</span><span class="p">.</span><span class="nf">Fatal</span><span class="p">(</span><span class="nx">http</span><span class="p">.</span><span class="nf">ListenAndServe</span><span class="p">(</span><span class="s">&#34;:8099&#34;</span><span class="p">,</span> <span class="kc">nil</span><span class="p">))</span>
+<span class="p">}</span>
+
+
+</code></pre></div><p>最终采用的是两级channel，一级作为任务的队列。另一级用来控制并发处理任务的 worker 数量。</p>
+<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kd">func</span> <span class="nf">payloadHandler</span><span class="p">(</span><span class="nx">w</span> <span class="nx">http</span><span class="p">.</span><span class="nx">ResponseWriter</span><span class="p">,</span> <span class="nx">r</span> <span class="o">*</span><span class="nx">http</span><span class="p">.</span><span class="nx">Request</span><span class="p">)</span> <span class="p">{</span>
+	<span class="nx">work</span> <span class="o">:=</span> <span class="nx">Job</span><span class="p">{</span><span class="nx">PayLoad</span><span class="p">:</span> <span class="nx">Payload</span><span class="p">{}}</span>
+	<span class="nx">JobQueue</span> <span class="o">&lt;-</span> <span class="nx">work</span>
+	<span class="nx">_</span><span class="p">,</span> <span class="nx">_</span> <span class="p">=</span> <span class="nx">w</span><span class="p">.</span><span class="nf">Write</span><span class="p">([]</span><span class="nb">byte</span><span class="p">(</span><span class="s">&#34;操作成功&#34;</span><span class="p">))</span>
+<span class="p">}</span>
+</code></pre></div><p>首先我们再接收到一个请求，创建任务 work，把它放入到任务队列中等待 work 池处理。</p>
+<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kd">func</span> <span class="p">(</span><span class="nx">d</span> <span class="o">*</span><span class="nx">Dispatcher</span><span class="p">)</span> <span class="nf">Run</span><span class="p">()</span> <span class="p">{</span>
+	<span class="c1">// 开始运行 n 个 worker
+</span><span class="c1"></span>	<span class="k">for</span> <span class="nx">i</span> <span class="o">:=</span> <span class="mi">0</span><span class="p">;</span> <span class="nx">i</span> <span class="p">&lt;</span> <span class="nx">MaxWorker</span><span class="p">;</span> <span class="nx">i</span><span class="o">++</span> <span class="p">{</span>
+		<span class="nx">worker</span> <span class="o">:=</span> <span class="nf">NewWorker</span><span class="p">(</span><span class="nx">d</span><span class="p">.</span><span class="nx">WorkerPool</span><span class="p">)</span>
+		<span class="nx">worker</span><span class="p">.</span><span class="nf">Start</span><span class="p">()</span>
+	<span class="p">}</span>
+	<span class="k">go</span> <span class="nx">d</span><span class="p">.</span><span class="nf">dispatch</span><span class="p">()</span>
+<span class="p">}</span>
+
+<span class="kd">func</span> <span class="p">(</span><span class="nx">d</span> <span class="o">*</span><span class="nx">Dispatcher</span><span class="p">)</span> <span class="nf">dispatch</span><span class="p">()</span> <span class="p">{</span>
+	<span class="k">for</span> <span class="p">{</span>
+		<span class="k">select</span> <span class="p">{</span>
+		<span class="k">case</span> <span class="nx">job</span> <span class="o">:=</span> <span class="o">&lt;-</span><span class="nx">JobQueue</span><span class="p">:</span>
+			<span class="k">go</span> <span class="kd">func</span><span class="p">(</span><span class="nx">job</span> <span class="nx">Job</span><span class="p">)</span> <span class="p">{</span>
+				<span class="c1">// 尝试获取一个可用的 worker job channel，阻塞直到有可用的 worker
+</span><span class="c1"></span>				<span class="nx">jobChannel</span> <span class="o">:=</span> <span class="o">&lt;-</span><span class="nx">d</span><span class="p">.</span><span class="nx">WorkerPool</span>
+				<span class="c1">// 分发任务到 worker job channel 中
+</span><span class="c1"></span>				<span class="nx">jobChannel</span> <span class="o">&lt;-</span> <span class="nx">job</span>
+			<span class="p">}(</span><span class="nx">job</span><span class="p">)</span>
+		<span class="p">}</span>
+	<span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div><p>调度器初始化work池后，在 dispatch 中，一旦我们接收到 JobQueue 的任务，就去尝试获取一个可用的 worker，分发任务给work 的 job channel 中。
+注意这个过程不是同步的，而是每接收到一个 job,就开启一个 g 去处理。</p>
+<h3 id="最终方案">最终方案</h3>
+]]></content>
+		</item>
+		
+		<item>
+			<title>Kubernetes 本地快速启动（基于 Docker）</title>
+			<link>https://aabbccm.com/posts/kubernetes/2020-05-01-install/</link>
+			<pubDate>Fri, 01 May 2020 11:25:52 +0800</pubDate>
+			
+			<guid>https://aabbccm.com/posts/kubernetes/2020-05-01-install/</guid>
+			<description>Kubernetes 在容器编排大战结束后已经在云原生中占据了明确的一席，最近几年越来越火热，目前搜索趋势：
+Kubernetes 的热度很明显是不断地在上涨，因此学习和使用 Kubernetes 是一件相对正确的事，同时公司大多都在往容器化上接近，在拥抱 Kubernetes，所以我们所开发的应用也总是跑在容器环境中。更甚的是，需要对接 Kubernetes API 来做一些功能的开发。
+这个时候，我们就需要一个 Kubernetes 环境来进行开发和调试，但你准备开始时，又遇到了一个问题，虽然在 2020 年的现在，Kubernetes 的安装已经有了极大的简化，教程也满地跑，但 Kubernetes 的安装和运行依然有一定的要求，像我，就遇到了如下问题：
+显然，我的小水管 Mac 承受不起，但是又需要对 Kubernetes 进行学习和使用，除了买云服务器，又或是再在台式机上搭虚拟机，还有没有什么办法呢。
+非运维开发的情况下，入门级中最简单的方式就是采用 Docker 所提供的 Kubernetes 支持。
+Docker for Mac/Windows with Kubernetes Docker 在 17.12.ce 起就提供了 Mac 版本的 Kubernetes Beta 支持，在初始使用上来说非常的方便。首先我们检查 Docker 的版本，点击 Docker -&amp;gt; Check for Updates 确保你的 Docker 在最新版本。
+快速安装 Kubernetes 在升级完成后，我们可以点击 Docker -&amp;gt; Preferences -&amp;gt; Kubernetes，如下图：
+你会发现存在三个选项，分别是：Enable Kubernete、Deploy Docker Stacks to Kubernetes by default、Show system containers (advanced)。</description>
+			<content type="html"><![CDATA[<p>Kubernetes 在容器编排大战结束后已经在云原生中占据了明确的一席，最近几年越来越火热，目前搜索趋势：</p>
+<p><img src="https://image.eddycjy.com/2583d073cc05df561c735564bb3e9e81.jpg" alt="image"></p>
+<p>Kubernetes 的热度很明显是不断地在上涨，因此学习和使用 Kubernetes 是一件相对正确的事，同时公司大多都在往容器化上接近，在拥抱 Kubernetes，所以我们所开发的应用也总是跑在容器环境中。更甚的是，需要对接 Kubernetes API 来做一些功能的开发。</p>
+<p>这个时候，我们就需要一个 Kubernetes 环境来进行开发和调试，但你准备开始时，又遇到了一个问题，虽然在 2020 年的现在，Kubernetes 的安装已经有了极大的简化，教程也满地跑，但 Kubernetes 的安装和运行依然有一定的要求，像我，就遇到了如下问题：</p>
+<p><img src="https://image.eddycjy.com/9ee9dd19241bfc9099603abcc455787d.jpg" alt="image"></p>
+<p>显然，我的小水管 Mac 承受不起，但是又需要对 Kubernetes 进行学习和使用，除了买云服务器，又或是再在台式机上搭虚拟机，还有没有什么办法呢。</p>
+<p>非运维开发的情况下，入门级中最简单的方式就是采用 Docker 所提供的 Kubernetes 支持。</p>
+<h2 id="docker-for-macwindows-with-kubernetes">Docker for Mac/Windows with Kubernetes</h2>
+<p>Docker 在 17.12.ce 起就提供了 Mac 版本的 <a href="https://www.docker.com/blog/docker-mac-kubernetes/">Kubernetes Beta</a> 支持，在初始使用上来说非常的方便。首先我们检查 Docker 的版本，点击 Docker -&gt; Check for Updates 确保你的 Docker 在最新版本。</p>
+<h2 id="快速安装-kubernetes">快速安装 Kubernetes</h2>
+<p>在升级完成后，我们可以点击 Docker -&gt; Preferences -&gt; Kubernetes，如下图：</p>
+<p><img src="https://image.eddycjy.com/85e953f790c6b6955aa307445a8cf67a.jpg" alt="image"></p>
+<p>你会发现存在三个选项，分别是：Enable Kubernete、Deploy Docker Stacks to Kubernetes by default、Show system containers (advanced)。</p>
+<p>一般我们只勾选 “Enable Kubernetes” 选项，如果你还想通过 <code>docker ps</code> 查看到 Kubernetes 的相关容器信息，那么还可以勾选 “Show system containers” 选项，在勾选完毕后点击右下角的 “Apply” 按钮就可以了。</p>
+<p>这个时候 Docker Preferences 界面上的 Kubernetes 选项将会进入 <code>kubernetes is starting...</code> 状态，也就是在拉取各类镜像，需要一定的时间。</p>
+<p>这一步有一点需要注意，Kubernetes 大多数的镜像都在国外，如果不翻墙你是无法正常下载的，就会导致一直阻塞在 <code>kubernetes is starting...</code>，等半天也没有响应，这种情况下你可以把镜像源改为国内，又或是参考 <a href="https://github.com/gotok8s/k8s-docker-desktop-for-mac">k8s-docker-desktop-for-mac</a> 项目来安装。</p>
+<p>最后在安装完毕后，你可以检查 Docker Preferences 界面左下角的 Kubernetes 状态是否正常就可以了，如下图：</p>
+<p><img src="https://image.eddycjy.com/2e626b97af3549deff1f693800bd1275.jpg" alt="image"></p>
+<h2 id="安装-dashboard">安装 Dashboard</h2>
+<p>在完成 Kubernetes 的安装后，我们需要安装 Dashboard，执行如下命令：</p>
+<div class="highlight"><pre class="chroma"><code class="language-bash" data-lang="bash">$ kubectl apply -f https://raw.githubusercontent.com/kubernetes/dashboard/v1.10.1/src/deploy/recommended/kubernetes-dashboard.yaml
+</code></pre></div><p>该 Dashboard 对应 <a href="https://github.com/kubernetes/dashboard">kubernetes/dashboard</a> 项目，而所选择的版本号（兼容性问题），大家可以根据 Releases 中的 Compatibility 来进行选择，但一般不需要太在意，因为 Kubernetes 在 Dashboard 上的建设重心已经逐渐偏向 Promethues 体系了，因此在这一块是比较滞后的，如果想特别依赖 Dashboard 来进行分析，也可以自行选择一些成熟的开源产品。</p>
+<p>在完成 <code>apply</code> 后，进行代理，执行如下命令：</p>
+<pre><code>// 默认 8001 端口，若有需要可通过 --port=8080 进行指定
+$ kubectl proxy
+</code></pre><p>执行完毕完毕后，我们可以直接在通过浏览器访问 <code>http://localhost:8001/api/v1/namespaces/kube-system/services/https:kubernetes-dashboard:/proxy/#!/login</code> 地址，如下图：</p>
+<p><img src="https://image.eddycjy.com/905246b8d5150f90282b2b56eaf6a5c8.jpg" alt="image"></p>
+<h2 id="创建-serviceaccount">创建 ServiceAccount</h2>
+<p>我们在本地创建一个 k8s-admin.yaml 文件，创建一个 ServiceAccount 和角色绑定关系，写入如下文件内容：</p>
+<pre><code>apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: dashboard-admin
+  namespace: kube-system
+---
+kind: ClusterRoleBinding
+apiVersion: rbac.authorization.k8s.io/v1beta1
+metadata:
+  name: dashboard-admin
+subjects:
+  - kind: ServiceAccount
+    name: dashboard-admin
+    namespace: kube-system
+roleRef:
+  kind: ClusterRole
+  name: cluster-admin
+  apiGroup: rbac.authorization.k8s.io
+</code></pre><p>获取管理员角色的 <code>secret</code> 名称：</p>
+<pre><code>$ kubectl get secrets -n kube-system | grep dashboard-admin | awk '{print $1}'
+dashboard-admin-token-dknqx
+</code></pre><p>获取对应的管理员的 <code>token</code> 值：</p>
+<pre><code>$ kubectl describe secret dashboard-admin-token-dknqx -n kube-system
+Name:         dashboard-admin-token-dknqx
+Namespace:    kube-system
+Labels:       &lt;none&gt;
+Annotations:  kubernetes.io/service-account.name: dashboard-admin
+              kubernetes.io/service-account.uid: 2f817ddd-5802-4e8b-8c38-f4affc16a6fe
+
+Type:  kubernetes.io/service-account-token
+
+Data
+====
+ca.crt:     1025 bytes
+namespace:  11 bytes
+token:      eyJhbGciOiJSUzI1NiIsImtpZCI6IiJ9.eyJpc3MiOiJrdWJlcm5ldGVzL3NlcnZpY2VhY2NvdW50Iiwia3ViZXJuZXRlcy5pby9zZXJ2aWNlYWNjb3VudC9uYW1lc3BhY2UiOiJrdWJlLXN5c3RlbSIsImt1YmVybmV0ZXMuaW8vc2VydmljZWFjY291bnQvc2VjcmV0Lm5hbWUiOiJkYXNoYm9hcmQtYWRtaW4tdG9rZW4tZGtucXgiLCJrdWJlcm5ldGVzLmlvL3NlcnZpY2VhY2NvdW50L3NlcnZpY2UtYWNjb3VudC5uYW1lIjoiZGFzaGJvYXJkLWFkbWluIiwia3ViZXJuZXRlcy5pby9zZXJ2aWNlYWNjb3VudC9zZXJ2aWNlLWFjY291bnQudWlkIjoiMmY4MTdkZGQtNTgwMi00ZThiLThjMzgtZjRhZmZjMTZhNmZlIiwic3ViIjoic3lzdGVtOnNlcnZpY2VhY2NvdW50Omt1YmUtc3lzdGVtOmRhc2hib2FyZC1hZG1pbiJ9.NKa8OESUsvrolyxezo8w_auKr7jC94gmCm2ZyvQda5X1wOImYYqnH482sDPsQ5Y_V-RH2UD-4eBIuZP6gh0p50nxz-gPqEEPdRln_7osbRMCgcGzqajVo3bx7UOLTJC9ka9S-0rv5HYbn3yeVi6Pt4sVW5GF6KInDcbyyYgse5B_nySIpw4AjdWXNG0npLjneBCQWrVKAQSYYw2mLPZAPPjw6yjXnBvqZmtH1wyvCsKAXbZqBtTp7ddIVvtmveeBuELsX5yIzWqD7qhcpZz4v07FrsfqK0_QJ18BBDBGYMJaaoaK0h2pl_E9sIlAXoBCJ6ol_wwUzfuOshPo9adqww
+</code></pre><p>如果已经熟悉了，可以直接通过组合命令直接获取 token 值：</p>
+<pre><code>$ kubectl describe secret dashboard-admin-token-dknqx -n kube-system | grep -E '^token' | awk '{print $2}'
+</code></pre><h2 id="登陆-dashboard">登陆 Dashboard</h2>
+<p>最后我们将 <code>token</code> 保存并复制到 Kubernetes Dashboard 的仪表盘并登陆，我们就可以看到如下界面：</p>
+<p><img src="https://image.eddycjy.com/980b8975a010b6321de4e87cb29fb009.jpg" alt="image"></p>
+<h2 id="小结">小结</h2>
+<p>我们又回到最初的问题，要学习和使用 Kubernetes，最快最正确的方式，那就是尽快的进行实践，因为本质上我们不是运维开发人员，部署环境的 Kubernetes 也大多不是由你亲自搭建，因为中小微会直接用某云厂商的 Kubernetes，大厂有专职的人员，也不愁这个问题。</p>
+<p>因此尽快行动，完成迭代中的需求是我们的目的，等完成后，再回过头来一步步手动搭建 Kubernetes 也未尝不可，所以我认为 Docker for Mac/Windows with Kubernetes 在初级入门阶段是一个很好的安装和使用方法。</p>
+]]></content>
+		</item>
+		
+	</channel>
+</rss>
