@@ -15,12 +15,14 @@
 			<pubDate>Mon, 05 Apr 2021 22:25:52 +0800</pubDate>
 			
 			<guid>https://aabbccm.com/posts/go/handle-million-requests/</guid>
-			<description>介绍 偶然间看到一篇写于15年的文章，说实话，标题确实吸引了我，不过看了几遍之后，确实精彩。 关于这篇文章，我就不直接翻译了。 项目的需求就是 客户端发送请求，服务端接收请求处理数据(原文是把资源上传至 Amazon S3 资源中)。
-我稍微改动了原文的业务代码，但是并不影响核心模块。第一版是每收到一个 Request,开启一个 G 进行处理，快速响应，很常规的操作。 代码如下
-初版 package main import ( &amp;#34;fmt&amp;#34; &amp;#34;log&amp;#34; &amp;#34;net/http&amp;#34; &amp;#34;time&amp;#34; ) type Payload struct { // 传啥不重要 } func (p *Payload) UpdateToS3() error { //存储逻辑,模拟操作耗时 	time.Sleep(500 * time.Millisecond) fmt.Println(&amp;#34;上传成功&amp;#34;) return nil } func payloadHandler(w http.ResponseWriter, r *http.Request) { // 业务过滤 	// 请求body解析...... 	var p Payload go p.UpdateToS3() w.Write([]byte(&amp;#34;操作成功&amp;#34;)) } func main() { http.HandleFunc(&amp;#34;/payload&amp;#34;, payloadHandler) log.Fatal(http.ListenAndServe(&amp;#34;:8099&amp;#34;, nil)) } 这样存在什么问题呢？一般情况下，没什么问题。但是如果是高并发的场景下，不对G数进行控制，你的 CPU 使用率暴涨，内存占用暴涨，直至程序奔溃。如果此操作落地至数据库，例如mysql,那么相应的，你数据库的服务器磁盘IO、网络带宽 、CPU负载、内存消耗都会达到非常高的情况，一并奔溃。所以，一旦程序中出现不可控的事物，往往是危险的信号。</description>
+			<description>介绍 偶然间看到一篇写于15年的文章，说实话，标题确实吸引了我，不过看了几遍之后，确实精彩。 关于这篇文章，我就不直接翻译了。 项目的需求就是 客户端发送请求，服务端接收请求处理数据(原文是把资源上传至 Amazon S3 资源中)。本质上就是这样, 我稍微改动了原文的业务代码，但是并不影响核心模块。在第一版中，每收到一个 Request,开启一个 G 进行处理，快速响应，很常规的操作。
+代码如下
+初版 package main import ( &amp;#34;fmt&amp;#34; &amp;#34;log&amp;#34; &amp;#34;net/http&amp;#34; &amp;#34;time&amp;#34; ) type Payload struct { // 传啥不重要 } func (p *Payload) UpdateToS3() error { //存储逻辑,模拟操作耗时 	time.Sleep(500 * time.Millisecond) fmt.Println(&amp;#34;上传成功&amp;#34;) return nil } func payloadHandler(w http.ResponseWriter, r *http.Request) { // 业务过滤 	// 请求body解析...... 	var p Payload go p.UpdateToS3() w.Write([]byte(&amp;#34;操作成功&amp;#34;)) } func main() { http.HandleFunc(&amp;#34;/payload&amp;#34;, payloadHandler) log.Fatal(http.ListenAndServe(&amp;#34;:8099&amp;#34;, nil)) } 这样操作存在什么问题呢？一般情况下，没什么问题。但是如果是高并发的场景下，不对G数进行控制，你的 CPU 使用率暴涨，内存占用暴涨，直至程序奔溃。</description>
 			<content type="html"><![CDATA[<h3 id="介绍">介绍</h3>
-<p>偶然间看到一篇写于15年的文章，说实话，标题确实吸引了我，不过看了几遍之后，确实精彩。 关于这篇文章，我就不直接翻译了。 项目的需求就是 客户端发送请求，服务端接收请求处理数据(原文是把资源上传至 Amazon S3 资源中)。</p>
-<p>我稍微改动了原文的业务代码，但是并不影响核心模块。第一版是每收到一个 Request,开启一个 G 进行处理，快速响应，很常规的操作。 代码如下</p>
+<p>偶然间看到一篇写于15年的文章，说实话，标题确实吸引了我，不过看了几遍之后，确实精彩。 关于这篇文章，我就不直接翻译了。 项目的需求就是 客户端发送请求，服务端接收请求处理数据(原文是把资源上传至 Amazon S3 资源中)。本质上就是这样,
+<img src="https://image.aabbccm.com/image/handle-million.png" alt="image"></p>
+<p>我稍微改动了原文的业务代码，但是并不影响核心模块。在第一版中，每收到一个 Request,开启一个 G 进行处理，快速响应，很常规的操作。</p>
+<p>代码如下</p>
 <h3 id="初版">初版</h3>
 <div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go">
 <span class="kn">package</span> <span class="nx">main</span>
@@ -56,7 +58,8 @@
 	<span class="nx">log</span><span class="p">.</span><span class="nf">Fatal</span><span class="p">(</span><span class="nx">http</span><span class="p">.</span><span class="nf">ListenAndServe</span><span class="p">(</span><span class="s">&#34;:8099&#34;</span><span class="p">,</span> <span class="kc">nil</span><span class="p">))</span>
 <span class="p">}</span>
 
-</code></pre></div><p>这样存在什么问题呢？一般情况下，没什么问题。但是如果是高并发的场景下，不对G数进行控制，你的 CPU 使用率暴涨，内存占用暴涨，直至程序奔溃。如果此操作落地至数据库，例如mysql,那么相应的，你数据库的服务器磁盘IO、网络带宽
+</code></pre></div><p>这样操作存在什么问题呢？一般情况下，没什么问题。但是如果是高并发的场景下，不对G数进行控制，你的 CPU 使用率暴涨，内存占用暴涨，直至程序奔溃。</p>
+<p>如果此操作落地至数据库，例如mysql,那么相应的，你数据库的服务器磁盘IO、网络带宽
 、CPU负载、内存消耗都会达到非常高的情况，一并奔溃。所以，一旦程序中出现不可控的事物，往往是危险的信号。</p>
 <h3 id="中版">中版</h3>
 <div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kn">package</span> <span class="nx">main</span>
@@ -112,12 +115,11 @@
 </span><span class="c1"></span>	<span class="k">go</span> <span class="nf">StartProcessor</span><span class="p">()</span>
 	<span class="nx">log</span><span class="p">.</span><span class="nf">Fatal</span><span class="p">(</span><span class="nx">http</span><span class="p">.</span><span class="nf">ListenAndServe</span><span class="p">(</span><span class="s">&#34;:8099&#34;</span><span class="p">,</span> <span class="kc">nil</span><span class="p">))</span>
 <span class="p">}</span>
-</code></pre></div><p>这一版作者借助了带 buffered 的 channel 来完成这个功能，这样控制住了无限制的G，但是依然没有解决问题。 处理请求是一个同步的操作，每次只会处理一个任务，请求进来的速度远远超过了处理的速度。这种情况，一旦channel
-满了之后， 后续的请求全部阻塞，无法再把任务塞入通道中，然后你会发现，响应的时间会大幅度的开始增加， 甚至不再有任何的响应。</p>
+</code></pre></div><p>这一版借助带 buffered 的 channel 来完成这个功能，这样控制住了无限制的G，但是依然没有解决问题。</p>
+<p>处理请求是一个同步的操作，每次只会处理一个任务，然而高并发下请求进来的速度远远超过了处理的速度。这种情况，一旦 channel
+满了之后， 后续的请求将会被阻塞等地啊。然后你会发现，响应的时间会大幅度的开始增加， 甚至不再有任何的响应。</p>
 <h3 id="终版">终版</h3>
 <div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kn">package</span> <span class="nx">main</span>
-
-<span class="kn">package</span> <span class="nx">main</span>
 
 <span class="kn">import</span> <span class="p">(</span>
 <span class="s">&#34;fmt&#34;</span>
@@ -139,10 +141,6 @@
 <span class="p">}</span>
 
 <span class="kd">type</span> <span class="nx">Payload</span> <span class="kd">struct</span><span class="p">{}</span>
-
-<span class="kd">type</span> <span class="nx">PayloadCollection</span> <span class="kd">struct</span> <span class="p">{</span>
-	<span class="nx">PayLoad</span> <span class="p">[]</span><span class="nx">Payload</span>
-<span class="p">}</span>
 
 <span class="kd">type</span> <span class="nx">Job</span> <span class="kd">struct</span> <span class="p">{</span>
 	<span class="nx">PayLoad</span> <span class="nx">Payload</span>
@@ -238,7 +236,9 @@
 <span class="p">}</span>
 
 
-</code></pre></div><p>最终采用的是两级channel，一级作为任务的队列。另一级用来控制并发处理任务的 worker 数量。</p>
+</code></pre></div><p>最终采用的是两级 channel，一级是将用户请求数据放入到 chan Job 中，这个 channel job 相当于待处理的任务队列。</p>
+<p>另一级用来存放可以处理任务的 work 缓存队列，类型为 chan chan Job。调度器把待处理的任务放入一个空闲的缓存队列当中，work 会一直处理它的缓存队列。通过这种方式，实现了一个 worker 池。大致画了一个图帮助理解
+<img src="https://image.aabbccm.com/image/work-pool.png" alt="image"></p>
 <div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kd">func</span> <span class="nf">payloadHandler</span><span class="p">(</span><span class="nx">w</span> <span class="nx">http</span><span class="p">.</span><span class="nx">ResponseWriter</span><span class="p">,</span> <span class="nx">r</span> <span class="o">*</span><span class="nx">http</span><span class="p">.</span><span class="nx">Request</span><span class="p">)</span> <span class="p">{</span>
 	<span class="nx">work</span> <span class="o">:=</span> <span class="nx">Job</span><span class="p">{</span><span class="nx">PayLoad</span><span class="p">:</span> <span class="nx">Payload</span><span class="p">{}}</span>
 	<span class="nx">JobQueue</span> <span class="o">&lt;-</span> <span class="nx">work</span>
@@ -268,7 +268,11 @@
 	<span class="p">}</span>
 <span class="p">}</span>
 </code></pre></div><p>调度器初始化work池后，在 dispatch 中，一旦我们接收到 JobQueue 的任务，就去尝试获取一个可用的 worker，分发任务给work 的 job channel 中。
-注意这个过程不是同步的，而是每接收到一个 job,就开启一个 g 去处理。</p>
+注意这个过程不是同步的，而是每接收到一个 job,就开启一个 g 去处理。可以保证 JobQueue 不需要进行阻塞，对应的往 JobQueue 理论上也可以不需要阻塞地写入任务。</p>
+<p>但是这里&quot;不可控&quot;的G和上面还是不同的，这里G存活数量理论是</p>
+<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="nf">G</span><span class="p">(</span><span class="nx">live</span><span class="p">)=</span><span class="nx">总请求数</span><span class="o">-</span><span class="nx">已处理完的G数</span>
+</code></pre></div><p>而且这里的 G 本质上没有像一开始那样，涉及到外部资源、数据库、或者网络带宽的占用。
+这里只有当有空闲的 worker 被唤醒，然后分发任务，生命周期远远短于上面的操作。</p>
 <h3 id="最终方案">最终方案</h3>
 ]]></content>
 		</item>
