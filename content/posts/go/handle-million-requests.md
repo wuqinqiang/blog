@@ -252,6 +252,8 @@ func main() {
 另一级用来存放可以处理任务的 work 缓存队列，类型为 chan chan Job。调度器把待处理的任务放入一个空闲的缓存队列当中，work 会一直处理它的缓存队列。通过这种方式，实现了一个 worker 池。大致画了一个图帮助理解
 ![image](https://image.aabbccm.com/image/work-pool.png)
 
+首先我们在接收到一个请求后，创建 Job 任务，把它放入到任务队列中等待 work 池处理。
+
 ```go
 func payloadHandler(w http.ResponseWriter, r *http.Request) {
 	work := Job{PayLoad: Payload{}}
@@ -259,7 +261,10 @@ func payloadHandler(w http.ResponseWriter, r *http.Request) {
 	_, _ = w.Write([]byte("操作成功"))
 }
 ```
-首先我们再接收到一个请求，创建任务 work，把它放入到任务队列中等待 work 池处理。
+
+
+
+调度器初始化work池后，在 dispatch 中，一旦我们接收到 JobQueue 的任务，就去尝试获取一个可用的 worker，分发任务给 worker 的 job channel 中。 注意这个过程不是同步的，而是每接收到一个 job，就开启一个 G 去处理。这样可以保证 JobQueue 不需要进行阻塞，对应的往 JobQueue 理论上也不需要阻塞地写入任务。
 
 ```go
 func (d *Dispatcher) Run() {
@@ -286,15 +291,11 @@ func (d *Dispatcher) dispatch() {
 }
 ```
 
-调度器初始化work池后，在 dispatch 中，一旦我们接收到 JobQueue 的任务，就去尝试获取一个可用的 worker，分发任务给work 的 job channel 中。
-注意这个过程不是同步的，而是每接收到一个 job,就开启一个 g 去处理。可以保证 JobQueue 不需要进行阻塞，对应的往 JobQueue 理论上也可以不需要阻塞地写入任务。
+这里"不可控"的 G 和上面还是又所不同的。仅仅极短时间内处于阻塞读 Chan 状态， 当有空闲的 worker 被唤醒，然后分发任务，整个生命周期远远短于上面的操作。
 
-但是这里"不可控"的G和上面还是不同的，这里G存活数量理论是
-```go
-G(live)=总请求数-已处理完的G数
-```
-而且这里的 G 本质上没有像一开始那样，涉及到外部资源、数据库、或者网络带宽的占用。
-这里只有当有空闲的 worker 被唤醒，然后分发任务，生命周期远远短于上面的操作。
+最后，强烈建议看一下原文，原文地址在：http://marcio.io/2015/07/handling-1-million-requests-per-minute-with-golang/
+
+
 
 
 

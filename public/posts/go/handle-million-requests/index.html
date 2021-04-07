@@ -13,7 +13,7 @@
 初版 package main import ( &#34;fmt&#34; &#34;log&#34; &#34;net/http&#34; &#34;time&#34; ) type Payload struct { // 传啥不重要 } func (p *Payload) UpdateToS3() error { //存储逻辑,模拟操作耗时 	time.Sleep(500 * time.Millisecond) fmt.Println(&#34;上传成功&#34;) return nil } func payloadHandler(w http.ResponseWriter, r *http.Request) { // 业务过滤 	// 请求body解析...... 	var p Payload go p.UpdateToS3() w.Write([]byte(&#34;操作成功&#34;)) } func main() { http.HandleFunc(&#34;/payload&#34;, payloadHandler) log.Fatal(http.ListenAndServe(&#34;:8099&#34;, nil)) } 这样操作存在什么问题呢？一般情况下，没什么问题。但是如果是高并发的场景下，不对G数进行控制，你的 CPU 使用率暴涨，内存占用暴涨，直至程序奔溃。">
 <meta itemprop="datePublished" content="2021-04-05T22:25:52+08:00" />
 <meta itemprop="dateModified" content="2021-04-05T22:25:52+08:00" />
-<meta itemprop="wordCount" content="588">
+<meta itemprop="wordCount" content="591">
 
 
 
@@ -301,12 +301,13 @@
 </code></pre></div><p>最终采用的是两级 channel，一级是将用户请求数据放入到 chan Job 中，这个 channel job 相当于待处理的任务队列。</p>
 <p>另一级用来存放可以处理任务的 work 缓存队列，类型为 chan chan Job。调度器把待处理的任务放入一个空闲的缓存队列当中，work 会一直处理它的缓存队列。通过这种方式，实现了一个 worker 池。大致画了一个图帮助理解
 <img src="https://image.aabbccm.com/image/work-pool.png" alt="image"></p>
+<p>首先我们在接收到一个请求后，创建 Job 任务，把它放入到任务队列中等待 work 池处理。</p>
 <div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kd">func</span> <span class="nf">payloadHandler</span><span class="p">(</span><span class="nx">w</span> <span class="nx">http</span><span class="p">.</span><span class="nx">ResponseWriter</span><span class="p">,</span> <span class="nx">r</span> <span class="o">*</span><span class="nx">http</span><span class="p">.</span><span class="nx">Request</span><span class="p">)</span> <span class="p">{</span>
 	<span class="nx">work</span> <span class="o">:=</span> <span class="nx">Job</span><span class="p">{</span><span class="nx">PayLoad</span><span class="p">:</span> <span class="nx">Payload</span><span class="p">{}}</span>
 	<span class="nx">JobQueue</span> <span class="o">&lt;-</span> <span class="nx">work</span>
 	<span class="nx">_</span><span class="p">,</span> <span class="nx">_</span> <span class="p">=</span> <span class="nx">w</span><span class="p">.</span><span class="nf">Write</span><span class="p">([]</span><span class="nb">byte</span><span class="p">(</span><span class="s">&#34;操作成功&#34;</span><span class="p">))</span>
 <span class="p">}</span>
-</code></pre></div><p>首先我们再接收到一个请求，创建任务 work，把它放入到任务队列中等待 work 池处理。</p>
+</code></pre></div><p>调度器初始化work池后，在 dispatch 中，一旦我们接收到 JobQueue 的任务，就去尝试获取一个可用的 worker，分发任务给 worker 的 job channel 中。 注意这个过程不是同步的，而是每接收到一个 job，就开启一个 G 去处理。这样可以保证 JobQueue 不需要进行阻塞，对应的往 JobQueue 理论上也不需要阻塞地写入任务。</p>
 <div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kd">func</span> <span class="p">(</span><span class="nx">d</span> <span class="o">*</span><span class="nx">Dispatcher</span><span class="p">)</span> <span class="nf">Run</span><span class="p">()</span> <span class="p">{</span>
 	<span class="c1">// 开始运行 n 个 worker
 </span><span class="c1"></span>	<span class="k">for</span> <span class="nx">i</span> <span class="o">:=</span> <span class="mi">0</span><span class="p">;</span> <span class="nx">i</span> <span class="p">&lt;</span> <span class="nx">MaxWorker</span><span class="p">;</span> <span class="nx">i</span><span class="o">++</span> <span class="p">{</span>
@@ -329,12 +330,8 @@
 		<span class="p">}</span>
 	<span class="p">}</span>
 <span class="p">}</span>
-</code></pre></div><p>调度器初始化work池后，在 dispatch 中，一旦我们接收到 JobQueue 的任务，就去尝试获取一个可用的 worker，分发任务给work 的 job channel 中。
-注意这个过程不是同步的，而是每接收到一个 job,就开启一个 g 去处理。可以保证 JobQueue 不需要进行阻塞，对应的往 JobQueue 理论上也可以不需要阻塞地写入任务。</p>
-<p>但是这里&quot;不可控&quot;的G和上面还是不同的，这里G存活数量理论是</p>
-<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="nf">G</span><span class="p">(</span><span class="nx">live</span><span class="p">)=</span><span class="nx">总请求数</span><span class="o">-</span><span class="nx">已处理完的G数</span>
-</code></pre></div><p>而且这里的 G 本质上没有像一开始那样，涉及到外部资源、数据库、或者网络带宽的占用。
-这里只有当有空闲的 worker 被唤醒，然后分发任务，生命周期远远短于上面的操作。</p>
+</code></pre></div><p>这里&quot;不可控&quot;的 G 和上面还是又所不同的。仅仅极短时间内处于阻塞读 Chan 状态， 当有空闲的 worker 被唤醒，然后分发任务，整个生命周期远远短于上面的操作。</p>
+<p>最后，强烈建议看一下原文，原文地址在：http://marcio.io/2015/07/handling-1-million-requests-per-minute-with-golang/</p>
 <h3 id="最终方案">最终方案<a href="#最终方案" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h3>
 
 			</div>
@@ -344,7 +341,7 @@
 				<p>
 					<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-tag meta-icon"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"></path><line x1="7" y1="7" x2="7" y2="7"></line></svg><span class="tag"><a href="https://aabbccm.com/tags/go">go</a></span>
 				</p>
-				<p><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-file-text"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>588 Words</p>
+				<p><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-file-text"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>591 Words</p>
 				<p><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-calendar"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>2021-04-05 22:25 &#43;0800</p>
 			</footer>
 		</article>

@@ -239,12 +239,13 @@
 </code></pre></div><p>最终采用的是两级 channel，一级是将用户请求数据放入到 chan Job 中，这个 channel job 相当于待处理的任务队列。</p>
 <p>另一级用来存放可以处理任务的 work 缓存队列，类型为 chan chan Job。调度器把待处理的任务放入一个空闲的缓存队列当中，work 会一直处理它的缓存队列。通过这种方式，实现了一个 worker 池。大致画了一个图帮助理解
 <img src="https://image.aabbccm.com/image/work-pool.png" alt="image"></p>
+<p>首先我们在接收到一个请求后，创建 Job 任务，把它放入到任务队列中等待 work 池处理。</p>
 <div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kd">func</span> <span class="nf">payloadHandler</span><span class="p">(</span><span class="nx">w</span> <span class="nx">http</span><span class="p">.</span><span class="nx">ResponseWriter</span><span class="p">,</span> <span class="nx">r</span> <span class="o">*</span><span class="nx">http</span><span class="p">.</span><span class="nx">Request</span><span class="p">)</span> <span class="p">{</span>
 	<span class="nx">work</span> <span class="o">:=</span> <span class="nx">Job</span><span class="p">{</span><span class="nx">PayLoad</span><span class="p">:</span> <span class="nx">Payload</span><span class="p">{}}</span>
 	<span class="nx">JobQueue</span> <span class="o">&lt;-</span> <span class="nx">work</span>
 	<span class="nx">_</span><span class="p">,</span> <span class="nx">_</span> <span class="p">=</span> <span class="nx">w</span><span class="p">.</span><span class="nf">Write</span><span class="p">([]</span><span class="nb">byte</span><span class="p">(</span><span class="s">&#34;操作成功&#34;</span><span class="p">))</span>
 <span class="p">}</span>
-</code></pre></div><p>首先我们再接收到一个请求，创建任务 work，把它放入到任务队列中等待 work 池处理。</p>
+</code></pre></div><p>调度器初始化work池后，在 dispatch 中，一旦我们接收到 JobQueue 的任务，就去尝试获取一个可用的 worker，分发任务给 worker 的 job channel 中。 注意这个过程不是同步的，而是每接收到一个 job，就开启一个 G 去处理。这样可以保证 JobQueue 不需要进行阻塞，对应的往 JobQueue 理论上也不需要阻塞地写入任务。</p>
 <div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kd">func</span> <span class="p">(</span><span class="nx">d</span> <span class="o">*</span><span class="nx">Dispatcher</span><span class="p">)</span> <span class="nf">Run</span><span class="p">()</span> <span class="p">{</span>
 	<span class="c1">// 开始运行 n 个 worker
 </span><span class="c1"></span>	<span class="k">for</span> <span class="nx">i</span> <span class="o">:=</span> <span class="mi">0</span><span class="p">;</span> <span class="nx">i</span> <span class="p">&lt;</span> <span class="nx">MaxWorker</span><span class="p">;</span> <span class="nx">i</span><span class="o">++</span> <span class="p">{</span>
@@ -267,12 +268,8 @@
 		<span class="p">}</span>
 	<span class="p">}</span>
 <span class="p">}</span>
-</code></pre></div><p>调度器初始化work池后，在 dispatch 中，一旦我们接收到 JobQueue 的任务，就去尝试获取一个可用的 worker，分发任务给work 的 job channel 中。
-注意这个过程不是同步的，而是每接收到一个 job,就开启一个 g 去处理。可以保证 JobQueue 不需要进行阻塞，对应的往 JobQueue 理论上也可以不需要阻塞地写入任务。</p>
-<p>但是这里&quot;不可控&quot;的G和上面还是不同的，这里G存活数量理论是</p>
-<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="nf">G</span><span class="p">(</span><span class="nx">live</span><span class="p">)=</span><span class="nx">总请求数</span><span class="o">-</span><span class="nx">已处理完的G数</span>
-</code></pre></div><p>而且这里的 G 本质上没有像一开始那样，涉及到外部资源、数据库、或者网络带宽的占用。
-这里只有当有空闲的 worker 被唤醒，然后分发任务，生命周期远远短于上面的操作。</p>
+</code></pre></div><p>这里&quot;不可控&quot;的 G 和上面还是又所不同的。仅仅极短时间内处于阻塞读 Chan 状态， 当有空闲的 worker 被唤醒，然后分发任务，整个生命周期远远短于上面的操作。</p>
+<p>最后，强烈建议看一下原文，原文地址在：http://marcio.io/2015/07/handling-1-million-requests-per-minute-with-golang/</p>
 <h3 id="最终方案">最终方案</h3>
 ]]></content>
 		</item>
