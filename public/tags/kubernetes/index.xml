@@ -2,18 +2,18 @@
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
     <title>kubernetes on 记得</title>
-    <link>https://syst.top/tags/kubernetes/</link>
+    <link>https://www.syst.top/tags/kubernetes/</link>
     <description>Recent content in kubernetes on 记得</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>zh-hans</language>
     <copyright>This work is licensed under a Creative Commons Attribution-NonCommercial 4.0 International License.</copyright>
-    <lastBuildDate>Fri, 01 May 2020 11:25:52 +0800</lastBuildDate><atom:link href="https://syst.top/tags/kubernetes/index.xml" rel="self" type="application/rss+xml" />
+    <lastBuildDate>Fri, 01 May 2020 11:25:52 +0800</lastBuildDate><atom:link href="https://www.syst.top/tags/kubernetes/index.xml" rel="self" type="application/rss+xml" />
     <item>
       <title>Kubernetes 本地快速启动（基于 Docker）</title>
-      <link>https://syst.top/posts/kubernetes/2020-05-01-install/</link>
+      <link>https://www.syst.top/posts/kubernetes/2020-05-01-install/</link>
       <pubDate>Fri, 01 May 2020 11:25:52 +0800</pubDate>
       
-      <guid>https://syst.top/posts/kubernetes/2020-05-01-install/</guid>
+      <guid>https://www.syst.top/posts/kubernetes/2020-05-01-install/</guid>
       <description>Kubernetes 在容器编排大战结束后已经在云原生中占据了明确的一席，最近几年越来越火热，目前搜索趋势：
 Kubernetes 的热度很明显是不断地在上涨，因此学习和使用 Kubernetes 是一件相对正确的事，同时公司大多都在往容器化上接近，在拥抱 Kubernetes，所以我们所开发的应用也总是跑在容器环境中。更甚的是，需要对接 Kubernetes API 来做一些功能的开发。
 这个时候，我们就需要一个 Kubernetes 环境来进行开发和调试，但你准备开始时，又遇到了一个问题，虽然在 2020 年的现在，Kubernetes 的安装已经有了极大的简化，教程也满地跑，但 Kubernetes 的安装和运行依然有一定的要求，像我，就遇到了如下问题：

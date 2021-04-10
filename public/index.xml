@@ -2,18 +2,18 @@
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
     <title>记得</title>
-    <link>https://syst.top/</link>
+    <link>https://www.syst.top/</link>
     <description>Recent content on 记得</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>zh-hans</language>
     <copyright>This work is licensed under a Creative Commons Attribution-NonCommercial 4.0 International License.</copyright>
-    <lastBuildDate>Sat, 10 Apr 2021 09:54:52 +0800</lastBuildDate><atom:link href="https://syst.top/index.xml" rel="self" type="application/rss+xml" />
+    <lastBuildDate>Sat, 10 Apr 2021 09:54:52 +0800</lastBuildDate><atom:link href="https://www.syst.top/index.xml" rel="self" type="application/rss+xml" />
     <item>
       <title>etcd 实战基础篇(一) </title>
-      <link>https://syst.top/posts/go/etcd-2021-04-10/</link>
+      <link>https://www.syst.top/posts/go/etcd-2021-04-10/</link>
       <pubDate>Sat, 10 Apr 2021 09:54:52 +0800</pubDate>
       
-      <guid>https://syst.top/posts/go/etcd-2021-04-10/</guid>
+      <guid>https://www.syst.top/posts/go/etcd-2021-04-10/</guid>
       <description>最近一直在看 etcd 相关的东西，为了不&amp;quot;白看&amp;quot;，加深理解，随即开启此系列的输出。
 Etcd是什么 Etcd 是由 Go 编写的。它是一个强一致性的分布式键值存储，提供一种可靠的方式来存储需要由分布式系统或者机器集群访问的数据。 同时 Etcd 各节点中的通信是通过 Raft 一致性算法来处理的。 有很多大型开源项目的底层都基于 Etcd，举几个比较有名的工业级项目:kubernetes、 CoreDNS、ROOK&amp;hellip;&amp;hellip;
 Etcd 的场景  服务发现。(可以把服务存储到某个 prefix 开头的 key中，然后消费端或者服务信息以调用， 同时消费者也可以通过 watch 获得 key 的变化) 消息分布和订阅 分布式锁 Leader 选举 分布式队列 负载均衡 &amp;hellip;&amp;hellip;  和 redis 的区别 面试的时候可能有面试官喜欢问，
@@ -22,10 +22,10 @@ Etcd 的场景  服务发现。(可以把服务存储到某个 prefix 开头的 
     
     <item>
       <title>使用 Go 每分钟处理百万请求 </title>
-      <link>https://syst.top/posts/go/handle-million-requests/</link>
+      <link>https://www.syst.top/posts/go/handle-million-requests/</link>
       <pubDate>Mon, 05 Apr 2021 22:25:52 +0800</pubDate>
       
-      <guid>https://syst.top/posts/go/handle-million-requests/</guid>
+      <guid>https://www.syst.top/posts/go/handle-million-requests/</guid>
       <description>介绍 偶然间看到一篇写于15年的文章，说实话，标题确实吸引了我，不过看了几遍之后，确实精彩。 关于这篇文章，我就不直接翻译了。 项目的需求就是 客户端发送请求，服务端接收请求处理数据(原文是把资源上传至 Amazon S3 资源中)。本质上就是这样, 我稍微改动了原文的业务代码，但是并不影响核心模块。在第一版中，每收到一个 Request,开启一个 G 进行处理，快速响应，很常规的操作。
 代码如下
 初版 package main import ( &amp;#34;fmt&amp;#34; &amp;#34;log&amp;#34; &amp;#34;net/http&amp;#34; &amp;#34;time&amp;#34; ) type Payload struct { // 传啥不重要 } func (p *Payload) UpdateToS3() error { //存储逻辑,模拟操作耗时 	time.Sleep(500 * time.Millisecond) fmt.Println(&amp;#34;上传成功&amp;#34;) return nil } func payloadHandler(w http.ResponseWriter, r *http.Request) { // 业务过滤 	// 请求body解析...... 	var p Payload go p.UpdateToS3() w.Write([]byte(&amp;#34;操作成功&amp;#34;)) } func main() { http.HandleFunc(&amp;#34;/payload&amp;#34;, payloadHandler) log.Fatal(http.ListenAndServe(&amp;#34;:8099&amp;#34;, nil)) } 这样操作存在什么问题呢？一般情况下，没什么问题。但是如果是高并发的场景下，不对G数进行控制，你的 CPU 使用率暴涨，内存占用暴涨，直至程序奔溃。</description>
@@ -33,19 +33,19 @@ Etcd 的场景  服务发现。(可以把服务存储到某个 prefix 开头的 
     
     <item>
       <title>情绪管理 </title>
-      <link>https://syst.top/lives/2021-04-10/</link>
+      <link>https://www.syst.top/lives/2021-04-10/</link>
       <pubDate>Mon, 05 Apr 2021 22:25:52 +0800</pubDate>
       
-      <guid>https://syst.top/lives/2021-04-10/</guid>
+      <guid>https://www.syst.top/lives/2021-04-10/</guid>
       <description>情绪本质上是对自己无能的愤怒 被情绪控制 ，应该是控制情绪 有时候很生气，咋么办,克制 </description>
     </item>
     
     <item>
       <title>关于</title>
-      <link>https://syst.top/about/</link>
+      <link>https://www.syst.top/about/</link>
       <pubDate>Sat, 03 Apr 2021 00:00:00 +0000</pubDate>
       
-      <guid>https://syst.top/about/</guid>
+      <guid>https://www.syst.top/about/</guid>
       <description>你好，我是吴亲库里，最近沉迷于 Golang,欢迎一起交流。
 介绍： 18 年毕业于某不知名学校，开始走上php之路，20年9月跳槽新公司有幸接触 Golang,从此爱上了它。
 联系方式：  Github：https://github.com/wuqinqiang 公众号：吴亲强的深夜食堂 邮箱：wuqinqiang050@gmail.com 微信:我画你猜   </description>
@@ -53,28 +53,28 @@ Etcd 的场景  服务发现。(可以把服务存储到某个 prefix 开头的 
     
     <item>
       <title>《待定》</title>
-      <link>https://syst.top/k8s-categories/</link>
+      <link>https://www.syst.top/k8s-categories/</link>
       <pubDate>Sat, 16 May 2020 00:00:00 +0000</pubDate>
       
-      <guid>https://syst.top/k8s-categories/</guid>
+      <guid>https://www.syst.top/k8s-categories/</guid>
       <description>我的公众号 </description>
     </item>
     
     <item>
       <title>《待定》</title>
-      <link>https://syst.top/prometheus-categories/</link>
+      <link>https://www.syst.top/prometheus-categories/</link>
       <pubDate>Sat, 16 May 2020 00:00:00 +0000</pubDate>
       
-      <guid>https://syst.top/prometheus-categories/</guid>
+      <guid>https://www.syst.top/prometheus-categories/</guid>
       <description>我的公众号 </description>
     </item>
     
     <item>
       <title>Kubernetes 本地快速启动（基于 Docker）</title>
-      <link>https://syst.top/posts/kubernetes/2020-05-01-install/</link>
+      <link>https://www.syst.top/posts/kubernetes/2020-05-01-install/</link>
       <pubDate>Fri, 01 May 2020 11:25:52 +0800</pubDate>
       
-      <guid>https://syst.top/posts/kubernetes/2020-05-01-install/</guid>
+      <guid>https://www.syst.top/posts/kubernetes/2020-05-01-install/</guid>
       <description>Kubernetes 在容器编排大战结束后已经在云原生中占据了明确的一席，最近几年越来越火热，目前搜索趋势：
 Kubernetes 的热度很明显是不断地在上涨，因此学习和使用 Kubernetes 是一件相对正确的事，同时公司大多都在往容器化上接近，在拥抱 Kubernetes，所以我们所开发的应用也总是跑在容器环境中。更甚的是，需要对接 Kubernetes API 来做一些功能的开发。
 这个时候，我们就需要一个 Kubernetes 环境来进行开发和调试，但你准备开始时，又遇到了一个问题，虽然在 2020 年的现在，Kubernetes 的安装已经有了极大的简化，教程也满地跑，但 Kubernetes 的安装和运行依然有一定的要求，像我，就遇到了如下问题：
@@ -87,10 +87,10 @@ Docker for Mac/Windows with Kubernetes Docker 在 17.12.ce 起就提供了 Mac �
     
     <item>
       <title>《待定吧》</title>
-      <link>https://syst.top/go-categories/</link>
+      <link>https://www.syst.top/go-categories/</link>
       <pubDate>Tue, 21 Apr 2020 00:00:00 +0000</pubDate>
       
-      <guid>https://syst.top/go-categories/</guid>
+      <guid>https://www.syst.top/go-categories/</guid>
       <description>我不怎么喜欢左写写，右写写，因此总是在不知不觉中写了不少的系列教程，希望对你有所帮助，若要催更请关注公众号后私聊催。
   一：HTTP 应用
  「连载一」etcd(-) 「连载二」etcd （二） 「连载三」Gin搭建Blog API&amp;rsquo;s （二） 「连载四」Gin搭建Blog API&amp;rsquo;s （三）    二：gRPC 应用
