@@ -3,6 +3,36 @@
   xmlns:xhtml="http://www.w3.org/1999/xhtml">
   
   <url>
+    <loc>https://aabbccm.com/tags/etcd/</loc>
+    <lastmod>2021-04-10T09:54:52+08:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>https://aabbccm.com/posts/go/etcd-2021-04-10/</loc>
+    <lastmod>2021-04-10T09:54:52+08:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>https://aabbccm.com/posts/</loc>
+    <lastmod>2021-04-10T09:54:52+08:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>https://aabbccm.com/tags/</loc>
+    <lastmod>2021-04-10T09:54:52+08:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>https://aabbccm.com/</loc>
+    <lastmod>2021-04-10T09:54:52+08:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>https://aabbccm.com/tags/%E5%88%86%E5%B8%83%E5%BC%8F/</loc>
+    <lastmod>2021-04-10T09:54:52+08:00</lastmod>
+  </url>
+  
+  <url>
     <loc>https://aabbccm.com/tags/go/</loc>
     <lastmod>2021-04-05T22:25:52+08:00</lastmod>
   </url>
@@ -13,22 +43,7 @@
   </url>
   
   <url>
-    <loc>https://aabbccm.com/posts/</loc>
-    <lastmod>2021-04-05T22:25:52+08:00</lastmod>
-  </url>
-  
-  <url>
-    <loc>https://aabbccm.com/tags/</loc>
-    <lastmod>2021-04-05T22:25:52+08:00</lastmod>
-  </url>
-  
-  <url>
     <loc>https://aabbccm.com/posts/go/handle-million-requests/</loc>
-    <lastmod>2021-04-05T22:25:52+08:00</lastmod>
-  </url>
-  
-  <url>
-    <loc>https://aabbccm.com/</loc>
     <lastmod>2021-04-05T22:25:52+08:00</lastmod>
   </url>
   

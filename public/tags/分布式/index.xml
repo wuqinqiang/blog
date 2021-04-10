@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>分布式 on 关于体育的收藏</title>
+    <link>https://aabbccm.com/tags/%E5%88%86%E5%B8%83%E5%BC%8F/</link>
+    <description>Recent content in 分布式 on 关于体育的收藏</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>zh-hans</language>
+    <copyright>This work is licensed under a Creative Commons Attribution-NonCommercial 4.0 International License.</copyright>
+    <lastBuildDate>Sat, 10 Apr 2021 09:54:52 +0800</lastBuildDate><atom:link href="https://aabbccm.com/tags/%E5%88%86%E5%B8%83%E5%BC%8F/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>etcd 实战基础篇(一) </title>
+      <link>https://aabbccm.com/posts/go/etcd-2021-04-10/</link>
+      <pubDate>Sat, 10 Apr 2021 09:54:52 +0800</pubDate>
+      
+      <guid>https://aabbccm.com/posts/go/etcd-2021-04-10/</guid>
+      <description>最近一直在看 etcd 相关的东西，为了不&amp;quot;白看&amp;quot;，加深理解，随即开启此系列的输出。
+Etcd是什么 Etcd 是由 Go 编写的。它是一个强一致性的分布式键值存储，提供一种可靠的方式来存储需要由分布式系统或者机器集群访问的数据。 同时 Etcd 各节点中的通信是通过 Raft 一致性算法来处理的。 有很多大型开源项目的底层都基于 Etcd，举几个比较有名的工业级项目:kubernetes、 CoreDNS、ROOK&amp;hellip;&amp;hellip;
+Etcd 的场景  服务发现。(可以把服务存储到某个 prefix 开头的 key中，然后消费端或者服务信息以调用， 同时消费者也可以通过 watch 获得 key 的变化) 消息分布和订阅 分布式锁 Leader 选举 分布式队列 负载均衡 &amp;hellip;&amp;hellip;  和 redis 的区别 面试的时候可能有面试官喜欢问，
+ redis 的数据类型更丰富(string, hash, set ,zset, list)，etcd 仅仅就是 key-val。 etcd 的底层是 Raft 算法，可以保证数据的强一致性。而 redis 数据复制上是主备异步复制，只能最终一致性。 读写性能上，因为 etcd 保证强一致性，所以会比 redis 差。 存储方面，etcd 使用的是持久化存储boltdb，而 redis 的方案是可持久化的 aof/rdb -&amp;hellip;&amp;hellip; etcd  环境与说明 直接下载编译好的二进制文件也好，还是自己下载源码编译运行，先开启一个单节点服务就行。我本地使用 goreman 搭建了三个实例。 这里稍微说明一下:PEER ADDRS 指的是向其他 etcd server 暴露的通信地址,比如上图 name=infra1 要调用 infra2， 调用的就是 http://127.</description>
+    </item>
+    
+  </channel>
+</rss>
