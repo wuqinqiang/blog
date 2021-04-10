@@ -152,7 +152,7 @@ key 列表。后面我们分析源码的时候专门讨论这块。</p>
 <span class="p">}</span>
 </code></pre></div><p>我们都知道，etcd从 v3 开始，底层实现了 MVCC 机制。所以在 etcd 中的 key 是存在多个历史版本的。
 我们会在命令行中 <code>etcdctl get hello --rev=?</code>,比如
-<img src="https://image.aabbccm.com/image/etcd/rev.png" alt="image">
+<img src="https://image.aabbccm.com/image/etcd/rev-1.png" alt="image">
 可以看到，不同版本的 key(&ldquo;hello&rdquo;)的值是不一样的。</p>
 <div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="c1">// 获取指定版本的key
 </span><span class="c1"></span><span class="kd">func</span> <span class="nf">GetKeyByVersion</span><span class="p">(</span><span class="nx">key</span> <span class="kt">string</span><span class="p">,</span> <span class="nx">version</span> <span class="kt">int64</span><span class="p">)</span> <span class="p">{</span>
