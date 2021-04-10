@@ -11,10 +11,10 @@
 <meta itemprop="description" content="最近一直在看 etcd 相关的东西，为了不&quot;白看&quot;，加深理解，随即开启此系列的输出。
 Etcd是什么 Etcd 是由 Go 编写的。它是一个强一致性的分布式键值存储，提供一种可靠的方式来存储需要由分布式系统或者机器集群访问的数据。 同时 Etcd 各节点中的通信是通过 Raft 一致性算法来处理的。 有很多大型开源项目的底层都基于 Etcd，举几个比较有名的工业级项目:kubernetes、 CoreDNS、ROOK&hellip;&hellip;
 Etcd 的场景  服务发现。(可以把服务存储到某个 prefix 开头的 key中，然后消费端或者服务信息以调用， 同时消费者也可以通过 watch 获得 key 的变化) 消息分布和订阅 分布式锁 Leader 选举 分布式队列 负载均衡 &hellip;&hellip;  和 redis 的区别 面试的时候可能有面试官喜欢问，
- redis 的数据类型更丰富(string, hash, set ,zset, list)，etcd 仅仅就是 key-val。 etcd 的底层是 Raft 算法，可以保证数据的强一致性。而 redis 数据复制上是主备异步复制，只能最终一致性。 读写性能上，因为 etcd 保证强一致性，所以会比 redis 差。 存储方面，etcd 使用的是持久化存储boltdb，而 redis 的方案是可持久化的 aof/rdb -&hellip;&hellip; etcd  环境与说明 直接下载编译好的二进制文件也好，还是自己下载源码编译运行，先开启一个单节点服务就行。我本地使用 goreman 搭建了三个实例。 这里稍微说明一下:PEER ADDRS 指的是向其他 etcd server 暴露的通信地址,比如上图 name=infra1 要调用 infra2， 调用的就是 http://127.">
+ redis 的数据类型更丰富(string, hash, set ,zset, list)，etcd 仅仅就是 key-val。 etcd 的底层是 Raft 算法，可以保证数据的强一致性。而 redis 数据复制上是主备异步复制，只能最终一致性。 读写性能上，因为 etcd 保证强一致性，所以会比 redis 差。 存储方面，etcd 使用的是持久化存储boltdb，而 redis 的方案是可持久化的 aof/rdb -&hellip;&hellip;  环境与说明 直接下载编译好的二进制文件也好，还是自己下载源码编译运行，先开启一个单节点服务就行。我本地使用 goreman 搭建了三个实例。 这里稍微说明一下:PEER ADDRS 指的是向其他 etcd server 暴露的通信地址,比如上图 name=infra1 要调用 infra2， 调用的就是 http://127.">
 <meta itemprop="datePublished" content="2021-04-10T09:54:52+08:00" />
 <meta itemprop="dateModified" content="2021-04-10T09:54:52+08:00" />
-<meta itemprop="wordCount" content="871">
+<meta itemprop="wordCount" content="870">
 
 
 
@@ -23,9 +23,9 @@ Etcd 的场景  服务发现。(可以把服务存储到某个 prefix 开头的 
 <meta property="og:description" content="最近一直在看 etcd 相关的东西，为了不&quot;白看&quot;，加深理解，随即开启此系列的输出。
 Etcd是什么 Etcd 是由 Go 编写的。它是一个强一致性的分布式键值存储，提供一种可靠的方式来存储需要由分布式系统或者机器集群访问的数据。 同时 Etcd 各节点中的通信是通过 Raft 一致性算法来处理的。 有很多大型开源项目的底层都基于 Etcd，举几个比较有名的工业级项目:kubernetes、 CoreDNS、ROOK&hellip;&hellip;
 Etcd 的场景  服务发现。(可以把服务存储到某个 prefix 开头的 key中，然后消费端或者服务信息以调用， 同时消费者也可以通过 watch 获得 key 的变化) 消息分布和订阅 分布式锁 Leader 选举 分布式队列 负载均衡 &hellip;&hellip;  和 redis 的区别 面试的时候可能有面试官喜欢问，
- redis 的数据类型更丰富(string, hash, set ,zset, list)，etcd 仅仅就是 key-val。 etcd 的底层是 Raft 算法，可以保证数据的强一致性。而 redis 数据复制上是主备异步复制，只能最终一致性。 读写性能上，因为 etcd 保证强一致性，所以会比 redis 差。 存储方面，etcd 使用的是持久化存储boltdb，而 redis 的方案是可持久化的 aof/rdb -&hellip;&hellip; etcd  环境与说明 直接下载编译好的二进制文件也好，还是自己下载源码编译运行，先开启一个单节点服务就行。我本地使用 goreman 搭建了三个实例。 这里稍微说明一下:PEER ADDRS 指的是向其他 etcd server 暴露的通信地址,比如上图 name=infra1 要调用 infra2， 调用的就是 http://127." />
+ redis 的数据类型更丰富(string, hash, set ,zset, list)，etcd 仅仅就是 key-val。 etcd 的底层是 Raft 算法，可以保证数据的强一致性。而 redis 数据复制上是主备异步复制，只能最终一致性。 读写性能上，因为 etcd 保证强一致性，所以会比 redis 差。 存储方面，etcd 使用的是持久化存储boltdb，而 redis 的方案是可持久化的 aof/rdb -&hellip;&hellip;  环境与说明 直接下载编译好的二进制文件也好，还是自己下载源码编译运行，先开启一个单节点服务就行。我本地使用 goreman 搭建了三个实例。 这里稍微说明一下:PEER ADDRS 指的是向其他 etcd server 暴露的通信地址,比如上图 name=infra1 要调用 infra2， 调用的就是 http://127." />
 <meta property="og:type" content="article" />
-<meta property="og:url" content="https://aabbccm.com/posts/go/etcd-2021-04-10/" />
+<meta property="og:url" content="https://syst.top/posts/go/etcd-2021-04-10/" />
 <meta property="article:published_time" content="2021-04-10T09:54:52+08:00" />
 <meta property="article:modified_time" content="2021-04-10T09:54:52+08:00" />
 <meta name="twitter:card" content="summary"/>
@@ -33,7 +33,7 @@ Etcd 的场景  服务发现。(可以把服务存储到某个 prefix 开头的 
 <meta name="twitter:description" content="最近一直在看 etcd 相关的东西，为了不&quot;白看&quot;，加深理解，随即开启此系列的输出。
 Etcd是什么 Etcd 是由 Go 编写的。它是一个强一致性的分布式键值存储，提供一种可靠的方式来存储需要由分布式系统或者机器集群访问的数据。 同时 Etcd 各节点中的通信是通过 Raft 一致性算法来处理的。 有很多大型开源项目的底层都基于 Etcd，举几个比较有名的工业级项目:kubernetes、 CoreDNS、ROOK&hellip;&hellip;
 Etcd 的场景  服务发现。(可以把服务存储到某个 prefix 开头的 key中，然后消费端或者服务信息以调用， 同时消费者也可以通过 watch 获得 key 的变化) 消息分布和订阅 分布式锁 Leader 选举 分布式队列 负载均衡 &hellip;&hellip;  和 redis 的区别 面试的时候可能有面试官喜欢问，
- redis 的数据类型更丰富(string, hash, set ,zset, list)，etcd 仅仅就是 key-val。 etcd 的底层是 Raft 算法，可以保证数据的强一致性。而 redis 数据复制上是主备异步复制，只能最终一致性。 读写性能上，因为 etcd 保证强一致性，所以会比 redis 差。 存储方面，etcd 使用的是持久化存储boltdb，而 redis 的方案是可持久化的 aof/rdb -&hellip;&hellip; etcd  环境与说明 直接下载编译好的二进制文件也好，还是自己下载源码编译运行，先开启一个单节点服务就行。我本地使用 goreman 搭建了三个实例。 这里稍微说明一下:PEER ADDRS 指的是向其他 etcd server 暴露的通信地址,比如上图 name=infra1 要调用 infra2， 调用的就是 http://127."/>
+ redis 的数据类型更丰富(string, hash, set ,zset, list)，etcd 仅仅就是 key-val。 etcd 的底层是 Raft 算法，可以保证数据的强一致性。而 redis 数据复制上是主备异步复制，只能最终一致性。 读写性能上，因为 etcd 保证强一致性，所以会比 redis 差。 存储方面，etcd 使用的是持久化存储boltdb，而 redis 的方案是可持久化的 aof/rdb -&hellip;&hellip;  环境与说明 直接下载编译好的二进制文件也好，还是自己下载源码编译运行，先开启一个单节点服务就行。我本地使用 goreman 搭建了三个实例。 这里稍微说明一下:PEER ADDRS 指的是向其他 etcd server 暴露的通信地址,比如上图 name=infra1 要调用 infra2， 调用的就是 http://127."/>
 
 	<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
 	<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
@@ -43,7 +43,7 @@ Etcd 的场景  服务发现。(可以把服务存储到某个 prefix 开头的 
 	<link rel="shortcut icon" href="/favicon.ico">
 
 	<title>etcd 实战基础篇(一) </title>
-	<link rel="stylesheet" href="https://aabbccm.com/css/style.min.d3141168199607bf3a517216ce3c263814eecdbc8fca72a9a88700799a838219.css">
+	<link rel="stylesheet" href="https://syst.top/css/style.min.d3141168199607bf3a517216ce3c263814eecdbc8fca72a9a88700799a838219.css">
 	
 </head>
 
@@ -53,13 +53,12 @@ Etcd 的场景  服务发现。(可以把服务存储到某个 prefix 开头的 
 		<div class="hdr-wrapper section-inner">
 			<div class="hdr-left">
 				<div class="site-branding">
-					<a href="https://aabbccm.com">关于体育的收藏</a>
+					<a href="https://syst.top">记得</a>
 				</div>
 				<nav class="site-nav hide-in-mobile">
-					<a href="https://aabbccm.com/posts/">文章</a>
-					<a href="https://aabbccm.com/lives/">生活</a>
+					<a href="https://syst.top/posts/">文章</a>
+					<a href="https://syst.top/lives/">生活</a>
 					<a href="https://go.aabbccm.com">Go面试题集锦</a>
-					<a href="https://aabbccm.com/k8s-categories/">Kubernetes系列</a>
 				</nav>
 			</div>
 			<div class="hdr-right hdr-icons">
@@ -69,9 +68,9 @@ Etcd 的场景  服务发现。(可以把服务存储到某个 prefix 开头的 
 	</header>
 	<div id="mobile-menu" class="animated fast">
 		<ul>
-			<li><a href="https://aabbccm.com/posts/">文章</a></li>
-			<li><a href="https://aabbccm.com/tags/">标签</a></li>
-			<li><a href="https://aabbccm.com/about/">关于</a></li>
+			<li><a href="https://syst.top/posts/">文章</a></li>
+			<li><a href="https://syst.top/tags/">标签</a></li>
+			<li><a href="https://syst.top/about/">关于</a></li>
 		</ul>
 	</div>
 
@@ -104,8 +103,7 @@ Etcd 的场景  服务发现。(可以把服务存储到某个 prefix 开头的 
 <li>etcd 的底层是 Raft 算法，可以保证数据的强一致性。而 redis 数据复制上是主备异步复制，只能最终一致性。</li>
 <li>读写性能上，因为 etcd 保证强一致性，所以会比 redis 差。</li>
 <li>存储方面，etcd 使用的是持久化存储boltdb，而 redis 的方案是可持久化的 aof/rdb
--&hellip;&hellip;
-etcd</li>
+-&hellip;&hellip;</li>
 </ul>
 <h3 id="环境与说明">环境与说明<a href="#环境与说明" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h3>
 <p>直接下载编译好的二进制文件也好，还是自己下载源码编译运行，先开启一个单节点服务就行。我本地使用 goreman 搭建了三个实例。
@@ -376,16 +374,16 @@ key 列表。后面我们分析源码的时候专门讨论这块。</p>
 
 </code></pre></div><p>这篇文章主要介绍了etcd这个分布式存储工具，包括它的应用场景以及实战基本的操作。
 上面其实还有很多的实例没有写出来，一个是因为懒，没必要一个个演示一遍，另一个原因是留给你们自行实现。
-我们以这个为开始，一步步敲开 etcd 的大门。如果觉得文章还不错，右下方点个在看不过分吧</p>
+我们以这个为开始，一步步敲开 etcd 的大门。</p>
 
 			</div>
 			<div class="content"><br><img src="https://aabbccm.com/image/wechat-qr.png"></div>
 			<hr class="post-end">
 			<footer class="post-info">
 				<p>
-					<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-tag meta-icon"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"></path><line x1="7" y1="7" x2="7" y2="7"></line></svg><span class="tag"><a href="https://aabbccm.com/tags/etcd">etcd</a></span><span class="tag"><a href="https://aabbccm.com/tags/%E5%88%86%E5%B8%83%E5%BC%8F">分布式</a></span>
+					<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-tag meta-icon"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"></path><line x1="7" y1="7" x2="7" y2="7"></line></svg><span class="tag"><a href="https://syst.top/tags/etcd">etcd</a></span><span class="tag"><a href="https://syst.top/tags/%E5%88%86%E5%B8%83%E5%BC%8F">分布式</a></span>
 				</p>
-				<p><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-file-text"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>871 Words</p>
+				<p><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-file-text"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>870 Words</p>
 				<p><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-calendar"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>2021-04-10 09:54 &#43;0800</p>
 			</footer>
 		</article>
@@ -410,7 +408,7 @@ key 列表。后面我们分析源码的时候专门讨论这块。</p>
 </nav>
 		</aside>
 		<div class="post-nav thin">
-			<a class="prev-post" href="https://aabbccm.com/posts/go/handle-million-requests/">
+			<a class="prev-post" href="https://syst.top/posts/go/handle-million-requests/">
 				<span class="post-nav-label">Older&nbsp;<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-arrow-right"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg></span><br><span>使用 Go 每分钟处理百万请求 </span>
 			</a>
 		</div>
@@ -426,14 +424,14 @@ key 列表。后面我们分析源码的时候专门讨论这块。</p>
 	</main>
 
 	<footer id="site-footer" class="section-inner thin animated fadeIn faster">
-		<p>&copy; 2018 - 2021 <a href="https://aabbccm.com">Remember</a> &#183; <a href="http://beian.miit.gov.cn/">浙ICP备18028603号-1</a></p>
+		<p>&copy; 2018 - 2021 <a href="https://syst.top">Remember</a> &#183; <a href="http://beian.miit.gov.cn/">浙ICP备18028603号-2</a></p>
 		<p>
-			Made with <a href="https://gohugo.io/" target="_blank" rel="noopener">Hugo</a> &#183; Theme <a href="https://github.com/Track3/hermit" target="_blank" rel="noopener">Hermit</a> &#183; <a href="https://aabbccm.com/post/index.xml" target="_blank" title="rss"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-rss"><path d="M4 11a9 9 0 0 1 9 9"></path><path d="M4 4a16 16 0 0 1 16 16"></path><circle cx="5" cy="19" r="1"></circle></svg></a>
+			Made with <a href="https://gohugo.io/" target="_blank" rel="noopener">Hugo</a> &#183; Theme <a href="https://github.com/Track3/hermit" target="_blank" rel="noopener">Hermit</a> &#183; <a href="https://syst.top/post/index.xml" target="_blank" title="rss"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-rss"><path d="M4 11a9 9 0 0 1 9 9"></path><path d="M4 4a16 16 0 0 1 16 16"></path><circle cx="5" cy="19" r="1"></circle></svg></a>
 		</p>
 	</footer>
 
 
-	<script src="https://aabbccm.com/js/main.min.784417f5847151f848c339cf0acb13a06cbb648b1483435a28ed4556c4ead69b.js"></script>
+	<script src="https://syst.top/js/main.min.784417f5847151f848c339cf0acb13a06cbb648b1483435a28ed4556c4ead69b.js"></script>
 <script type="application/javascript">
 var doNotTrack = false;
 if (!doNotTrack) {

@@ -1,7 +1,7 @@
-baseURL = "https://aabbccm.com"
+baseURL = "https://syst.top"
 languageCode = "zh-hans"
 defaultContentLanguage = "en"
-title = "关于体育的收藏"
+title = "记得"
 theme = "hermit"
 # enableGitInfo = true
 pygmentsCodefences  = true
@@ -39,8 +39,8 @@ googleAnalytics = "UA-166045776-1"
   # images = [""]
   themeColor = "#494f5c"
 
-  homeSubtitle = "Metrics, Tracing, Logging"
-  footerCopyright = ' &#183; <a href="http://beian.miit.gov.cn/">浙ICP备18028603号-1</a>'
+  homeSubtitle = "Less is More"
+  footerCopyright = ' &#183; <a href="http://beian.miit.gov.cn/">浙ICP备18028603号-2</a>'
   # bgImg = ""  # Homepage background-image URL
 
   # Prefix of link to the git commit detail page. GitInfo must be enabled.
@@ -91,31 +91,11 @@ googleAnalytics = "UA-166045776-1"
     url = "lives/"
     weight = 10
 
-
    [[menu.nav]]
     name = "Go面试题集锦"
     url = "https://go.aabbccm.com"
     weight = 12
 
-#   [[menu.nav]]
-#     name = "Go语言编程之旅"
-#     url = "https://golang2.eddycjy.com/"
-#     weight = 11
-
-#   [[menu.nav]]
-#     name = "Go语言进阶之旅"
-#     url = "https://golang1.eddycjy.com/"
-#     weight = 11
-
-#   [[menu.nav]]
-#     name = "Go语言入门系列"
-#     url = "go-categories/"
-#     weight = 12
-
-  [[menu.nav]]
-    name = "Kubernetes系列"
-    url = "k8s-categories/"
-    weight = 13
 
 
 
