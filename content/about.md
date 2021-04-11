@@ -15,6 +15,6 @@ date: "2021-04-03"
 - 公众号：吴亲强的深夜食堂
 - 邮箱：wuqinqiang050@gmail.com
 - 微信:我画你猜
-  ![image](https://aabbccm.com/image/wechat-qr.png)
+  ![image](https://image.syst.top/image/wechat-qr.png)
 
 
