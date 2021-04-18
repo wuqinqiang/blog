@@ -107,11 +107,11 @@ Etcd 的场景  服务发现。(可以把服务存储到某个 prefix 开头的 
 </ul>
 <h3 id="环境与说明">环境与说明<a href="#环境与说明" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h3>
 <p>直接下载编译好的二进制文件也好，还是自己下载源码编译运行，先开启一个单节点服务就行。我本地使用 goreman 搭建了三个实例。
-<img src="https://image.aabbccm.com/image/etcd/peer.png" alt="image">
+<img src="https://image.syst.top/image/etcd/peer.png" alt="image">
 这里稍微说明一下:<code>PEER ADDRS</code> 指的是向其他 <code>etcd server</code> 暴露的通信地址,比如上图 <code>name=infra1</code> 要调用 <code>infra2</code>，
 调用的就是 <code>http://127.0.0.1:22380</code>。 而 <code>CLIENT ADDRS</code> 是对客户端暴露的地址。比如接下来我们的客户端连接的是 <code>infra1</code>，使用的就是 <code>http://127.0.0.1:2379</code>。</p>
 <p>目前网上的教程大多使用编译好的 etcdctl 这样的二进制文件，通过命令行来进行操作,简单直观。比如:
-<img src="https://image.aabbccm.com/image/etcd/etcd-ctl.png" alt="image"></p>
+<img src="https://image.syst.top/image/etcd/etcd-ctl.png" alt="image"></p>
 <p>但是也会导致一个问题，你并不知道客户端底层是如何运行的，这中间又涉及了哪些接口，对应的数据结构是什么样的。 所以为了一步步深入 etcd，我们从代码层面操作 etcd 客户端。</p>
 <p>以下是本篇文章涉及到的全部代码,下面我们开始分块讲解.</p>
 <h3 id="初始化-etcd-客户端">初始化 etcd 客户端<a href="#初始化-etcd-客户端" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h3>
@@ -214,7 +214,7 @@ key 列表。后面我们分析源码的时候专门讨论这块。</p>
 <span class="p">}</span>
 </code></pre></div><p>我们都知道，etcd从 v3 开始，底层实现了 MVCC 机制。所以在 etcd 中的 key 是存在多个历史版本的。
 我们会在命令行中 <code>etcdctl get hello --rev=?</code>,比如
-<img src="https://image.aabbccm.com/image/etcd/rev-1.png" alt="image">
+<img src="https://image.syst.top/image/etcd/rev-1.png" alt="image">
 可以看到，不同版本的 key(&ldquo;hello&rdquo;)的值是不一样的。</p>
 <div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="c1">// 获取指定版本的key
 </span><span class="c1"></span><span class="kd">func</span> <span class="nf">GetKeyByVersion</span><span class="p">(</span><span class="nx">key</span> <span class="kt">string</span><span class="p">,</span> <span class="nx">version</span> <span class="kt">int64</span><span class="p">)</span> <span class="p">{</span>
@@ -229,7 +229,7 @@ key 列表。后面我们分析源码的时候专门讨论这块。</p>
 </code></pre></div><p>一样的套路。我们也可以运行这段代码演示一下。</p>
 <div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="nx">src</span><span class="p">.</span><span class="nf">GetKeyByVersion</span><span class="p">(</span><span class="s">&#34;hello&#34;</span><span class="p">,</span> <span class="mi">20</span><span class="p">)</span>
 <span class="nx">src</span><span class="p">.</span><span class="nf">GetKeyByVersion</span><span class="p">(</span><span class="s">&#34;hello&#34;</span><span class="p">,</span> <span class="mi">21</span><span class="p">)</span>
-</code></pre></div><p><img src="https://image.aabbccm.com/image/etcd/rev-2.png" alt="image">
+</code></pre></div><p><img src="https://image.syst.top/image/etcd/rev-2.png" alt="image">
 其他参数暂时忽略，主要看 Kvs 里面的结果。</p>
 <h3 id="watch-操作">Watch 操作<a href="#watch-操作" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h3>
 <p>命令行 <code>./etcdctl watch hello</code></p>
@@ -253,7 +253,7 @@ key 列表。后面我们分析源码的时候专门讨论这块。</p>
 <div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="p">.</span><span class="o">/</span><span class="nx">etcdctl</span> <span class="nx">lease</span> <span class="nx">grant</span> <span class="mi">30</span>
 <span class="nx">lease</span> <span class="mi">326978</span><span class="nx">bac638651e</span> <span class="nx">granted</span> <span class="nx">with</span> <span class="nf">TTL</span><span class="p">(</span><span class="mi">30</span><span class="nx">s</span><span class="p">)</span>
 <span class="p">.</span><span class="o">/</span><span class="nx">etcdctl</span> <span class="nx">put</span> <span class="nx">hello</span> <span class="nx">world</span><span class="o">-</span><span class="nx">age</span> <span class="o">--</span><span class="nx">lease</span><span class="p">=</span><span class="mi">326978</span><span class="nx">bac638651e</span>
-</code></pre></div><p><img src="https://image.aabbccm.com/image/etcd/watch.png" alt="image">
+</code></pre></div><p><img src="https://image.syst.top/image/etcd/watch.png" alt="image">
 可以看到接收到两个事件，一个是 put，一个是租约到期 delete。</p>
 <h3 id="总结">总结<a href="#总结" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h3>
 <p>以下是这篇文章全部代码</p>
@@ -408,8 +408,8 @@ key 列表。后面我们分析源码的时候专门讨论这块。</p>
 </nav>
 		</aside>
 		<div class="post-nav thin">
-			<a class="prev-post" href="https://www.syst.top/posts/go/handle-million-requests/">
-				<span class="post-nav-label">Older&nbsp;<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-arrow-right"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg></span><br><span>使用 Go 每分钟处理百万请求 </span>
+			<a class="prev-post" href="https://www.syst.top/posts/go/etcd-2021-04-15/">
+				<span class="post-nav-label">Older&nbsp;<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-arrow-right"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg></span><br><span>etcd 实战基础篇(二) </span>
 			</a>
 		</div>
 		<div id="comments" class="thin">

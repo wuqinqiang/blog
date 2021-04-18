@@ -20,5 +20,16 @@ Etcd 的场景  服务发现。(可以把服务存储到某个 prefix 开头的 
  redis 的数据类型更丰富(string, hash, set ,zset, list)，etcd 仅仅就是 key-val。 etcd 的底层是 Raft 算法，可以保证数据的强一致性。而 redis 数据复制上是主备异步复制，只能最终一致性。 读写性能上，因为 etcd 保证强一致性，所以会比 redis 差。 存储方面，etcd 使用的是持久化存储boltdb，而 redis 的方案是可持久化的 aof/rdb -&amp;hellip;&amp;hellip;  环境与说明 直接下载编译好的二进制文件也好，还是自己下载源码编译运行，先开启一个单节点服务就行。我本地使用 goreman 搭建了三个实例。 这里稍微说明一下:PEER ADDRS 指的是向其他 etcd server 暴露的通信地址,比如上图 name=infra1 要调用 infra2， 调用的就是 http://127.</description>
     </item>
     
+    <item>
+      <title>etcd 实战基础篇(二) </title>
+      <link>https://www.syst.top/posts/go/etcd-2021-04-15/</link>
+      <pubDate>Sat, 10 Apr 2021 09:54:52 +0800</pubDate>
+      
+      <guid>https://www.syst.top/posts/go/etcd-2021-04-15/</guid>
+      <description>上一篇我们主要是介绍了 etcd 使用场景以及最基础性的一些操作(put get watch)。 这一篇我们接着实战etcd的一些应用。无论深入哪个开源项目，首先我们得先学会使用它们。
+基于 etcd 的分布式锁 基于 etcd 实现一个分布式锁特别简单。etcd 提供了开箱即用的包 concurrency，几行代码就实现一个分布式锁。
+package src import ( &amp;#34;context&amp;#34; &amp;#34;flag&amp;#34; &amp;#34;fmt&amp;#34; &amp;#34;github.com/coreos/etcd/clientv3&amp;#34; &amp;#34;github.com/coreos/etcd/clientv3/concurrency&amp;#34; &amp;#34;log&amp;#34; &amp;#34;strings&amp;#34; &amp;#34;time&amp;#34; ) var addr = flag.String(&amp;#34;addr&amp;#34;, &amp;#34;http://127.0.0.1:2379&amp;#34;, &amp;#34;etcd address&amp;#34;) // 初始化etcd客户端 func initEtcdClient() *clientv3.Client { var client *clientv3.Client var err error // 解析etcd的地址，编程[]string 	endpoints := strings.Split(*addr, &amp;#34;,&amp;#34;) // 创建一个 etcd 的客户端 	client, err = clientv3.New(clientv3.Config{Endpoints: endpoints, DialTimeout: 5 * time.Second}) if err != nil { fmt.</description>
+    </item>
+    
   </channel>
 </rss>

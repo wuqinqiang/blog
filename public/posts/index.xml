@@ -44,11 +44,11 @@ Etcd 的场景  服务发现。(可以把服务存储到某个 prefix 开头的 
 </ul>
 <h3 id="环境与说明">环境与说明</h3>
 <p>直接下载编译好的二进制文件也好，还是自己下载源码编译运行，先开启一个单节点服务就行。我本地使用 goreman 搭建了三个实例。
-<img src="https://image.aabbccm.com/image/etcd/peer.png" alt="image">
+<img src="https://image.syst.top/image/etcd/peer.png" alt="image">
 这里稍微说明一下:<code>PEER ADDRS</code> 指的是向其他 <code>etcd server</code> 暴露的通信地址,比如上图 <code>name=infra1</code> 要调用 <code>infra2</code>，
 调用的就是 <code>http://127.0.0.1:22380</code>。 而 <code>CLIENT ADDRS</code> 是对客户端暴露的地址。比如接下来我们的客户端连接的是 <code>infra1</code>，使用的就是 <code>http://127.0.0.1:2379</code>。</p>
 <p>目前网上的教程大多使用编译好的 etcdctl 这样的二进制文件，通过命令行来进行操作,简单直观。比如:
-<img src="https://image.aabbccm.com/image/etcd/etcd-ctl.png" alt="image"></p>
+<img src="https://image.syst.top/image/etcd/etcd-ctl.png" alt="image"></p>
 <p>但是也会导致一个问题，你并不知道客户端底层是如何运行的，这中间又涉及了哪些接口，对应的数据结构是什么样的。 所以为了一步步深入 etcd，我们从代码层面操作 etcd 客户端。</p>
 <p>以下是本篇文章涉及到的全部代码,下面我们开始分块讲解.</p>
 <h3 id="初始化-etcd-客户端">初始化 etcd 客户端</h3>
@@ -151,7 +151,7 @@ key 列表。后面我们分析源码的时候专门讨论这块。</p>
 <span class="p">}</span>
 </code></pre></div><p>我们都知道，etcd从 v3 开始，底层实现了 MVCC 机制。所以在 etcd 中的 key 是存在多个历史版本的。
 我们会在命令行中 <code>etcdctl get hello --rev=?</code>,比如
-<img src="https://image.aabbccm.com/image/etcd/rev-1.png" alt="image">
+<img src="https://image.syst.top/image/etcd/rev-1.png" alt="image">
 可以看到，不同版本的 key(&ldquo;hello&rdquo;)的值是不一样的。</p>
 <div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="c1">// 获取指定版本的key
 </span><span class="c1"></span><span class="kd">func</span> <span class="nf">GetKeyByVersion</span><span class="p">(</span><span class="nx">key</span> <span class="kt">string</span><span class="p">,</span> <span class="nx">version</span> <span class="kt">int64</span><span class="p">)</span> <span class="p">{</span>
@@ -166,7 +166,7 @@ key 列表。后面我们分析源码的时候专门讨论这块。</p>
 </code></pre></div><p>一样的套路。我们也可以运行这段代码演示一下。</p>
 <div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="nx">src</span><span class="p">.</span><span class="nf">GetKeyByVersion</span><span class="p">(</span><span class="s">&#34;hello&#34;</span><span class="p">,</span> <span class="mi">20</span><span class="p">)</span>
 <span class="nx">src</span><span class="p">.</span><span class="nf">GetKeyByVersion</span><span class="p">(</span><span class="s">&#34;hello&#34;</span><span class="p">,</span> <span class="mi">21</span><span class="p">)</span>
-</code></pre></div><p><img src="https://image.aabbccm.com/image/etcd/rev-2.png" alt="image">
+</code></pre></div><p><img src="https://image.syst.top/image/etcd/rev-2.png" alt="image">
 其他参数暂时忽略，主要看 Kvs 里面的结果。</p>
 <h3 id="watch-操作">Watch 操作</h3>
 <p>命令行 <code>./etcdctl watch hello</code></p>
@@ -190,7 +190,7 @@ key 列表。后面我们分析源码的时候专门讨论这块。</p>
 <div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="p">.</span><span class="o">/</span><span class="nx">etcdctl</span> <span class="nx">lease</span> <span class="nx">grant</span> <span class="mi">30</span>
 <span class="nx">lease</span> <span class="mi">326978</span><span class="nx">bac638651e</span> <span class="nx">granted</span> <span class="nx">with</span> <span class="nf">TTL</span><span class="p">(</span><span class="mi">30</span><span class="nx">s</span><span class="p">)</span>
 <span class="p">.</span><span class="o">/</span><span class="nx">etcdctl</span> <span class="nx">put</span> <span class="nx">hello</span> <span class="nx">world</span><span class="o">-</span><span class="nx">age</span> <span class="o">--</span><span class="nx">lease</span><span class="p">=</span><span class="mi">326978</span><span class="nx">bac638651e</span>
-</code></pre></div><p><img src="https://image.aabbccm.com/image/etcd/watch.png" alt="image">
+</code></pre></div><p><img src="https://image.syst.top/image/etcd/watch.png" alt="image">
 可以看到接收到两个事件，一个是 put，一个是租约到期 delete。</p>
 <h3 id="总结">总结</h3>
 <p>以下是这篇文章全部代码</p>
@@ -312,6 +312,392 @@ key 列表。后面我们分析源码的时候专门讨论这块。</p>
 </code></pre></div><p>这篇文章主要介绍了etcd这个分布式存储工具，包括它的应用场景以及实战基本的操作。
 上面其实还有很多的实例没有写出来，一个是因为懒，没必要一个个演示一遍，另一个原因是留给你们自行实现。
 我们以这个为开始，一步步敲开 etcd 的大门。</p>
+]]></content>
+		</item>
+		
+		<item>
+			<title>etcd 实战基础篇(二) </title>
+			<link>https://www.syst.top/posts/go/etcd-2021-04-15/</link>
+			<pubDate>Sat, 10 Apr 2021 09:54:52 +0800</pubDate>
+			
+			<guid>https://www.syst.top/posts/go/etcd-2021-04-15/</guid>
+			<description>上一篇我们主要是介绍了 etcd 使用场景以及最基础性的一些操作(put get watch)。 这一篇我们接着实战etcd的一些应用。无论深入哪个开源项目，首先我们得先学会使用它们。
+基于 etcd 的分布式锁 基于 etcd 实现一个分布式锁特别简单。etcd 提供了开箱即用的包 concurrency，几行代码就实现一个分布式锁。
+package src import ( &amp;#34;context&amp;#34; &amp;#34;flag&amp;#34; &amp;#34;fmt&amp;#34; &amp;#34;github.com/coreos/etcd/clientv3&amp;#34; &amp;#34;github.com/coreos/etcd/clientv3/concurrency&amp;#34; &amp;#34;log&amp;#34; &amp;#34;strings&amp;#34; &amp;#34;time&amp;#34; ) var addr = flag.String(&amp;#34;addr&amp;#34;, &amp;#34;http://127.0.0.1:2379&amp;#34;, &amp;#34;etcd address&amp;#34;) // 初始化etcd客户端 func initEtcdClient() *clientv3.Client { var client *clientv3.Client var err error // 解析etcd的地址，编程[]string 	endpoints := strings.Split(*addr, &amp;#34;,&amp;#34;) // 创建一个 etcd 的客户端 	client, err = clientv3.New(clientv3.Config{Endpoints: endpoints, DialTimeout: 5 * time.Second}) if err != nil { fmt.</description>
+			<content type="html"><![CDATA[<p>上一篇我们主要是介绍了 etcd 使用场景以及最基础性的一些操作(put get watch)。 这一篇我们接着实战etcd的一些应用。无论深入哪个开源项目，首先我们得先学会使用它们。</p>
+<h3 id="基于-etcd-的分布式锁">基于 etcd 的分布式锁</h3>
+<p>基于 etcd 实现一个分布式锁特别简单。etcd 提供了开箱即用的包 <code>concurrency</code>，几行代码就实现一个分布式锁。</p>
+<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kn">package</span> <span class="nx">src</span>
+
+<span class="kn">import</span> <span class="p">(</span>
+	<span class="s">&#34;context&#34;</span>
+	<span class="s">&#34;flag&#34;</span>
+	<span class="s">&#34;fmt&#34;</span>
+	<span class="s">&#34;github.com/coreos/etcd/clientv3&#34;</span>
+	<span class="s">&#34;github.com/coreos/etcd/clientv3/concurrency&#34;</span>
+	<span class="s">&#34;log&#34;</span>
+	<span class="s">&#34;strings&#34;</span>
+	<span class="s">&#34;time&#34;</span>
+<span class="p">)</span>
+
+<span class="kd">var</span> <span class="nx">addr</span> <span class="p">=</span> <span class="nx">flag</span><span class="p">.</span><span class="nf">String</span><span class="p">(</span><span class="s">&#34;addr&#34;</span><span class="p">,</span> <span class="s">&#34;http://127.0.0.1:2379&#34;</span><span class="p">,</span> <span class="s">&#34;etcd address&#34;</span><span class="p">)</span>
+
+<span class="c1">// 初始化etcd客户端
+</span><span class="c1"></span><span class="kd">func</span> <span class="nf">initEtcdClient</span><span class="p">()</span> <span class="o">*</span><span class="nx">clientv3</span><span class="p">.</span><span class="nx">Client</span> <span class="p">{</span>
+	<span class="kd">var</span> <span class="nx">client</span> <span class="o">*</span><span class="nx">clientv3</span><span class="p">.</span><span class="nx">Client</span>
+	<span class="kd">var</span> <span class="nx">err</span> <span class="kt">error</span>
+	<span class="c1">// 解析etcd的地址，编程[]string
+</span><span class="c1"></span>	<span class="nx">endpoints</span> <span class="o">:=</span> <span class="nx">strings</span><span class="p">.</span><span class="nf">Split</span><span class="p">(</span><span class="o">*</span><span class="nx">addr</span><span class="p">,</span> <span class="s">&#34;,&#34;</span><span class="p">)</span>
+	<span class="c1">// 创建一个 etcd 的客户端
+</span><span class="c1"></span>	<span class="nx">client</span><span class="p">,</span> <span class="nx">err</span> <span class="p">=</span> <span class="nx">clientv3</span><span class="p">.</span><span class="nf">New</span><span class="p">(</span><span class="nx">clientv3</span><span class="p">.</span><span class="nx">Config</span><span class="p">{</span><span class="nx">Endpoints</span><span class="p">:</span> <span class="nx">endpoints</span><span class="p">,</span>
+		<span class="nx">DialTimeout</span><span class="p">:</span> <span class="mi">5</span> <span class="o">*</span> <span class="nx">time</span><span class="p">.</span><span class="nx">Second</span><span class="p">})</span>
+	<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+		<span class="nx">fmt</span><span class="p">.</span><span class="nf">Printf</span><span class="p">(</span><span class="s">&#34;初始化客户端失败:%v\n&#34;</span><span class="p">,</span> <span class="nx">err</span><span class="p">)</span>
+		<span class="nx">log</span><span class="p">.</span><span class="nf">Fatal</span><span class="p">(</span><span class="nx">err</span><span class="p">)</span>
+	<span class="p">}</span>
+	<span class="k">return</span> <span class="nx">client</span>
+<span class="p">}</span>
+
+<span class="kd">func</span> <span class="nf">Lock</span><span class="p">(</span><span class="nx">id</span> <span class="kt">int</span><span class="p">,</span> <span class="nx">lockName</span> <span class="kt">string</span><span class="p">)</span> <span class="p">{</span>
+	<span class="nx">client</span> <span class="o">:=</span> <span class="nf">initEtcdClient</span><span class="p">()</span>
+	<span class="k">defer</span> <span class="nx">client</span><span class="p">.</span><span class="nf">Close</span><span class="p">()</span>
+
+	<span class="c1">// 创建一个 session,如果程序宕机奔溃，etcd可以知道
+</span><span class="c1"></span>	<span class="nx">s</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">concurrency</span><span class="p">.</span><span class="nf">NewSession</span><span class="p">(</span><span class="nx">client</span><span class="p">)</span>
+	<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+		<span class="nx">log</span><span class="p">.</span><span class="nf">Fatal</span><span class="p">(</span><span class="nx">err</span><span class="p">)</span>
+	<span class="p">}</span>
+	<span class="k">defer</span> <span class="nx">s</span><span class="p">.</span><span class="nf">Close</span><span class="p">()</span>
+
+	<span class="c1">// 创建一个etcd  locker
+</span><span class="c1"></span>	<span class="nx">locker</span> <span class="o">:=</span> <span class="nx">concurrency</span><span class="p">.</span><span class="nf">NewLocker</span><span class="p">(</span><span class="nx">s</span><span class="p">,</span> <span class="nx">lockName</span><span class="p">)</span>
+
+	<span class="nx">log</span><span class="p">.</span><span class="nf">Printf</span><span class="p">(</span><span class="s">&#34;id：%v 尝试获取锁%v&#34;</span><span class="p">,</span> <span class="nx">id</span><span class="p">,</span> <span class="nx">lockName</span><span class="p">)</span>
+	<span class="nx">locker</span><span class="p">.</span><span class="nf">Lock</span><span class="p">()</span>
+	<span class="nx">log</span><span class="p">.</span><span class="nf">Printf</span><span class="p">(</span><span class="s">&#34;id:%v取得锁%v&#34;</span><span class="p">,</span> <span class="nx">id</span><span class="p">,</span> <span class="nx">lockName</span><span class="p">)</span>
+
+	<span class="c1">// 模拟业务耗时
+</span><span class="c1"></span>	<span class="nx">time</span><span class="p">.</span><span class="nf">Sleep</span><span class="p">(</span><span class="nx">time</span><span class="p">.</span><span class="nx">Millisecond</span> <span class="o">*</span> <span class="mi">300</span><span class="p">)</span>
+
+	<span class="nx">locker</span><span class="p">.</span><span class="nf">Unlock</span><span class="p">()</span>
+	<span class="nx">log</span><span class="p">.</span><span class="nf">Printf</span><span class="p">(</span><span class="s">&#34;id:%v释放锁%v&#34;</span><span class="p">,</span> <span class="nx">id</span><span class="p">,</span> <span class="nx">lockName</span><span class="p">)</span>
+<span class="p">}</span>
+</code></pre></div><p>如果你看了上篇文章，这里的代码也很简单。然后我们可以写个简单的脚本运行以下看看结果</p>
+<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kn">package</span> <span class="nx">main</span>
+
+<span class="kn">import</span> <span class="p">(</span>
+	<span class="s">&#34;etcd-test/src&#34;</span>
+	<span class="s">&#34;sync&#34;</span>
+<span class="p">)</span>
+
+<span class="kd">func</span> <span class="nf">main</span><span class="p">()</span> <span class="p">{</span>
+	<span class="kd">var</span> <span class="nx">lockName</span> <span class="p">=</span> <span class="s">&#34;locker-test&#34;</span>
+	<span class="kd">var</span> <span class="nx">wg</span> <span class="nx">sync</span><span class="p">.</span><span class="nx">WaitGroup</span>
+	<span class="k">for</span> <span class="nx">i</span> <span class="o">:=</span> <span class="mi">0</span><span class="p">;</span> <span class="nx">i</span> <span class="p">&lt;</span> <span class="mi">10</span><span class="p">;</span> <span class="nx">i</span><span class="o">++</span> <span class="p">{</span>
+		<span class="nx">wg</span><span class="p">.</span><span class="nf">Add</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+		<span class="k">go</span> <span class="kd">func</span><span class="p">(</span><span class="nx">item</span> <span class="kt">int</span><span class="p">)</span> <span class="p">{</span>
+			<span class="k">defer</span> <span class="nx">wg</span><span class="p">.</span><span class="nf">Done</span><span class="p">()</span>
+			<span class="nx">src</span><span class="p">.</span><span class="nf">Lock</span><span class="p">(</span><span class="nx">item</span><span class="p">,</span> <span class="nx">lockName</span><span class="p">)</span>
+		<span class="p">}(</span><span class="nx">i</span><span class="p">)</span>
+	<span class="p">}</span>
+	<span class="nx">wg</span><span class="p">.</span><span class="nf">Wait</span><span class="p">()</span>
+<span class="p">}</span>
+</code></pre></div><p>我们发起了 10 个 并发抢同一个key锁的命令。运行脚本查看结果。
+<img src="https://image.syst.top/image/etcd/lock.png" alt="image"></p>
+<p>从图片可以看到，同一时刻一定只有一个 G 得到锁，一个 G 获取到一个锁的前提一定是当前 key 未被锁，别觉得这是废话，这是必然的。</p>
+<p>说到分布式锁，不得不提起 redis。它有一个看似安全实际一点都不安全的分布式锁。它的命令模式是</p>
+<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="nx">set</span> <span class="nx">key</span> <span class="nx">value</span> <span class="p">[</span><span class="nx">EX</span> <span class="nx">seconds</span><span class="p">]</span> <span class="p">[</span><span class="nx">PX</span> <span class="nx">milliseconds</span><span class="p">]</span> <span class="p">[</span><span class="nx">NX</span><span class="p">|</span><span class="nx">XX</span><span class="p">]</span>
+</code></pre></div><p>这其中，介绍两个关键的属性:</p>
+<ul>
+<li>EX 标示设置过期时间，单位是秒。</li>
+<li>NX 表示 当 对应的 key 不存在时，才创建。</li>
+</ul>
+<p>我们在使用 redis 做分布式锁会这么写。这里使用了包 <code>https://github.com/go-redis/redis</code></p>
+<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kd">func</span> <span class="nf">RedisLock</span><span class="p">(</span><span class="nx">item</span> <span class="kt">int</span><span class="p">)</span> <span class="p">{</span>
+	<span class="nx">rdb</span> <span class="p">=</span> <span class="nx">redis</span><span class="p">.</span><span class="nf">NewClient</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">redis</span><span class="p">.</span><span class="nx">Options</span><span class="p">{</span>
+		<span class="nx">Addr</span><span class="p">:</span>     <span class="s">&#34;127.0.0.1:6379&#34;</span><span class="p">,</span>
+		<span class="nx">Password</span><span class="p">:</span> <span class="s">&#34;&#34;</span><span class="p">,</span>
+		<span class="nx">DB</span><span class="p">:</span>       <span class="mi">0</span><span class="p">,</span>
+	<span class="p">})</span>
+	<span class="nx">fmt</span><span class="p">.</span><span class="nf">Printf</span><span class="p">(</span><span class="s">&#34;item:%v 尝试获取锁,时间:%v\n&#34;</span><span class="p">,</span> <span class="nx">item</span><span class="p">,</span> <span class="nx">time</span><span class="p">.</span><span class="nf">Now</span><span class="p">().</span><span class="nf">String</span><span class="p">())</span>
+	<span class="nx">res</span><span class="p">,</span> <span class="nx">_</span> <span class="o">:=</span> <span class="nx">rdb</span><span class="p">.</span><span class="nf">SetNX</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span> <span class="s">&#34;key&#34;</span><span class="p">,</span> <span class="s">&#34;value&#34;</span><span class="p">,</span> <span class="mi">2</span><span class="o">*</span><span class="nx">time</span><span class="p">.</span><span class="nx">Second</span><span class="p">).</span><span class="nf">Result</span><span class="p">()</span>
+	<span class="k">if</span> <span class="p">!</span><span class="nx">res</span> <span class="p">{</span>
+		<span class="nx">fmt</span><span class="p">.</span><span class="nf">Printf</span><span class="p">(</span><span class="s">&#34;item:%v 尝试获取锁失败\n&#34;</span><span class="p">,</span> <span class="nx">item</span><span class="p">)</span>
+		<span class="k">return</span>
+	<span class="p">}</span>
+
+	<span class="nx">fmt</span><span class="p">.</span><span class="nf">Printf</span><span class="p">(</span><span class="s">&#34;item:%v 获取到锁,时间:%v\n&#34;</span><span class="p">,</span> <span class="nx">item</span><span class="p">,</span> <span class="nx">time</span><span class="p">.</span><span class="nf">Now</span><span class="p">().</span><span class="nf">String</span><span class="p">())</span>
+	<span class="nx">time</span><span class="p">.</span><span class="nf">Sleep</span><span class="p">(</span><span class="mi">1</span> <span class="o">*</span> <span class="nx">time</span><span class="p">.</span><span class="nx">Second</span><span class="p">)</span> <span class="c1">//模拟业务耗时
+</span><span class="c1"></span>	<span class="nx">fmt</span><span class="p">.</span><span class="nf">Printf</span><span class="p">(</span><span class="s">&#34;item:%v 释放锁，时间:%v\n&#34;</span><span class="p">,</span> <span class="nx">item</span><span class="p">,</span> <span class="nx">time</span><span class="p">.</span><span class="nf">Now</span><span class="p">().</span><span class="nf">String</span><span class="p">())</span>
+	<span class="nx">rdb</span><span class="p">.</span><span class="nf">Del</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span> <span class="s">&#34;key&#34;</span><span class="p">)</span>
+<span class="p">}</span>
+</code></pre></div><div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="nx">rdb</span><span class="p">.</span><span class="nf">SetNX</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span> <span class="s">&#34;key&#34;</span><span class="p">,</span> <span class="s">&#34;value&#34;</span><span class="p">,</span> <span class="mi">2</span><span class="o">*</span><span class="nx">time</span><span class="p">.</span><span class="nx">Second</span><span class="p">)</span>
+</code></pre></div><p>我们规定锁的过期时间是2秒，下面有一句 <code>time.Sleep(1 * time.Second) //模拟业务耗时</code> 简单粗暴的模拟了
+处理业务的耗时，业务处理结束，我们删除 key，解锁 <code>rdb.Del(ctx, &quot;key&quot;)</code> 。</p>
+<p>我们再简单地模拟并发场景。</p>
+<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kd">func</span> <span class="nf">main</span><span class="p">()</span> <span class="p">{</span>
+	<span class="kd">var</span> <span class="nx">wg</span> <span class="nx">sync</span><span class="p">.</span><span class="nx">WaitGroup</span>
+	<span class="k">for</span> <span class="nx">i</span> <span class="o">:=</span> <span class="mi">0</span><span class="p">;</span> <span class="nx">i</span> <span class="p">&lt;</span> <span class="mi">10</span><span class="p">;</span> <span class="nx">i</span><span class="o">++</span> <span class="p">{</span>
+		<span class="nx">wg</span><span class="p">.</span><span class="nf">Add</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+		<span class="k">go</span> <span class="kd">func</span><span class="p">(</span><span class="nx">item</span> <span class="kt">int</span><span class="p">)</span> <span class="p">{</span>
+			<span class="k">defer</span> <span class="nx">wg</span><span class="p">.</span><span class="nf">Done</span><span class="p">()</span>
+			<span class="nf">RedisLock</span><span class="p">(</span><span class="nx">item</span><span class="p">)</span>
+		<span class="p">}(</span><span class="nx">i</span><span class="p">)</span>
+	<span class="p">}</span>
+	<span class="nx">wg</span><span class="p">.</span><span class="nf">Wait</span><span class="p">()</span>
+<span class="p">}</span>
+</code></pre></div><p>我们开启十个 G 并发的调用 <code>RedisLock</code> 函数，函数内部会新建一个 redis 客户端，本质上是十个客户端。我们运行这段程序。</p>
+<p><img src="https://image.syst.top/image/redis/lock-1.png" alt="image"></p>
+<p>从图中看出，同一时刻只有一个客户端获取到锁，并且在一秒的任务处理后释放了锁，好像没太大的问题。</p>
+<p>那么，我再写一个简单的例子。</p>
+<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kn">package</span> <span class="nx">main</span>
+
+<span class="kn">import</span> <span class="p">(</span>
+	<span class="s">&#34;context&#34;</span>
+	<span class="s">&#34;fmt&#34;</span>
+	<span class="s">&#34;github.com/go-redis/redis/v8&#34;</span>
+	<span class="s">&#34;sync&#34;</span>
+	<span class="s">&#34;time&#34;</span>
+<span class="p">)</span>
+
+<span class="kd">var</span> <span class="nx">ctx</span> <span class="p">=</span> <span class="nx">context</span><span class="p">.</span><span class="nf">Background</span><span class="p">()</span>
+<span class="kd">var</span> <span class="nx">rdb</span> <span class="o">*</span><span class="nx">redis</span><span class="p">.</span><span class="nx">Client</span>
+
+<span class="kd">func</span> <span class="nf">main</span><span class="p">()</span> <span class="p">{</span>
+	<span class="kd">var</span> <span class="nx">wg</span> <span class="nx">sync</span><span class="p">.</span><span class="nx">WaitGroup</span>
+	<span class="nx">wg</span><span class="p">.</span><span class="nf">Add</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span>
+	<span class="k">go</span> <span class="kd">func</span><span class="p">()</span> <span class="p">{</span>
+		<span class="k">defer</span> <span class="nx">wg</span><span class="p">.</span><span class="nf">Done</span><span class="p">()</span>
+		<span class="nf">ExampleLock</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+	<span class="p">}()</span>
+
+	<span class="k">go</span> <span class="kd">func</span><span class="p">()</span> <span class="p">{</span>
+		<span class="k">defer</span> <span class="nx">wg</span><span class="p">.</span><span class="nf">Done</span><span class="p">()</span>
+		<span class="nf">ExampleLock</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">5</span><span class="p">)</span>
+	<span class="p">}()</span>
+	<span class="nx">wg</span><span class="p">.</span><span class="nf">Wait</span><span class="p">()</span>
+<span class="p">}</span>
+
+
+<span class="kd">func</span> <span class="nf">ExampleLock</span><span class="p">(</span><span class="nx">item</span> <span class="kt">int</span><span class="p">,</span> <span class="nx">timeSleep</span> <span class="nx">time</span><span class="p">.</span><span class="nx">Duration</span><span class="p">)</span> <span class="p">{</span>
+	<span class="nx">rdb</span> <span class="p">=</span> <span class="nx">redis</span><span class="p">.</span><span class="nf">NewClient</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">redis</span><span class="p">.</span><span class="nx">Options</span><span class="p">{</span>
+		<span class="nx">Addr</span><span class="p">:</span>     <span class="s">&#34;127.0.0.1:6379&#34;</span><span class="p">,</span>
+		<span class="nx">Password</span><span class="p">:</span> <span class="s">&#34;&#34;</span><span class="p">,</span>
+		<span class="nx">DB</span><span class="p">:</span>       <span class="mi">0</span><span class="p">,</span>
+	<span class="p">})</span>
+	<span class="k">if</span> <span class="nx">timeSleep</span> <span class="p">&gt;</span> <span class="mi">0</span> <span class="p">{</span>
+		<span class="nx">time</span><span class="p">.</span><span class="nf">Sleep</span><span class="p">(</span><span class="nx">time</span><span class="p">.</span><span class="nx">Second</span> <span class="o">*</span> <span class="nx">timeSleep</span><span class="p">)</span>
+	<span class="p">}</span>
+	<span class="nx">fmt</span><span class="p">.</span><span class="nf">Printf</span><span class="p">(</span><span class="s">&#34;item:%v 尝试获取锁,时间:%v\n&#34;</span><span class="p">,</span> <span class="nx">item</span><span class="p">,</span> <span class="nx">time</span><span class="p">.</span><span class="nf">Now</span><span class="p">().</span><span class="nf">String</span><span class="p">())</span>
+	<span class="nx">res</span><span class="p">,</span> <span class="nx">_</span> <span class="o">:=</span> <span class="nx">rdb</span><span class="p">.</span><span class="nf">SetNX</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span> <span class="s">&#34;key&#34;</span><span class="p">,</span> <span class="s">&#34;value&#34;</span><span class="p">,</span> <span class="mi">3</span><span class="o">*</span><span class="nx">time</span><span class="p">.</span><span class="nx">Second</span><span class="p">).</span><span class="nf">Result</span><span class="p">()</span>
+	<span class="k">if</span> <span class="p">!</span><span class="nx">res</span> <span class="p">{</span>
+		<span class="nx">fmt</span><span class="p">.</span><span class="nf">Printf</span><span class="p">(</span><span class="s">&#34;item:尝试获取锁失败:%v\n&#34;</span><span class="p">,</span> <span class="nx">item</span><span class="p">)</span>
+		<span class="k">return</span>
+	<span class="p">}</span>
+
+	<span class="nx">fmt</span><span class="p">.</span><span class="nf">Printf</span><span class="p">(</span><span class="s">&#34;item:%v 获取到锁,时间:%v\n&#34;</span><span class="p">,</span> <span class="nx">item</span><span class="p">,</span> <span class="nx">time</span><span class="p">.</span><span class="nf">Now</span><span class="p">().</span><span class="nf">String</span><span class="p">())</span>
+	<span class="nx">time</span><span class="p">.</span><span class="nf">Sleep</span><span class="p">(</span><span class="mi">7</span> <span class="o">*</span> <span class="nx">time</span><span class="p">.</span><span class="nx">Second</span><span class="p">)</span>
+	<span class="nx">fmt</span><span class="p">.</span><span class="nf">Printf</span><span class="p">(</span><span class="s">&#34;item:%v 释放锁，时间:%v\n&#34;</span><span class="p">,</span> <span class="nx">item</span><span class="p">,</span> <span class="nx">time</span><span class="p">.</span><span class="nf">Now</span><span class="p">().</span><span class="nf">String</span><span class="p">())</span>
+	<span class="nx">rdb</span><span class="p">.</span><span class="nf">Del</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span> <span class="s">&#34;key&#34;</span><span class="p">)</span>
+<span class="p">}</span>
+</code></pre></div><p>我们设置锁的过期时间是 3 秒，而获取锁之后的处理时间为 7 秒。然后我们开启两个 G。</p>
+<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="nf">ExampleLock</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+<span class="nf">ExampleLock</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">5</span><span class="p">)</span>
+</code></pre></div><p>其中 5 从代码中可以看出，是指启动 G 后过5秒去获取锁。
+那么这段粗暴的代码整体流程就是这样的:G(1) 获取到锁后，设置的锁持有时间是 3 秒，由于任务执行需要7 秒的时间，因此在 3 秒过后锁会自动释放。
+G(2)在第 5 秒的时候可以获取到锁，然后它也得 任务执行 7 秒。然后，G(1) 7 秒时间过后释放锁，G(2) 7 秒时间过后释放锁。</p>
+<p><img src="https://image.syst.top/image/redis/lock-2.png" alt="image"></p>
+<p>发现问题了吗？G(1)的锁在 3 秒后已经自动释放了。但是在任务执行耗时 7 秒后执行了解锁的操作,可此时这个锁是 G(2)的呀。
+那么接下来由于G(1)误解了G(2)的锁，如果此时有其他的 G，那么就可以获取到锁。
+等G(2)任务执行结束，同理又会误解其他G的锁，这是一个恶性循环。
+这也是掘金一篇由 redis 分布式锁造成的茅台超卖的重大事故原因之一。
+至于还有什么原因，可以自行查看这篇文章。</p>
+<h3 id="基于-etcd-的分布式队列">基于 etcd 的分布式队列</h3>
+<p>对队列更多的理论知识就不加以介绍了。我们都知道，队列是一种先进先出的数据结构，一般也只有入队和出队两种操作。
+我们常常在单机的应用中使用到队列，那么，如何实现一个分布式的队列呢?。</p>
+<p>我们可以使用 etcd 开箱即用的工具。在 etcd 底层 recipe 包里结构 Queue，实现了一个多读多写的分布式队列。</p>
+<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kd">type</span> <span class="nx">Queue</span> <span class="kd">struct</span> <span class="p">{</span>
+	<span class="nx">client</span> <span class="o">*</span><span class="nx">v3</span><span class="p">.</span><span class="nx">Client</span>
+	<span class="nx">ctx</span>    <span class="nx">context</span><span class="p">.</span><span class="nx">Context</span>
+
+	<span class="nx">keyPrefix</span> <span class="kt">string</span>
+<span class="p">}</span>
+<span class="kd">func</span> <span class="nf">NewQueue</span><span class="p">(</span><span class="nx">client</span> <span class="o">*</span><span class="nx">v3</span><span class="p">.</span><span class="nx">Client</span><span class="p">,</span> <span class="nx">keyPrefix</span> <span class="kt">string</span><span class="p">)</span> <span class="o">*</span><span class="nx">Queue</span>
+<span class="kd">func</span> <span class="p">(</span><span class="nx">q</span> <span class="o">*</span><span class="nx">Queue</span><span class="p">)</span> <span class="nf">Dequeue</span><span class="p">()</span> <span class="p">(</span><span class="kt">string</span><span class="p">,</span> <span class="kt">error</span><span class="p">)</span>
+<span class="kd">func</span> <span class="p">(</span><span class="nx">q</span> <span class="o">*</span><span class="nx">Queue</span><span class="p">)</span> <span class="nf">Enqueue</span><span class="p">(</span><span class="nx">val</span> <span class="kt">string</span><span class="p">)</span>
+
+</code></pre></div><p>我们基于此包可以很方面的实现。</p>
+<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kn">package</span> <span class="nx">src</span>
+
+<span class="kn">import</span> <span class="p">(</span>
+	<span class="s">&#34;github.com/coreos/etcd/clientv3&#34;</span>
+	<span class="nx">recipe</span> <span class="s">&#34;github.com/coreos/etcd/contrib/recipes&#34;</span>
+	<span class="s">&#34;log&#34;</span>
+	<span class="s">&#34;strconv&#34;</span>
+	<span class="s">&#34;strings&#34;</span>
+	<span class="s">&#34;sync&#34;</span>
+	<span class="s">&#34;time&#34;</span>
+<span class="p">)</span>
+
+<span class="c1">// 初始化etcd客户端
+</span><span class="c1"></span><span class="kd">func</span> <span class="nf">initEtcdClient</span><span class="p">()</span> <span class="o">*</span><span class="nx">clientv3</span><span class="p">.</span><span class="nx">Client</span> <span class="p">{</span>
+	<span class="kd">var</span> <span class="nx">client</span> <span class="o">*</span><span class="nx">clientv3</span><span class="p">.</span><span class="nx">Client</span>
+	<span class="kd">var</span> <span class="nx">err</span> <span class="kt">error</span>
+	<span class="c1">// 解析etcd的地址，编程[]string
+</span><span class="c1"></span>	<span class="nx">endpoints</span> <span class="o">:=</span> <span class="nx">strings</span><span class="p">.</span><span class="nf">Split</span><span class="p">(</span><span class="o">*</span><span class="nx">addr</span><span class="p">,</span> <span class="s">&#34;,&#34;</span><span class="p">)</span>
+	<span class="c1">// 创建一个 etcd 的客户端
+</span><span class="c1"></span>	<span class="nx">client</span><span class="p">,</span> <span class="nx">err</span> <span class="p">=</span> <span class="nx">clientv3</span><span class="p">.</span><span class="nf">New</span><span class="p">(</span><span class="nx">clientv3</span><span class="p">.</span><span class="nx">Config</span><span class="p">{</span><span class="nx">Endpoints</span><span class="p">:</span> <span class="nx">endpoints</span><span class="p">,</span>
+		<span class="nx">DialTimeout</span><span class="p">:</span> <span class="mi">5</span> <span class="o">*</span> <span class="nx">time</span><span class="p">.</span><span class="nx">Second</span><span class="p">})</span>
+	<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+		<span class="nx">log</span><span class="p">.</span><span class="nf">Printf</span><span class="p">(</span><span class="s">&#34;初始化客户端失败:%v\n&#34;</span><span class="p">,</span> <span class="nx">err</span><span class="p">)</span>
+		<span class="nx">log</span><span class="p">.</span><span class="nf">Fatal</span><span class="p">(</span><span class="nx">err</span><span class="p">)</span>
+	<span class="p">}</span>
+	<span class="k">return</span> <span class="nx">client</span>
+<span class="p">}</span>
+
+<span class="kd">func</span> <span class="nf">Push</span><span class="p">(</span><span class="nx">keyName</span> <span class="kt">string</span><span class="p">)</span> <span class="p">{</span>
+	<span class="nx">client</span> <span class="o">:=</span> <span class="nf">initEtcdClient</span><span class="p">()</span>
+	<span class="k">defer</span> <span class="nx">client</span><span class="p">.</span><span class="nf">Close</span><span class="p">()</span>
+	<span class="nx">q</span> <span class="o">:=</span> <span class="nx">recipe</span><span class="p">.</span><span class="nf">NewQueue</span><span class="p">(</span><span class="nx">client</span><span class="p">,</span> <span class="nx">keyName</span><span class="p">)</span>
+	<span class="kd">var</span> <span class="nx">wg</span> <span class="nx">sync</span><span class="p">.</span><span class="nx">WaitGroup</span>
+
+	<span class="k">for</span> <span class="nx">i</span> <span class="o">:=</span> <span class="mi">0</span><span class="p">;</span> <span class="nx">i</span> <span class="p">&lt;</span> <span class="mi">3</span><span class="p">;</span> <span class="nx">i</span><span class="o">++</span> <span class="p">{</span>
+		<span class="k">for</span> <span class="nx">j</span> <span class="o">:=</span> <span class="mi">0</span><span class="p">;</span> <span class="nx">j</span> <span class="p">&lt;</span> <span class="mi">10</span><span class="p">;</span> <span class="nx">j</span><span class="o">++</span> <span class="p">{</span>
+			<span class="nx">wg</span><span class="p">.</span><span class="nf">Add</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+			<span class="k">go</span> <span class="kd">func</span><span class="p">(</span><span class="nx">item</span> <span class="kt">int</span><span class="p">)</span> <span class="p">{</span>
+				<span class="k">defer</span> <span class="nx">wg</span><span class="p">.</span><span class="nf">Done</span><span class="p">()</span>
+				<span class="nx">err</span> <span class="o">:=</span> <span class="nx">q</span><span class="p">.</span><span class="nf">Enqueue</span><span class="p">(</span><span class="nx">strconv</span><span class="p">.</span><span class="nf">Itoa</span><span class="p">(</span><span class="nx">item</span><span class="p">))</span>
+				<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+					<span class="nx">log</span><span class="p">.</span><span class="nf">Printf</span><span class="p">(</span><span class="s">&#34;push err:%v\n&#34;</span><span class="p">,</span> <span class="nx">err</span><span class="p">)</span>
+				<span class="p">}</span>
+			<span class="p">}(</span><span class="nx">j</span><span class="p">)</span>
+		<span class="p">}</span>
+		<span class="nx">time</span><span class="p">.</span><span class="nf">Sleep</span><span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="nx">time</span><span class="p">.</span><span class="nx">Second</span><span class="p">)</span>
+	<span class="p">}</span>
+	<span class="nx">wg</span><span class="p">.</span><span class="nf">Wait</span><span class="p">()</span>
+<span class="p">}</span>
+
+<span class="kd">func</span> <span class="nf">Pop</span><span class="p">(</span><span class="nx">keyName</span> <span class="kt">string</span><span class="p">)</span> <span class="p">{</span>
+	<span class="nx">client</span> <span class="o">:=</span> <span class="nf">initEtcdClient</span><span class="p">()</span>
+	<span class="k">defer</span> <span class="nx">client</span><span class="p">.</span><span class="nf">Close</span><span class="p">()</span>
+	<span class="nx">q</span> <span class="o">:=</span> <span class="nx">recipe</span><span class="p">.</span><span class="nf">NewQueue</span><span class="p">(</span><span class="nx">client</span><span class="p">,</span> <span class="nx">keyName</span><span class="p">)</span>
+	<span class="k">for</span> <span class="p">{</span>
+		<span class="nx">res</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">q</span><span class="p">.</span><span class="nf">Dequeue</span><span class="p">()</span>
+		<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+			<span class="nx">log</span><span class="p">.</span><span class="nf">Fatal</span><span class="p">(</span><span class="nx">err</span><span class="p">)</span>
+			<span class="k">return</span>
+		<span class="p">}</span>
+		<span class="nx">log</span><span class="p">.</span><span class="nf">Printf</span><span class="p">(</span><span class="s">&#34;接收值:%v\n&#34;</span><span class="p">,</span> <span class="nx">res</span><span class="p">)</span>
+	<span class="p">}</span>
+<span class="p">}</span>
+
+</code></pre></div><p>在 push 中，我们开启三轮发送数值入队，每此发送十个，发送一轮休息 2秒。
+在 pop 中，通过死循环获取队列中的值。</p>
+<p>我们也简单的运行下。</p>
+<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kn">package</span> <span class="nx">main</span>
+
+<span class="kn">import</span> <span class="p">(</span>
+	<span class="s">&#34;etcd-test/src&#34;</span>
+	<span class="s">&#34;time&#34;</span>
+<span class="p">)</span>
+
+<span class="kd">func</span> <span class="nf">main</span><span class="p">()</span> <span class="p">{</span>
+	<span class="nx">key</span> <span class="o">:=</span> <span class="s">&#34;test-queue&#34;</span>
+	<span class="k">go</span> <span class="nx">src</span><span class="p">.</span><span class="nf">Pop</span><span class="p">(</span><span class="nx">key</span><span class="p">)</span>
+	<span class="nx">time</span><span class="p">.</span><span class="nf">Sleep</span><span class="p">(</span><span class="mi">1</span> <span class="o">*</span> <span class="nx">time</span><span class="p">.</span><span class="nx">Second</span><span class="p">)</span>
+	<span class="k">go</span> <span class="nx">src</span><span class="p">.</span><span class="nf">Push</span><span class="p">(</span><span class="nx">key</span><span class="p">)</span>
+	<span class="nx">time</span><span class="p">.</span><span class="nf">Sleep</span><span class="p">(</span><span class="mi">20</span> <span class="o">*</span> <span class="nx">time</span><span class="p">.</span><span class="nx">Second</span><span class="p">)</span>
+<span class="p">}</span>
+</code></pre></div><p>我们使用两个 G 代表 分别运行 push 和 pop 操作。
+同时为了达到运行效果，我们先运行 pop 等待有入队的元素。</p>
+<p><img src="https://image.syst.top/image/etcd/queue.gif" alt="image"></p>
+<p>etcd 还提供了优先级的分布式的队列。和上面的用户相差不多。只是在入队的时候，不仅仅需要提供一个值，还需要提供一个整数，来体现当前 push 值的优先级。数值越小，优先级越高。
+我们可以改动一下上述的代码。</p>
+<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kn">package</span> <span class="nx">src</span>
+
+<span class="kn">import</span> <span class="p">(</span>
+	<span class="s">&#34;github.com/coreos/etcd/clientv3&#34;</span>
+	<span class="nx">recipe</span> <span class="s">&#34;github.com/coreos/etcd/contrib/recipes&#34;</span>
+	<span class="s">&#34;log&#34;</span>
+	<span class="s">&#34;strconv&#34;</span>
+	<span class="s">&#34;strings&#34;</span>
+	<span class="s">&#34;sync&#34;</span>
+	<span class="s">&#34;time&#34;</span>
+<span class="p">)</span>
+
+<span class="c1">// 初始化etcd客户端
+</span><span class="c1"></span><span class="kd">func</span> <span class="nf">initEtcdClient</span><span class="p">()</span> <span class="o">*</span><span class="nx">clientv3</span><span class="p">.</span><span class="nx">Client</span> <span class="p">{</span>
+	<span class="kd">var</span> <span class="nx">client</span> <span class="o">*</span><span class="nx">clientv3</span><span class="p">.</span><span class="nx">Client</span>
+	<span class="kd">var</span> <span class="nx">err</span> <span class="kt">error</span>
+	<span class="c1">// 解析etcd的地址，编程[]string
+</span><span class="c1"></span>	<span class="nx">endpoints</span> <span class="o">:=</span> <span class="nx">strings</span><span class="p">.</span><span class="nf">Split</span><span class="p">(</span><span class="o">*</span><span class="nx">addr</span><span class="p">,</span> <span class="s">&#34;,&#34;</span><span class="p">)</span>
+	<span class="c1">// 创建一个 etcd 的客户端
+</span><span class="c1"></span>	<span class="nx">client</span><span class="p">,</span> <span class="nx">err</span> <span class="p">=</span> <span class="nx">clientv3</span><span class="p">.</span><span class="nf">New</span><span class="p">(</span><span class="nx">clientv3</span><span class="p">.</span><span class="nx">Config</span><span class="p">{</span><span class="nx">Endpoints</span><span class="p">:</span> <span class="nx">endpoints</span><span class="p">,</span>
+		<span class="nx">DialTimeout</span><span class="p">:</span> <span class="mi">5</span> <span class="o">*</span> <span class="nx">time</span><span class="p">.</span><span class="nx">Second</span><span class="p">})</span>
+	<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+		<span class="nx">log</span><span class="p">.</span><span class="nf">Printf</span><span class="p">(</span><span class="s">&#34;初始化客户端失败:%v\n&#34;</span><span class="p">,</span> <span class="nx">err</span><span class="p">)</span>
+		<span class="nx">log</span><span class="p">.</span><span class="nf">Fatal</span><span class="p">(</span><span class="nx">err</span><span class="p">)</span>
+	<span class="p">}</span>
+	<span class="k">return</span> <span class="nx">client</span>
+<span class="p">}</span>
+
+<span class="kd">func</span> <span class="nf">PriorityPush</span><span class="p">(</span><span class="nx">keyName</span> <span class="kt">string</span><span class="p">)</span> <span class="p">{</span>
+	<span class="nx">client</span> <span class="o">:=</span> <span class="nf">initEtcdClient</span><span class="p">()</span>
+	<span class="k">defer</span> <span class="nx">client</span><span class="p">.</span><span class="nf">Close</span><span class="p">()</span>
+	<span class="nx">q</span> <span class="o">:=</span> <span class="nx">recipe</span><span class="p">.</span><span class="nf">NewPriorityQueue</span><span class="p">(</span><span class="nx">client</span><span class="p">,</span> <span class="nx">keyName</span><span class="p">)</span>
+	<span class="kd">var</span> <span class="nx">wg</span> <span class="nx">sync</span><span class="p">.</span><span class="nx">WaitGroup</span>
+
+	<span class="k">for</span> <span class="nx">j</span> <span class="o">:=</span> <span class="mi">0</span><span class="p">;</span> <span class="nx">j</span> <span class="p">&lt;</span> <span class="mi">10</span><span class="p">;</span> <span class="nx">j</span><span class="o">++</span> <span class="p">{</span>
+		<span class="nx">wg</span><span class="p">.</span><span class="nf">Add</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+		<span class="k">go</span> <span class="kd">func</span><span class="p">(</span><span class="nx">item</span> <span class="kt">int</span><span class="p">)</span> <span class="p">{</span>
+			<span class="k">defer</span> <span class="nx">wg</span><span class="p">.</span><span class="nf">Done</span><span class="p">()</span>
+			<span class="nx">err</span> <span class="o">:=</span> <span class="nx">q</span><span class="p">.</span><span class="nf">Enqueue</span><span class="p">(</span><span class="nx">strconv</span><span class="p">.</span><span class="nf">Itoa</span><span class="p">(</span><span class="nx">item</span><span class="p">),</span> <span class="nb">uint16</span><span class="p">(</span><span class="nx">item</span><span class="p">))</span>
+			<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+				<span class="nx">log</span><span class="p">.</span><span class="nf">Printf</span><span class="p">(</span><span class="s">&#34;push err:%v\n&#34;</span><span class="p">,</span> <span class="nx">err</span><span class="p">)</span>
+			<span class="p">}</span>
+		<span class="p">}(</span><span class="nx">j</span><span class="p">)</span>
+	<span class="p">}</span>
+	<span class="nx">wg</span><span class="p">.</span><span class="nf">Wait</span><span class="p">()</span>
+<span class="p">}</span>
+
+<span class="kd">func</span> <span class="nf">PriorityPop</span><span class="p">(</span><span class="nx">keyName</span> <span class="kt">string</span><span class="p">)</span> <span class="p">{</span>
+	<span class="nx">client</span> <span class="o">:=</span> <span class="nf">initEtcdClient</span><span class="p">()</span>
+	<span class="k">defer</span> <span class="nx">client</span><span class="p">.</span><span class="nf">Close</span><span class="p">()</span>
+	<span class="nx">q</span> <span class="o">:=</span> <span class="nx">recipe</span><span class="p">.</span><span class="nf">NewPriorityQueue</span><span class="p">(</span><span class="nx">client</span><span class="p">,</span> <span class="nx">keyName</span><span class="p">)</span>
+	<span class="k">for</span> <span class="p">{</span>
+		<span class="nx">res</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">q</span><span class="p">.</span><span class="nf">Dequeue</span><span class="p">()</span>
+		<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+			<span class="nx">log</span><span class="p">.</span><span class="nf">Fatal</span><span class="p">(</span><span class="nx">err</span><span class="p">)</span>
+			<span class="k">return</span>
+		<span class="p">}</span>
+		<span class="nx">log</span><span class="p">.</span><span class="nf">Printf</span><span class="p">(</span><span class="s">&#34;接收值:%v\n&#34;</span><span class="p">,</span> <span class="nx">res</span><span class="p">)</span>
+	<span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div><p>然后我们的测试代码:</p>
+<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kn">package</span> <span class="nx">main</span>
+
+<span class="kn">import</span> <span class="p">(</span>
+	<span class="s">&#34;etcd-test/src&#34;</span>
+	<span class="s">&#34;sync&#34;</span>
+	<span class="s">&#34;time&#34;</span>
+<span class="p">)</span>
+<span class="kd">func</span> <span class="nf">main</span><span class="p">()</span> <span class="p">{</span>
+	<span class="nx">key</span> <span class="o">:=</span> <span class="s">&#34;test-queue&#34;</span>
+	<span class="kd">var</span> <span class="nx">wg</span> <span class="nx">sync</span><span class="p">.</span><span class="nx">WaitGroup</span>
+	<span class="nx">wg</span><span class="p">.</span><span class="nf">Add</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+	<span class="k">go</span> <span class="kd">func</span><span class="p">()</span> <span class="p">{</span>
+		<span class="k">defer</span> <span class="nx">wg</span><span class="p">.</span><span class="nf">Done</span><span class="p">()</span>
+		<span class="nx">src</span><span class="p">.</span><span class="nf">PriorityPush</span><span class="p">(</span><span class="nx">key</span><span class="p">)</span>
+	<span class="p">}()</span>
+	<span class="nx">wg</span><span class="p">.</span><span class="nf">Wait</span><span class="p">()</span>
+	<span class="k">go</span> <span class="nx">src</span><span class="p">.</span><span class="nf">PriorityPop</span><span class="p">(</span><span class="nx">key</span><span class="p">)</span>
+	<span class="nx">time</span><span class="p">.</span><span class="nf">Sleep</span><span class="p">(</span><span class="mi">20</span> <span class="o">*</span> <span class="nx">time</span><span class="p">.</span><span class="nx">Second</span><span class="p">)</span>
+<span class="p">}</span>
+
+</code></pre></div><p>我们把0到9的数 push 到队列中，对应的优先级整数值就是它本身，push 完毕，我们运行 PriorityPop，看结果显示就是从0到9</p>
+<p><img src="https://image.syst.top/image/etcd/queue-2.gif" alt="image"></p>
+<h3 id="总结">总结</h3>
+<p>这篇文章主要介绍了如何使用 etcd 实现分布式锁以及分布式队列。其他etcd的场景，可以自行实践。</p>
 ]]></content>
 		</item>
 		
