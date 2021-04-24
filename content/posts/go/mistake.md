@@ -1,5 +1,5 @@
 ---
-title: "在Go中高频犯过的错 "
+title: "在Go中你犯过的错"
 date: 2021-04-21T23:54:52+08:00
 toc: true
 tags :
@@ -9,9 +9,9 @@ tags :
 
 ---
 
-### 在迭代器变量上使用goroutine
+### 在迭代器变量上使用 goroutine
 
-我们来看一段代码
+这算高频吧。
 
 ```go
 package main
@@ -21,29 +21,17 @@ import (
 	"sync"
 )
 
-type User struct {
-	userId int
-}
-
 func main() {
-	var userList []User
-	for i := 0; i < 10; i++ {
-		userList = append(userList, User{userId: i})
-	}
-
 	var wg sync.WaitGroup
-	for i, _ := range userList {
+	items := []int{1, 2, 3, 4, 5}
+	for index, _ := range items {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			Do(userList[i])
+			fmt.Printf("item:%v\n", items[index])
 		}()
 	}
 	wg.Wait()
-}
-
-func Do(user User) {
-	fmt.Printf("用户id:%v\n", user.userId)
 }
 
 ```
@@ -52,59 +40,41 @@ func Do(user User) {
 
 ![image](https://image.syst.top/image/mistake/mistake-1.png)
 
-啥情况，为啥不是1-9(当然不是顺序的)。
+为啥不是1-5(当然不是顺序的)。
 
 原因很简单，循环器中的 i 实际上是一个单变量，`go func`  里的闭包只绑定在一个变量上，
-每个 `goroutine` 可能要等到循环结束才真正的运行，这时候运行的 i 值大概率就是 9了。
+每个 `goroutine` 可能要等到循环结束才真正的运行，这时候运行的 i 值大概率就是5了,
 大概率的意思是没人能保证这个过程，有的只是手段。
 
 正确的做法
 
 ```go
-package main
-
-import (
-	"fmt"
-	"sync"
-)
-
-type User struct {
-	userId int
-}
-
 func main() {
-	var userList []User
-	for i := 0; i < 10; i++ {
-		userList = append(userList, User{userId: i})
-	}
-
 	var wg sync.WaitGroup
-	for i, _ := range userList {
+
+	items := []int{1, 2, 3, 4, 5}
+	for index, _ := range items {
 		wg.Add(1)
-		go func(user User) {
+		go func(i int) {
 			defer wg.Done()
-			Do(user)
-		}(userList[i])
+			fmt.Printf("item:%v\n", items[i])
+		}(index)
 	}
 	wg.Wait()
 }
-
-func Do(user User) {
-	fmt.Printf("用户id:%v\n", user.userId)
-}
 ```
 
-通过将 `user`  作为一个参数传入闭包中，user 每次迭代都会被求值，
-并放置在 `goroutine` 的堆栈中，因此每个用户列表切片元素最终都会被执行打印。
+通过将 `i`  作为一个参数传入闭包中，i 每次迭代都会被求值，
+并放置在 `goroutine` 的堆栈中，因此每个切片元素最终都会被执行打印。
 
-或者这样,道理是一样的
+或者这样,道理是一样的。
 ```go
-for i, _ := range userList {
+for index, _ := range items {
 		wg.Add(1)
-		index:=i
+		i:=index
 		go func() {
 			defer wg.Done()
-			Do(userList[index])
+			fmt.Printf("item:%v\n", items[i])
 		}()
 	}
 ```
@@ -112,8 +82,9 @@ for i, _ := range userList {
 ### WaitGroup
 
 
-上面说到 `sync.waitGroup`，它也有犯错的地方，之前帮同事看代码的时候也发现这个错误。
-我把上面的例子稍微改动一下
+上面的例子有用到 `sync.waitGroup`，它也有犯错的地方。
+
+我把上面的例子稍微改动复杂一点点。
 ```go
 package main
 
@@ -159,7 +130,6 @@ func Do(user User) (string, error) {
 	return "成功", nil
 }
 ```
-
 发现问题严重性了吗？
 
 当用户id等于9的时候，`err !=nil` 直接 `return` 了，导致 `waitGroup` 计数器根本没机会减1，

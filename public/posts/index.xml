@@ -10,17 +10,19 @@
 		<atom:link href="https://www.syst.top/posts/index.xml" rel="self" type="application/rss+xml" />
 		
 		<item>
-			<title>在Go中高频犯过的错 </title>
+			<title>在Go中你犯过的错</title>
 			<link>https://www.syst.top/posts/go/mistake/</link>
 			<pubDate>Wed, 21 Apr 2021 23:54:52 +0800</pubDate>
 			
 			<guid>https://www.syst.top/posts/go/mistake/</guid>
-			<description>在迭代器变量上使用goroutine 我们来看一段代码
-package main import ( &amp;#34;fmt&amp;#34; &amp;#34;sync&amp;#34; ) type User struct { userId int } func main() { var userList []User for i := 0; i &amp;lt; 10; i++ { userList = append(userList, User{userId: i}) } var wg sync.WaitGroup for i, _ := range userList { wg.Add(1) go func() { defer wg.Done() Do(userList[i]) }() } wg.Wait() } func Do(user User) { fmt.Printf(&amp;#34;用户id:%v\n&amp;#34;, user.userId) } 一个很简单的利用 sync.waitGroup 做任务编排的场景，看一下好像没啥问题，运行看看结果。
-啥情况，为啥不是1-9(当然不是顺序的)。
-原因很简单，循环器中的 i 实际上是一个单变量，go func 里的闭包只绑定在一个变量上， 每个 goroutine 可能要等到循环结束才真正的运行，这时候运行的 i 值大概率就是 9了。 大概率的意思是没人能保证这个过程，有的只是手段。</description>
-			<content type="html"><![CDATA[<h3 id="在迭代器变量上使用goroutine">在迭代器变量上使用goroutine</h3>
-<p>我们来看一段代码</p>
+			<description>在迭代器变量上使用 goroutine 这算高频吧。
+package main import ( &amp;#34;fmt&amp;#34; &amp;#34;sync&amp;#34; ) func main() { var wg sync.WaitGroup items := []int{1, 2, 3, 4, 5} for index, _ := range items { wg.Add(1) go func() { defer wg.Done() fmt.Printf(&amp;#34;item:%v\n&amp;#34;, items[index]) }() } wg.Wait() } 一个很简单的利用 sync.waitGroup 做任务编排的场景，看一下好像没啥问题，运行看看结果。
+为啥不是1-5(当然不是顺序的)。
+原因很简单，循环器中的 i 实际上是一个单变量，go func 里的闭包只绑定在一个变量上， 每个 goroutine 可能要等到循环结束才真正的运行，这时候运行的 i 值大概率就是5了, 大概率的意思是没人能保证这个过程，有的只是手段。
+正确的做法
+func main() { var wg sync.WaitGroup items := []int{1, 2, 3, 4, 5} for index, _ := range items { wg.</description>
+			<content type="html"><![CDATA[<h3 id="在迭代器变量上使用-goroutine">在迭代器变量上使用 goroutine</h3>
+<p>这算高频吧。</p>
 <div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kn">package</span> <span class="nx">main</span>
 
 <span class="kn">import</span> <span class="p">(</span>
@@ -28,83 +30,53 @@ package main import ( &amp;#34;fmt&amp;#34; &amp;#34;sync&amp;#34; ) type User s
 	<span class="s">&#34;sync&#34;</span>
 <span class="p">)</span>
 
-<span class="kd">type</span> <span class="nx">User</span> <span class="kd">struct</span> <span class="p">{</span>
-	<span class="nx">userId</span> <span class="kt">int</span>
-<span class="p">}</span>
-
 <span class="kd">func</span> <span class="nf">main</span><span class="p">()</span> <span class="p">{</span>
-	<span class="kd">var</span> <span class="nx">userList</span> <span class="p">[]</span><span class="nx">User</span>
-	<span class="k">for</span> <span class="nx">i</span> <span class="o">:=</span> <span class="mi">0</span><span class="p">;</span> <span class="nx">i</span> <span class="p">&lt;</span> <span class="mi">10</span><span class="p">;</span> <span class="nx">i</span><span class="o">++</span> <span class="p">{</span>
-		<span class="nx">userList</span> <span class="p">=</span> <span class="nb">append</span><span class="p">(</span><span class="nx">userList</span><span class="p">,</span> <span class="nx">User</span><span class="p">{</span><span class="nx">userId</span><span class="p">:</span> <span class="nx">i</span><span class="p">})</span>
-	<span class="p">}</span>
-
 	<span class="kd">var</span> <span class="nx">wg</span> <span class="nx">sync</span><span class="p">.</span><span class="nx">WaitGroup</span>
-	<span class="k">for</span> <span class="nx">i</span><span class="p">,</span> <span class="nx">_</span> <span class="o">:=</span> <span class="k">range</span> <span class="nx">userList</span> <span class="p">{</span>
+	<span class="nx">items</span> <span class="o">:=</span> <span class="p">[]</span><span class="kt">int</span><span class="p">{</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">5</span><span class="p">}</span>
+	<span class="k">for</span> <span class="nx">index</span><span class="p">,</span> <span class="nx">_</span> <span class="o">:=</span> <span class="k">range</span> <span class="nx">items</span> <span class="p">{</span>
 		<span class="nx">wg</span><span class="p">.</span><span class="nf">Add</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
 		<span class="k">go</span> <span class="kd">func</span><span class="p">()</span> <span class="p">{</span>
 			<span class="k">defer</span> <span class="nx">wg</span><span class="p">.</span><span class="nf">Done</span><span class="p">()</span>
-			<span class="nf">Do</span><span class="p">(</span><span class="nx">userList</span><span class="p">[</span><span class="nx">i</span><span class="p">])</span>
+			<span class="nx">fmt</span><span class="p">.</span><span class="nf">Printf</span><span class="p">(</span><span class="s">&#34;item:%v\n&#34;</span><span class="p">,</span> <span class="nx">items</span><span class="p">[</span><span class="nx">index</span><span class="p">])</span>
 		<span class="p">}()</span>
 	<span class="p">}</span>
 	<span class="nx">wg</span><span class="p">.</span><span class="nf">Wait</span><span class="p">()</span>
-<span class="p">}</span>
-
-<span class="kd">func</span> <span class="nf">Do</span><span class="p">(</span><span class="nx">user</span> <span class="nx">User</span><span class="p">)</span> <span class="p">{</span>
-	<span class="nx">fmt</span><span class="p">.</span><span class="nf">Printf</span><span class="p">(</span><span class="s">&#34;用户id:%v\n&#34;</span><span class="p">,</span> <span class="nx">user</span><span class="p">.</span><span class="nx">userId</span><span class="p">)</span>
 <span class="p">}</span>
 
 </code></pre></div><p>一个很简单的利用 <code>sync.waitGroup</code> 做任务编排的场景，看一下好像没啥问题，运行看看结果。</p>
 <p><img src="https://image.syst.top/image/mistake/mistake-1.png" alt="image"></p>
-<p>啥情况，为啥不是1-9(当然不是顺序的)。</p>
+<p>为啥不是1-5(当然不是顺序的)。</p>
 <p>原因很简单，循环器中的 i 实际上是一个单变量，<code>go func</code>  里的闭包只绑定在一个变量上，
-每个 <code>goroutine</code> 可能要等到循环结束才真正的运行，这时候运行的 i 值大概率就是 9了。
+每个 <code>goroutine</code> 可能要等到循环结束才真正的运行，这时候运行的 i 值大概率就是5了,
 大概率的意思是没人能保证这个过程，有的只是手段。</p>
 <p>正确的做法</p>
-<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kn">package</span> <span class="nx">main</span>
-
-<span class="kn">import</span> <span class="p">(</span>
-	<span class="s">&#34;fmt&#34;</span>
-	<span class="s">&#34;sync&#34;</span>
-<span class="p">)</span>
-
-<span class="kd">type</span> <span class="nx">User</span> <span class="kd">struct</span> <span class="p">{</span>
-	<span class="nx">userId</span> <span class="kt">int</span>
-<span class="p">}</span>
-
-<span class="kd">func</span> <span class="nf">main</span><span class="p">()</span> <span class="p">{</span>
-	<span class="kd">var</span> <span class="nx">userList</span> <span class="p">[]</span><span class="nx">User</span>
-	<span class="k">for</span> <span class="nx">i</span> <span class="o">:=</span> <span class="mi">0</span><span class="p">;</span> <span class="nx">i</span> <span class="p">&lt;</span> <span class="mi">10</span><span class="p">;</span> <span class="nx">i</span><span class="o">++</span> <span class="p">{</span>
-		<span class="nx">userList</span> <span class="p">=</span> <span class="nb">append</span><span class="p">(</span><span class="nx">userList</span><span class="p">,</span> <span class="nx">User</span><span class="p">{</span><span class="nx">userId</span><span class="p">:</span> <span class="nx">i</span><span class="p">})</span>
-	<span class="p">}</span>
-
+<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kd">func</span> <span class="nf">main</span><span class="p">()</span> <span class="p">{</span>
 	<span class="kd">var</span> <span class="nx">wg</span> <span class="nx">sync</span><span class="p">.</span><span class="nx">WaitGroup</span>
-	<span class="k">for</span> <span class="nx">i</span><span class="p">,</span> <span class="nx">_</span> <span class="o">:=</span> <span class="k">range</span> <span class="nx">userList</span> <span class="p">{</span>
+
+	<span class="nx">items</span> <span class="o">:=</span> <span class="p">[]</span><span class="kt">int</span><span class="p">{</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">5</span><span class="p">}</span>
+	<span class="k">for</span> <span class="nx">index</span><span class="p">,</span> <span class="nx">_</span> <span class="o">:=</span> <span class="k">range</span> <span class="nx">items</span> <span class="p">{</span>
 		<span class="nx">wg</span><span class="p">.</span><span class="nf">Add</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
-		<span class="k">go</span> <span class="kd">func</span><span class="p">(</span><span class="nx">user</span> <span class="nx">User</span><span class="p">)</span> <span class="p">{</span>
+		<span class="k">go</span> <span class="kd">func</span><span class="p">(</span><span class="nx">i</span> <span class="kt">int</span><span class="p">)</span> <span class="p">{</span>
 			<span class="k">defer</span> <span class="nx">wg</span><span class="p">.</span><span class="nf">Done</span><span class="p">()</span>
-			<span class="nf">Do</span><span class="p">(</span><span class="nx">user</span><span class="p">)</span>
-		<span class="p">}(</span><span class="nx">userList</span><span class="p">[</span><span class="nx">i</span><span class="p">])</span>
+			<span class="nx">fmt</span><span class="p">.</span><span class="nf">Printf</span><span class="p">(</span><span class="s">&#34;item:%v\n&#34;</span><span class="p">,</span> <span class="nx">items</span><span class="p">[</span><span class="nx">i</span><span class="p">])</span>
+		<span class="p">}(</span><span class="nx">index</span><span class="p">)</span>
 	<span class="p">}</span>
 	<span class="nx">wg</span><span class="p">.</span><span class="nf">Wait</span><span class="p">()</span>
 <span class="p">}</span>
-
-<span class="kd">func</span> <span class="nf">Do</span><span class="p">(</span><span class="nx">user</span> <span class="nx">User</span><span class="p">)</span> <span class="p">{</span>
-	<span class="nx">fmt</span><span class="p">.</span><span class="nf">Printf</span><span class="p">(</span><span class="s">&#34;用户id:%v\n&#34;</span><span class="p">,</span> <span class="nx">user</span><span class="p">.</span><span class="nx">userId</span><span class="p">)</span>
-<span class="p">}</span>
-</code></pre></div><p>通过将 <code>user</code>  作为一个参数传入闭包中，user 每次迭代都会被求值，
-并放置在 <code>goroutine</code> 的堆栈中，因此每个用户列表切片元素最终都会被执行打印。</p>
-<p>或者这样,道理是一样的</p>
-<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="k">for</span> <span class="nx">i</span><span class="p">,</span> <span class="nx">_</span> <span class="o">:=</span> <span class="k">range</span> <span class="nx">userList</span> <span class="p">{</span>
+</code></pre></div><p>通过将 <code>i</code>  作为一个参数传入闭包中，i 每次迭代都会被求值，
+并放置在 <code>goroutine</code> 的堆栈中，因此每个切片元素最终都会被执行打印。</p>
+<p>或者这样,道理是一样的。</p>
+<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="k">for</span> <span class="nx">index</span><span class="p">,</span> <span class="nx">_</span> <span class="o">:=</span> <span class="k">range</span> <span class="nx">items</span> <span class="p">{</span>
 		<span class="nx">wg</span><span class="p">.</span><span class="nf">Add</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
-		<span class="nx">index</span><span class="o">:=</span><span class="nx">i</span>
+		<span class="nx">i</span><span class="o">:=</span><span class="nx">index</span>
 		<span class="k">go</span> <span class="kd">func</span><span class="p">()</span> <span class="p">{</span>
 			<span class="k">defer</span> <span class="nx">wg</span><span class="p">.</span><span class="nf">Done</span><span class="p">()</span>
-			<span class="nf">Do</span><span class="p">(</span><span class="nx">userList</span><span class="p">[</span><span class="nx">index</span><span class="p">])</span>
+			<span class="nx">fmt</span><span class="p">.</span><span class="nf">Printf</span><span class="p">(</span><span class="s">&#34;item:%v\n&#34;</span><span class="p">,</span> <span class="nx">items</span><span class="p">[</span><span class="nx">i</span><span class="p">])</span>
 		<span class="p">}()</span>
 	<span class="p">}</span>
 </code></pre></div><h3 id="waitgroup">WaitGroup</h3>
-<p>上面说到 <code>sync.waitGroup</code>，它也有犯错的地方，之前帮同事看代码的时候也发现这个错误。
-我把上面的例子稍微改动一下</p>
+<p>上面的例子有用到 <code>sync.waitGroup</code>，它也有犯错的地方。</p>
+<p>我把上面的例子稍微改动复杂一点点。</p>
 <div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kn">package</span> <span class="nx">main</span>
 
 <span class="kn">import</span> <span class="p">(</span>
