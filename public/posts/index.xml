@@ -6,8 +6,387 @@
 		<generator>Hugo -- gohugo.io</generator>
 		<language>zh-hans</language>
 		<copyright>This work is licensed under a Creative Commons Attribution-NonCommercial 4.0 International License.</copyright>
-		<lastBuildDate>Sat, 10 Apr 2021 09:54:52 +0800</lastBuildDate>
+		<lastBuildDate>Wed, 21 Apr 2021 23:54:52 +0800</lastBuildDate>
 		<atom:link href="https://www.syst.top/posts/index.xml" rel="self" type="application/rss+xml" />
+		
+		<item>
+			<title>在Go中高频犯过的错 </title>
+			<link>https://www.syst.top/posts/go/mistake/</link>
+			<pubDate>Wed, 21 Apr 2021 23:54:52 +0800</pubDate>
+			
+			<guid>https://www.syst.top/posts/go/mistake/</guid>
+			<description>在迭代器变量上使用goroutine 我们来看一段代码
+package main import ( &amp;#34;fmt&amp;#34; &amp;#34;sync&amp;#34; ) type User struct { userId int } func main() { var userList []User for i := 0; i &amp;lt; 10; i++ { userList = append(userList, User{userId: i}) } var wg sync.WaitGroup for i, _ := range userList { wg.Add(1) go func() { defer wg.Done() Do(userList[i]) }() } wg.Wait() } func Do(user User) { fmt.Printf(&amp;#34;用户id:%v\n&amp;#34;, user.userId) } 一个很简单的利用 sync.waitGroup 做任务编排的场景，看一下好像没啥问题，运行看看结果。
+啥情况，为啥不是1-9(当然不是顺序的)。
+原因很简单，循环器中的 i 实际上是一个单变量，go func 里的闭包只绑定在一个变量上， 每个 goroutine 可能要等到循环结束才真正的运行，这时候运行的 i 值大概率就是 9了。 大概率的意思是没人能保证这个过程，有的只是手段。</description>
+			<content type="html"><![CDATA[<h3 id="在迭代器变量上使用goroutine">在迭代器变量上使用goroutine</h3>
+<p>我们来看一段代码</p>
+<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kn">package</span> <span class="nx">main</span>
+
+<span class="kn">import</span> <span class="p">(</span>
+	<span class="s">&#34;fmt&#34;</span>
+	<span class="s">&#34;sync&#34;</span>
+<span class="p">)</span>
+
+<span class="kd">type</span> <span class="nx">User</span> <span class="kd">struct</span> <span class="p">{</span>
+	<span class="nx">userId</span> <span class="kt">int</span>
+<span class="p">}</span>
+
+<span class="kd">func</span> <span class="nf">main</span><span class="p">()</span> <span class="p">{</span>
+	<span class="kd">var</span> <span class="nx">userList</span> <span class="p">[]</span><span class="nx">User</span>
+	<span class="k">for</span> <span class="nx">i</span> <span class="o">:=</span> <span class="mi">0</span><span class="p">;</span> <span class="nx">i</span> <span class="p">&lt;</span> <span class="mi">10</span><span class="p">;</span> <span class="nx">i</span><span class="o">++</span> <span class="p">{</span>
+		<span class="nx">userList</span> <span class="p">=</span> <span class="nb">append</span><span class="p">(</span><span class="nx">userList</span><span class="p">,</span> <span class="nx">User</span><span class="p">{</span><span class="nx">userId</span><span class="p">:</span> <span class="nx">i</span><span class="p">})</span>
+	<span class="p">}</span>
+
+	<span class="kd">var</span> <span class="nx">wg</span> <span class="nx">sync</span><span class="p">.</span><span class="nx">WaitGroup</span>
+	<span class="k">for</span> <span class="nx">i</span><span class="p">,</span> <span class="nx">_</span> <span class="o">:=</span> <span class="k">range</span> <span class="nx">userList</span> <span class="p">{</span>
+		<span class="nx">wg</span><span class="p">.</span><span class="nf">Add</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+		<span class="k">go</span> <span class="kd">func</span><span class="p">()</span> <span class="p">{</span>
+			<span class="k">defer</span> <span class="nx">wg</span><span class="p">.</span><span class="nf">Done</span><span class="p">()</span>
+			<span class="nf">Do</span><span class="p">(</span><span class="nx">userList</span><span class="p">[</span><span class="nx">i</span><span class="p">])</span>
+		<span class="p">}()</span>
+	<span class="p">}</span>
+	<span class="nx">wg</span><span class="p">.</span><span class="nf">Wait</span><span class="p">()</span>
+<span class="p">}</span>
+
+<span class="kd">func</span> <span class="nf">Do</span><span class="p">(</span><span class="nx">user</span> <span class="nx">User</span><span class="p">)</span> <span class="p">{</span>
+	<span class="nx">fmt</span><span class="p">.</span><span class="nf">Printf</span><span class="p">(</span><span class="s">&#34;用户id:%v\n&#34;</span><span class="p">,</span> <span class="nx">user</span><span class="p">.</span><span class="nx">userId</span><span class="p">)</span>
+<span class="p">}</span>
+
+</code></pre></div><p>一个很简单的利用 <code>sync.waitGroup</code> 做任务编排的场景，看一下好像没啥问题，运行看看结果。</p>
+<p><img src="https://image.syst.top/image/mistake/mistake-1.png" alt="image"></p>
+<p>啥情况，为啥不是1-9(当然不是顺序的)。</p>
+<p>原因很简单，循环器中的 i 实际上是一个单变量，<code>go func</code>  里的闭包只绑定在一个变量上，
+每个 <code>goroutine</code> 可能要等到循环结束才真正的运行，这时候运行的 i 值大概率就是 9了。
+大概率的意思是没人能保证这个过程，有的只是手段。</p>
+<p>正确的做法</p>
+<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kn">package</span> <span class="nx">main</span>
+
+<span class="kn">import</span> <span class="p">(</span>
+	<span class="s">&#34;fmt&#34;</span>
+	<span class="s">&#34;sync&#34;</span>
+<span class="p">)</span>
+
+<span class="kd">type</span> <span class="nx">User</span> <span class="kd">struct</span> <span class="p">{</span>
+	<span class="nx">userId</span> <span class="kt">int</span>
+<span class="p">}</span>
+
+<span class="kd">func</span> <span class="nf">main</span><span class="p">()</span> <span class="p">{</span>
+	<span class="kd">var</span> <span class="nx">userList</span> <span class="p">[]</span><span class="nx">User</span>
+	<span class="k">for</span> <span class="nx">i</span> <span class="o">:=</span> <span class="mi">0</span><span class="p">;</span> <span class="nx">i</span> <span class="p">&lt;</span> <span class="mi">10</span><span class="p">;</span> <span class="nx">i</span><span class="o">++</span> <span class="p">{</span>
+		<span class="nx">userList</span> <span class="p">=</span> <span class="nb">append</span><span class="p">(</span><span class="nx">userList</span><span class="p">,</span> <span class="nx">User</span><span class="p">{</span><span class="nx">userId</span><span class="p">:</span> <span class="nx">i</span><span class="p">})</span>
+	<span class="p">}</span>
+
+	<span class="kd">var</span> <span class="nx">wg</span> <span class="nx">sync</span><span class="p">.</span><span class="nx">WaitGroup</span>
+	<span class="k">for</span> <span class="nx">i</span><span class="p">,</span> <span class="nx">_</span> <span class="o">:=</span> <span class="k">range</span> <span class="nx">userList</span> <span class="p">{</span>
+		<span class="nx">wg</span><span class="p">.</span><span class="nf">Add</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+		<span class="k">go</span> <span class="kd">func</span><span class="p">(</span><span class="nx">user</span> <span class="nx">User</span><span class="p">)</span> <span class="p">{</span>
+			<span class="k">defer</span> <span class="nx">wg</span><span class="p">.</span><span class="nf">Done</span><span class="p">()</span>
+			<span class="nf">Do</span><span class="p">(</span><span class="nx">user</span><span class="p">)</span>
+		<span class="p">}(</span><span class="nx">userList</span><span class="p">[</span><span class="nx">i</span><span class="p">])</span>
+	<span class="p">}</span>
+	<span class="nx">wg</span><span class="p">.</span><span class="nf">Wait</span><span class="p">()</span>
+<span class="p">}</span>
+
+<span class="kd">func</span> <span class="nf">Do</span><span class="p">(</span><span class="nx">user</span> <span class="nx">User</span><span class="p">)</span> <span class="p">{</span>
+	<span class="nx">fmt</span><span class="p">.</span><span class="nf">Printf</span><span class="p">(</span><span class="s">&#34;用户id:%v\n&#34;</span><span class="p">,</span> <span class="nx">user</span><span class="p">.</span><span class="nx">userId</span><span class="p">)</span>
+<span class="p">}</span>
+</code></pre></div><p>通过将 <code>user</code>  作为一个参数传入闭包中，user 每次迭代都会被求值，
+并放置在 <code>goroutine</code> 的堆栈中，因此每个用户列表切片元素最终都会被执行打印。</p>
+<p>或者这样,道理是一样的</p>
+<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="k">for</span> <span class="nx">i</span><span class="p">,</span> <span class="nx">_</span> <span class="o">:=</span> <span class="k">range</span> <span class="nx">userList</span> <span class="p">{</span>
+		<span class="nx">wg</span><span class="p">.</span><span class="nf">Add</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+		<span class="nx">index</span><span class="o">:=</span><span class="nx">i</span>
+		<span class="k">go</span> <span class="kd">func</span><span class="p">()</span> <span class="p">{</span>
+			<span class="k">defer</span> <span class="nx">wg</span><span class="p">.</span><span class="nf">Done</span><span class="p">()</span>
+			<span class="nf">Do</span><span class="p">(</span><span class="nx">userList</span><span class="p">[</span><span class="nx">index</span><span class="p">])</span>
+		<span class="p">}()</span>
+	<span class="p">}</span>
+</code></pre></div><h3 id="waitgroup">WaitGroup</h3>
+<p>上面说到 <code>sync.waitGroup</code>，它也有犯错的地方，之前帮同事看代码的时候也发现这个错误。
+我把上面的例子稍微改动一下</p>
+<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kn">package</span> <span class="nx">main</span>
+
+<span class="kn">import</span> <span class="p">(</span>
+	<span class="s">&#34;errors&#34;</span>
+	<span class="s">&#34;github.com/prometheus/common/log&#34;</span>
+	<span class="s">&#34;sync&#34;</span>
+<span class="p">)</span>
+
+<span class="kd">type</span> <span class="nx">User</span> <span class="kd">struct</span> <span class="p">{</span>
+	<span class="nx">userId</span> <span class="kt">int</span>
+<span class="p">}</span>
+
+<span class="kd">func</span> <span class="nf">main</span><span class="p">()</span> <span class="p">{</span>
+	<span class="kd">var</span> <span class="nx">userList</span> <span class="p">[]</span><span class="nx">User</span>
+	<span class="k">for</span> <span class="nx">i</span> <span class="o">:=</span> <span class="mi">0</span><span class="p">;</span> <span class="nx">i</span> <span class="p">&lt;</span> <span class="mi">10</span><span class="p">;</span> <span class="nx">i</span><span class="o">++</span> <span class="p">{</span>
+		<span class="nx">userList</span> <span class="p">=</span> <span class="nb">append</span><span class="p">(</span><span class="nx">userList</span><span class="p">,</span> <span class="nx">User</span><span class="p">{</span><span class="nx">userId</span><span class="p">:</span> <span class="nx">i</span><span class="p">})</span>
+	<span class="p">}</span>
+
+	<span class="kd">var</span> <span class="nx">wg</span> <span class="nx">sync</span><span class="p">.</span><span class="nx">WaitGroup</span>
+	<span class="k">for</span> <span class="nx">i</span><span class="p">,</span> <span class="nx">_</span> <span class="o">:=</span> <span class="k">range</span> <span class="nx">userList</span> <span class="p">{</span>
+		<span class="nx">wg</span><span class="p">.</span><span class="nf">Add</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+		<span class="k">go</span> <span class="kd">func</span><span class="p">(</span><span class="nx">item</span> <span class="kt">int</span><span class="p">)</span> <span class="p">{</span>
+			<span class="nx">_</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nf">Do</span><span class="p">(</span><span class="nx">userList</span><span class="p">[</span><span class="nx">item</span><span class="p">])</span>
+			<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+				<span class="nx">log</span><span class="p">.</span><span class="nf">Infof</span><span class="p">(</span><span class="s">&#34;err message:%v\n&#34;</span><span class="p">,</span> <span class="nx">err</span><span class="p">)</span>
+				<span class="k">return</span>
+			<span class="p">}</span>
+			<span class="nx">wg</span><span class="p">.</span><span class="nf">Done</span><span class="p">()</span>
+		<span class="p">}(</span><span class="nx">i</span><span class="p">)</span>
+	<span class="p">}</span>
+	<span class="nx">wg</span><span class="p">.</span><span class="nf">Wait</span><span class="p">()</span>
+	
+	<span class="c1">// 处理其他事务
+</span><span class="c1"></span><span class="p">}</span>
+
+<span class="kd">func</span> <span class="nf">Do</span><span class="p">(</span><span class="nx">user</span> <span class="nx">User</span><span class="p">)</span> <span class="p">(</span><span class="kt">string</span><span class="p">,</span> <span class="kt">error</span><span class="p">)</span> <span class="p">{</span>
+	<span class="c1">// 处理杂七杂八的业务....
+</span><span class="c1"></span>	<span class="k">if</span> <span class="nx">user</span><span class="p">.</span><span class="nx">userId</span> <span class="o">==</span> <span class="mi">9</span> <span class="p">{</span>
+		<span class="c1">// 此人是非法用户
+</span><span class="c1"></span>		<span class="k">return</span> <span class="s">&#34;失败&#34;</span><span class="p">,</span> <span class="nx">errors</span><span class="p">.</span><span class="nf">New</span><span class="p">(</span><span class="s">&#34;非法用户&#34;</span><span class="p">)</span>
+	<span class="p">}</span>
+	<span class="k">return</span> <span class="s">&#34;成功&#34;</span><span class="p">,</span> <span class="kc">nil</span>
+<span class="p">}</span>
+</code></pre></div><p>发现问题严重性了吗？</p>
+<p>当用户id等于9的时候，<code>err !=nil</code> 直接 <code>return</code> 了，导致 <code>waitGroup</code> 计数器根本没机会减1，
+最终 <code>wait</code> 阻塞在那，多么可怕的bug。</p>
+<p>所以一般，不，是绝大多数的场景下，我们都必须这样:</p>
+<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="k">go</span> <span class="kd">func</span><span class="p">(</span><span class="nx">item</span> <span class="kt">int</span><span class="p">)</span> <span class="p">{</span>
+			<span class="k">defer</span> <span class="nx">wg</span><span class="p">.</span><span class="nf">Done</span><span class="p">()</span>
+			<span class="c1">//....业务代码
+</span><span class="c1"></span>			<span class="c1">//....业务代码
+</span><span class="c1"></span>			<span class="nx">_</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nf">Do</span><span class="p">(</span><span class="nx">userList</span><span class="p">[</span><span class="nx">item</span><span class="p">])</span>
+			<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+				<span class="nx">log</span><span class="p">.</span><span class="nf">Infof</span><span class="p">(</span><span class="s">&#34;err message:%v\n&#34;</span><span class="p">,</span> <span class="nx">err</span><span class="p">)</span>
+				<span class="k">return</span>
+			<span class="p">}</span>
+		<span class="p">}(</span><span class="nx">i</span><span class="p">)</span>
+</code></pre></div><h3 id="goroutine-泄露">goroutine 泄露</h3>
+<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kn">package</span> <span class="nx">main</span>
+
+<span class="kn">import</span> <span class="p">(</span>
+	<span class="s">&#34;context&#34;</span>
+	<span class="s">&#34;github.com/prometheus/common/log&#34;</span>
+	<span class="s">&#34;time&#34;</span>
+<span class="p">)</span>
+
+<span class="kd">func</span> <span class="nf">main</span><span class="p">()</span> <span class="p">{</span>
+	<span class="nx">ch</span> <span class="o">:=</span> <span class="nb">make</span><span class="p">(</span><span class="kd">chan</span> <span class="kd">struct</span><span class="p">{})</span>
+	<span class="nx">c</span><span class="p">,</span> <span class="nx">cancel</span> <span class="o">:=</span> <span class="nx">context</span><span class="p">.</span><span class="nf">WithCancel</span><span class="p">(</span><span class="nx">context</span><span class="p">.</span><span class="nf">Background</span><span class="p">())</span>
+
+	<span class="k">go</span> <span class="kd">func</span><span class="p">()</span> <span class="p">{</span>
+		<span class="nx">ch</span><span class="o">&lt;-</span> <span class="kd">struct</span><span class="p">{}{}</span>
+		<span class="nx">time</span><span class="p">.</span><span class="nf">Sleep</span><span class="p">(</span><span class="mi">3</span> <span class="o">*</span> <span class="nx">time</span><span class="p">.</span><span class="nx">Second</span><span class="p">)</span>
+		<span class="nf">cancel</span><span class="p">()</span>
+	<span class="p">}()</span>
+
+	<span class="k">for</span> <span class="p">{</span>
+		<span class="k">select</span> <span class="p">{</span>
+		<span class="k">case</span> <span class="nx">res</span> <span class="o">:=</span> <span class="o">&lt;-</span><span class="nx">ch</span><span class="p">:</span>
+			<span class="nx">log</span><span class="p">.</span><span class="nf">Infof</span><span class="p">(</span><span class="s">&#34;item:%v&#34;</span><span class="p">,</span> <span class="nx">res</span><span class="p">)</span>
+		<span class="k">case</span> <span class="o">&lt;-</span><span class="nx">c</span><span class="p">.</span><span class="nf">Done</span><span class="p">():</span>
+			<span class="nx">log</span><span class="p">.</span><span class="nf">Infof</span><span class="p">(</span><span class="s">&#34;结束&#34;</span><span class="p">)</span>
+			<span class="k">break</span>
+		<span class="p">}</span>
+	<span class="p">}</span>
+<span class="p">}</span>
+
+</code></pre></div><p>我们的本意是三秒后终止 <code>for</code> 循环，我们这里用了 <code>break</code>。
+<code>break</code> 与 <code>select</code> 有关，和 <code>for</code> 语句无关！
+可以借助带标签的 break，比如下面这种
+<code>return</code>。</p>
+<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kn">package</span> <span class="nx">main</span>
+
+<span class="kn">import</span> <span class="p">(</span>
+	<span class="s">&#34;context&#34;</span>
+	<span class="s">&#34;github.com/prometheus/common/log&#34;</span>
+	<span class="s">&#34;time&#34;</span>
+<span class="p">)</span>
+
+<span class="kd">func</span> <span class="nf">main</span><span class="p">()</span> <span class="p">{</span>
+	<span class="nx">ch</span> <span class="o">:=</span> <span class="nb">make</span><span class="p">(</span><span class="kd">chan</span> <span class="kd">struct</span><span class="p">{})</span>
+	<span class="nx">c</span><span class="p">,</span> <span class="nx">can</span> <span class="o">:=</span> <span class="nx">context</span><span class="p">.</span><span class="nf">WithCancel</span><span class="p">(</span><span class="nx">context</span><span class="p">.</span><span class="nf">Background</span><span class="p">())</span>
+
+	<span class="k">go</span> <span class="kd">func</span><span class="p">()</span> <span class="p">{</span>
+		<span class="nx">ch</span> <span class="o">&lt;-</span> <span class="kd">struct</span><span class="p">{}{}</span>
+		<span class="nx">time</span><span class="p">.</span><span class="nf">Sleep</span><span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="nx">time</span><span class="p">.</span><span class="nx">Second</span><span class="p">)</span>
+		<span class="nf">can</span><span class="p">()</span>
+	<span class="p">}()</span>
+
+<span class="nx">loop</span><span class="p">:</span>
+	<span class="k">for</span> <span class="p">{</span>
+		<span class="k">select</span> <span class="p">{</span>
+		<span class="k">case</span> <span class="nx">res</span> <span class="o">:=</span> <span class="o">&lt;-</span><span class="nx">ch</span><span class="p">:</span>
+			<span class="nx">log</span><span class="p">.</span><span class="nf">Infof</span><span class="p">(</span><span class="s">&#34;item:%v&#34;</span><span class="p">,</span> <span class="nx">res</span><span class="p">)</span>
+		<span class="k">case</span> <span class="o">&lt;-</span><span class="nx">c</span><span class="p">.</span><span class="nf">Done</span><span class="p">():</span>
+			<span class="nx">log</span><span class="p">.</span><span class="nf">Infof</span><span class="p">(</span><span class="s">&#34;结束&#34;</span><span class="p">)</span>
+			<span class="k">break</span> <span class="nx">loop</span>
+		<span class="p">}</span>
+	<span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div><p>或者如果不需要往下走的直接 <code>return</code>。</p>
+<h3 id="野生-goroutine">野生 goroutine</h3>
+<p>我不知道你们公司是咋么处理异步操作的，是下面这样的吗</p>
+<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kd">func</span> <span class="nf">main</span><span class="p">()</span> <span class="p">{</span>
+	<span class="c1">// doSomething
+</span><span class="c1"></span>	<span class="k">go</span> <span class="kd">func</span><span class="p">()</span> <span class="p">{</span>
+		<span class="c1">// doSomething
+</span><span class="c1"></span>	<span class="p">}()</span>
+<span class="p">}</span>
+</code></pre></div><p>我们为了防止程序中出现不可预知的 <code>panic</code>，导致程序直接挂掉，都会加入 <code>recover</code>，比如这样</p>
+<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kd">func</span> <span class="nf">main</span><span class="p">()</span> <span class="p">{</span>
+	<span class="k">defer</span> <span class="kd">func</span><span class="p">()</span> <span class="p">{</span>
+		<span class="k">if</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nb">recover</span><span class="p">();</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+			<span class="nx">fmt</span><span class="p">.</span><span class="nf">Printf</span><span class="p">(</span><span class="s">&#34;%v\n&#34;</span><span class="p">,</span> <span class="nx">err</span><span class="p">)</span>
+		<span class="p">}</span>
+	<span class="p">}()</span>
+	<span class="nb">panic</span><span class="p">(</span><span class="s">&#34;处理失败&#34;</span><span class="p">)</span>
+<span class="p">}</span>
+</code></pre></div><p>但是如果这时候我们直接开启一个 <code>goroutine</code>，在这个 <code>goroutine</code> 里面发生了  <code>panic</code>，比如这样</p>
+<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kd">func</span> <span class="nf">main</span><span class="p">()</span> <span class="p">{</span>
+	<span class="k">defer</span> <span class="kd">func</span><span class="p">()</span> <span class="p">{</span>
+		<span class="k">if</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nb">recover</span><span class="p">();</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+			<span class="nx">fmt</span><span class="p">.</span><span class="nf">Printf</span><span class="p">(</span><span class="s">&#34;%v\n&#34;</span><span class="p">,</span> <span class="nx">err</span><span class="p">)</span>
+		<span class="p">}</span>
+	<span class="p">}()</span>
+	<span class="k">go</span> <span class="kd">func</span><span class="p">()</span> <span class="p">{</span>
+		<span class="nb">panic</span><span class="p">(</span><span class="s">&#34;处理失败&#34;</span><span class="p">)</span>
+	<span class="p">}()</span>
+
+	<span class="nx">time</span><span class="p">.</span><span class="nf">Sleep</span><span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="nx">time</span><span class="p">.</span><span class="nx">Second</span><span class="p">)</span>
+<span class="p">}</span>
+</code></pre></div><p>此时最外层的 <code>recover</code> 并不能捕获，程序会直接挂掉，就像下面这样。
+<img src="https://image.syst.top/image/mistake/mistake-2.png" alt="image"></p>
+<p>但是你总不能每次都在开启一个新的 <code>goroutine</code> 像下面这样写,</p>
+<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kd">func</span> <span class="nf">main</span><span class="p">()</span> <span class="p">{</span>
+	<span class="k">defer</span> <span class="kd">func</span><span class="p">()</span> <span class="p">{</span>
+		<span class="k">if</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nb">recover</span><span class="p">();</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+			<span class="nx">fmt</span><span class="p">.</span><span class="nf">Printf</span><span class="p">(</span><span class="s">&#34;%v\n&#34;</span><span class="p">,</span> <span class="nx">err</span><span class="p">)</span>
+		<span class="p">}</span>
+	<span class="p">}()</span>
+
+	<span class="c1">// func1
+</span><span class="c1"></span>	<span class="k">go</span> <span class="kd">func</span><span class="p">()</span> <span class="p">{</span>
+		<span class="k">defer</span> <span class="kd">func</span><span class="p">()</span> <span class="p">{</span>
+			<span class="k">if</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nb">recover</span><span class="p">();</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+				<span class="nx">fmt</span><span class="p">.</span><span class="nf">Printf</span><span class="p">(</span><span class="s">&#34;%v\n&#34;</span><span class="p">,</span> <span class="nx">err</span><span class="p">)</span>
+			<span class="p">}</span>
+		<span class="p">}()</span>
+		<span class="nb">panic</span><span class="p">(</span><span class="s">&#34;错误失败&#34;</span><span class="p">)</span>
+	<span class="p">}()</span>
+
+	<span class="c1">// func2
+</span><span class="c1"></span>	<span class="k">go</span> <span class="kd">func</span><span class="p">()</span> <span class="p">{</span>
+		<span class="k">defer</span> <span class="kd">func</span><span class="p">()</span> <span class="p">{</span>
+			<span class="k">if</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nb">recover</span><span class="p">();</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+				<span class="nx">fmt</span><span class="p">.</span><span class="nf">Printf</span><span class="p">(</span><span class="s">&#34;%v\n&#34;</span><span class="p">,</span> <span class="nx">err</span><span class="p">)</span>
+			<span class="p">}</span>
+		<span class="p">}()</span>
+		<span class="nb">panic</span><span class="p">(</span><span class="s">&#34;请求错误&#34;</span><span class="p">)</span>
+	<span class="p">}()</span>
+
+	<span class="nx">time</span><span class="p">.</span><span class="nf">Sleep</span><span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="nx">time</span><span class="p">.</span><span class="nx">Second</span><span class="p">)</span>
+<span class="p">}</span>
+</code></pre></div><p>所以基本上大家都会包一层。比如这样写,</p>
+<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kn">package</span> <span class="nx">main</span>
+
+<span class="kn">import</span> <span class="p">(</span>
+	<span class="s">&#34;fmt&#34;</span>
+	<span class="s">&#34;time&#34;</span>
+<span class="p">)</span>
+
+<span class="kd">func</span> <span class="nf">main</span><span class="p">()</span> <span class="p">{</span>
+	<span class="k">defer</span> <span class="kd">func</span><span class="p">()</span> <span class="p">{</span>
+		<span class="k">if</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nb">recover</span><span class="p">();</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+			<span class="nx">fmt</span><span class="p">.</span><span class="nf">Printf</span><span class="p">(</span><span class="s">&#34;%v\n&#34;</span><span class="p">,</span> <span class="nx">err</span><span class="p">)</span>
+		<span class="p">}</span>
+	<span class="p">}()</span>
+
+	<span class="c1">// func1
+</span><span class="c1"></span>	<span class="nf">Go</span><span class="p">(</span><span class="kd">func</span><span class="p">()</span> <span class="p">{</span>
+		<span class="nb">panic</span><span class="p">(</span><span class="s">&#34;错误失败&#34;</span><span class="p">)</span>
+	<span class="p">})</span>
+
+	<span class="c1">// func2
+</span><span class="c1"></span>	<span class="nf">Go</span><span class="p">(</span><span class="kd">func</span><span class="p">()</span> <span class="p">{</span>
+		<span class="nb">panic</span><span class="p">(</span><span class="s">&#34;请求错误&#34;</span><span class="p">)</span>
+	<span class="p">})</span>
+
+	<span class="nx">time</span><span class="p">.</span><span class="nf">Sleep</span><span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="nx">time</span><span class="p">.</span><span class="nx">Second</span><span class="p">)</span>
+<span class="p">}</span>
+
+<span class="kd">func</span> <span class="nf">Go</span><span class="p">(</span><span class="nx">fn</span> <span class="kd">func</span><span class="p">())</span> <span class="p">{</span>
+	<span class="k">go</span> <span class="nf">RunSafe</span><span class="p">(</span><span class="nx">fn</span><span class="p">)</span>
+<span class="p">}</span>
+
+<span class="kd">func</span> <span class="nf">RunSafe</span><span class="p">(</span><span class="nx">fn</span> <span class="kd">func</span><span class="p">())</span> <span class="p">{</span>
+	<span class="k">defer</span> <span class="kd">func</span><span class="p">()</span> <span class="p">{</span>
+		<span class="k">if</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nb">recover</span><span class="p">();</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+			<span class="nx">fmt</span><span class="p">.</span><span class="nf">Printf</span><span class="p">(</span><span class="s">&#34;错误:%v\n&#34;</span><span class="p">,</span> <span class="nx">err</span><span class="p">)</span>
+		<span class="p">}</span>
+	<span class="p">}()</span>
+	<span class="nf">fn</span><span class="p">()</span>
+<span class="p">}</span>
+</code></pre></div><p>当然我这里只是简单都打印一些日志信息，一般还会带上堆栈都信息。</p>
+<h3 id="channel">channel</h3>
+<p><code>channel</code> 在 <code>go</code> 中的地位实在太高了，各大开源项目到处都是 <code>channel</code> 的影子，
+以至于你在工业级的项目 issues 中搜索 <code>channel</code> ，能看到很多的 <code>bug</code>，
+比如 etcd 这个 <code>issues</code>,
+<img src="https://image.syst.top/image/mistake/mistake-3.png" alt="image"></p>
+<p>一个往已关闭的 <code>channel</code> 中发送数据数据引发的 <code>panic</code>,等等很多。
+这个故事告诉我们，否管大不大佬，改写的 <code>bug</code> 还是会写。</p>
+<p><code>channel</code> 除了上述高频出现的错误，还有以下几点:</p>
+<p>直接关闭一个 nil 值 channel 会引发 panic</p>
+<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kn">package</span> <span class="nx">main</span>
+
+<span class="kd">func</span> <span class="nf">main</span><span class="p">()</span> <span class="p">{</span>
+  <span class="kd">var</span> <span class="nx">ch</span> <span class="kd">chan</span> <span class="kd">struct</span><span class="p">{}</span>
+  <span class="nb">close</span><span class="p">(</span><span class="nx">ch</span><span class="p">)</span>
+<span class="p">}</span>
+
+</code></pre></div><p>关闭一个已关闭的 channel 会引发 panic。</p>
+<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kn">package</span> <span class="nx">main</span>
+
+<span class="kd">func</span> <span class="nf">main</span><span class="p">()</span> <span class="p">{</span>
+  <span class="nx">ch</span> <span class="o">:=</span> <span class="nb">make</span><span class="p">(</span><span class="kd">chan</span> <span class="kd">struct</span><span class="p">{})</span>
+  <span class="nb">close</span><span class="p">(</span><span class="nx">ch</span><span class="p">)</span>
+  <span class="nb">close</span><span class="p">(</span><span class="nx">ch</span><span class="p">)</span>
+<span class="p">}</span>
+</code></pre></div><p>还有一点，有时候使用 channel 不小心会导致 goroutine 泄露，比如下面这种情况,</p>
+<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kn">package</span> <span class="nx">main</span>
+
+<span class="kn">import</span> <span class="p">(</span>
+	<span class="s">&#34;context&#34;</span>
+	<span class="s">&#34;fmt&#34;</span>
+	<span class="s">&#34;time&#34;</span>
+<span class="p">)</span>
+
+<span class="kd">func</span> <span class="nf">main</span><span class="p">()</span> <span class="p">{</span>
+	<span class="nx">ch</span> <span class="o">:=</span> <span class="nb">make</span><span class="p">(</span><span class="kd">chan</span> <span class="kd">struct</span><span class="p">{})</span>
+	<span class="nx">cx</span><span class="p">,</span> <span class="nx">_</span> <span class="o">:=</span> <span class="nx">context</span><span class="p">.</span><span class="nf">WithTimeout</span><span class="p">(</span><span class="nx">context</span><span class="p">.</span><span class="nf">Background</span><span class="p">(),</span> <span class="nx">time</span><span class="p">.</span><span class="nx">Second</span><span class="p">)</span>
+	<span class="k">go</span> <span class="kd">func</span><span class="p">()</span> <span class="p">{</span>
+		<span class="nx">time</span><span class="p">.</span><span class="nf">Sleep</span><span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="nx">time</span><span class="p">.</span><span class="nx">Second</span><span class="p">)</span>
+		<span class="nx">ch</span> <span class="o">&lt;-</span> <span class="kd">struct</span><span class="p">{}{}</span>
+		<span class="nx">fmt</span><span class="p">.</span><span class="nf">Println</span><span class="p">(</span><span class="s">&#34;goroutine 结束&#34;</span><span class="p">)</span>
+	<span class="p">}()</span>
+
+	<span class="k">select</span> <span class="p">{</span>
+	<span class="k">case</span> <span class="o">&lt;-</span><span class="nx">ch</span><span class="p">:</span>
+		<span class="nx">fmt</span><span class="p">.</span><span class="nf">Println</span><span class="p">(</span><span class="s">&#34;res&#34;</span><span class="p">)</span>
+	<span class="k">case</span> <span class="o">&lt;-</span><span class="nx">cx</span><span class="p">.</span><span class="nf">Done</span><span class="p">():</span>
+		<span class="nx">fmt</span><span class="p">.</span><span class="nf">Println</span><span class="p">(</span><span class="s">&#34;timeout&#34;</span><span class="p">)</span>
+	<span class="p">}</span>
+	<span class="nx">time</span><span class="p">.</span><span class="nf">Sleep</span><span class="p">(</span><span class="mi">5</span> <span class="o">*</span> <span class="nx">time</span><span class="p">.</span><span class="nx">Second</span><span class="p">)</span>
+<span class="p">}</span>
+
+</code></pre></div><p>启动一个 goroutine 去处理业务，业务需要执行2秒，超时时间是1秒，
+会导致 channel 从未被读取，
+我们知道没有缓冲的 channel 必须等发送方和接收方都准备好才能操作。
+此时子 <code>goroutine</code> 会被永久阻塞在  <code>ch &lt;- struct{}</code> 这行代码，除非程序结束，而这就是 goroutine 泄露。</p>
+<p>解决这个也很简单，把无缓冲的 channel 改成缓冲为1。</p>
+]]></content>
+		</item>
 		
 		<item>
 			<title>etcd 实战基础篇(一) </title>

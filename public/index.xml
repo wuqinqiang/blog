@@ -7,7 +7,28 @@
     <generator>Hugo -- gohugo.io</generator>
     <language>zh-hans</language>
     <copyright>This work is licensed under a Creative Commons Attribution-NonCommercial 4.0 International License.</copyright>
-    <lastBuildDate>Sat, 10 Apr 2021 09:54:52 +0800</lastBuildDate><atom:link href="https://www.syst.top/index.xml" rel="self" type="application/rss+xml" />
+    <lastBuildDate>Wed, 21 Apr 2021 23:54:52 +0800</lastBuildDate><atom:link href="https://www.syst.top/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>在Go中高频犯过的错 </title>
+      <link>https://www.syst.top/posts/go/mistake/</link>
+      <pubDate>Wed, 21 Apr 2021 23:54:52 +0800</pubDate>
+      
+      <guid>https://www.syst.top/posts/go/mistake/</guid>
+      <description>在迭代器变量上使用goroutine 我们来看一段代码
+package main import ( &amp;#34;fmt&amp;#34; &amp;#34;sync&amp;#34; ) type User struct { userId int } func main() { var userList []User for i := 0; i &amp;lt; 10; i++ { userList = append(userList, User{userId: i}) } var wg sync.WaitGroup for i, _ := range userList { wg.Add(1) go func() { defer wg.Done() Do(userList[i]) }() } wg.Wait() } func Do(user User) { fmt.Printf(&amp;#34;用户id:%v\n&amp;#34;, user.userId) } 一个很简单的利用 sync.waitGroup 做任务编排的场景，看一下好像没啥问题，运行看看结果。
+啥情况，为啥不是1-9(当然不是顺序的)。
+原因很简单，循环器中的 i 实际上是一个单变量，go func 里的闭包只绑定在一个变量上， 每个 goroutine 可能要等到循环结束才真正的运行，这时候运行的 i 值大概率就是 9了。 大概率的意思是没人能保证这个过程，有的只是手段。</description>
+    </item>
+    
+    <item>
+      <title>etcd 实战基础篇(二) </title>
+      <link>https://www.syst.top/translations/go-concurrency-2021-04-20/</link>
+      <pubDate>Tue, 20 Apr 2021 23:54:52 +0800</pubDate>
+      
+      <guid>https://www.syst.top/translations/go-concurrency-2021-04-20/</guid>
+      <description></description>
+    </item>
+    
     <item>
       <title>etcd 实战基础篇(一) </title>
       <link>https://www.syst.top/posts/go/etcd-2021-04-10/</link>
@@ -117,19 +138,6 @@ Kubernetes 的热度很明显是不断地在上涨，因此学习和使用 Kuber
 Docker for Mac/Windows with Kubernetes Docker 在 17.12.ce 起就提供了 Mac 版本的 Kubernetes Beta 支持，在初始使用上来说非常的方便。首先我们检查 Docker 的版本，点击 Docker -&amp;gt; Check for Updates 确保你的 Docker 在最新版本。
 快速安装 Kubernetes 在升级完成后，我们可以点击 Docker -&amp;gt; Preferences -&amp;gt; Kubernetes，如下图：
 你会发现存在三个选项，分别是：Enable Kubernete、Deploy Docker Stacks to Kubernetes by default、Show system containers (advanced)。</description>
-    </item>
-    
-    <item>
-      <title>《待定吧》</title>
-      <link>https://www.syst.top/go-categories/</link>
-      <pubDate>Tue, 21 Apr 2020 00:00:00 +0000</pubDate>
-      
-      <guid>https://www.syst.top/go-categories/</guid>
-      <description>我不怎么喜欢左写写，右写写，因此总是在不知不觉中写了不少的系列教程，希望对你有所帮助，若要催更请关注公众号后私聊催。
-  一：HTTP 应用
- 「连载一」etcd(-) 「连载二」etcd （二） 「连载三」Gin搭建Blog API&amp;rsquo;s （二） 「连载四」Gin搭建Blog API&amp;rsquo;s （三）    二：gRPC 应用
-  三：grpc+grpc-gateway 应用
-  我的公众号 </description>
     </item>
     
   </channel>

@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>管道 on 记得</title>
+    <link>https://www.syst.top/tags/%E7%AE%A1%E9%81%93/</link>
+    <description>Recent content in 管道 on 记得</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>zh-hans</language>
+    <copyright>This work is licensed under a Creative Commons Attribution-NonCommercial 4.0 International License.</copyright>
+    <lastBuildDate>Tue, 20 Apr 2021 23:54:52 +0800</lastBuildDate><atom:link href="https://www.syst.top/tags/%E7%AE%A1%E9%81%93/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>etcd 实战基础篇(二) </title>
+      <link>https://www.syst.top/translations/go-concurrency-2021-04-20/</link>
+      <pubDate>Tue, 20 Apr 2021 23:54:52 +0800</pubDate>
+      
+      <guid>https://www.syst.top/translations/go-concurrency-2021-04-20/</guid>
+      <description></description>
+    </item>
+    
+  </channel>
+</rss>
