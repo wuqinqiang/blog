@@ -17,7 +17,7 @@
       <description>在迭代器变量上使用 goroutine 这算高频吧。
 package main import ( &amp;#34;fmt&amp;#34; &amp;#34;sync&amp;#34; ) func main() { var wg sync.WaitGroup items := []int{1, 2, 3, 4, 5} for index, _ := range items { wg.Add(1) go func() { defer wg.Done() fmt.Printf(&amp;#34;item:%v\n&amp;#34;, items[index]) }() } wg.Wait() } 一个很简单的利用 sync.waitGroup 做任务编排的场景，看一下好像没啥问题，运行看看结果。
 为啥不是1-5(当然不是顺序的)。
-原因很简单，循环器中的 i 实际上是一个单变量，go func 里的闭包只绑定在一个变量上， 每个 goroutine 可能要等到循环结束才真正的运行，这时候运行的 i 值大概率就是5了, 大概率的意思是没人能保证这个过程，有的只是手段。
+原因很简单，循环器中的 i 实际上是一个单变量，go func 里的闭包只绑定在一个变量上， 每个 goroutine 可能要等到循环结束才真正的运行，这时候运行的 i 值大概率就是5了, 没人能保证这个过程，有的只是手段。
 正确的做法
 func main() { var wg sync.WaitGroup items := []int{1, 2, 3, 4, 5} for index, _ := range items { wg.</description>
     </item>

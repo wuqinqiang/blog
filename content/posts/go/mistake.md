@@ -44,7 +44,7 @@ func main() {
 
 原因很简单，循环器中的 i 实际上是一个单变量，`go func`  里的闭包只绑定在一个变量上，
 每个 `goroutine` 可能要等到循环结束才真正的运行，这时候运行的 i 值大概率就是5了,
-大概率的意思是没人能保证这个过程，有的只是手段。
+没人能保证这个过程，有的只是手段。
 
 正确的做法
 
@@ -82,7 +82,7 @@ for index, _ := range items {
 ### WaitGroup
 
 
-上面的例子有用到 `sync.waitGroup`，它也有犯错的地方。
+上面的例子有用到 `sync.waitGroup`，使用不当，也会犯错。
 
 我把上面的例子稍微改动复杂一点点。
 ```go
@@ -132,13 +132,22 @@ func Do(user User) (string, error) {
 ```
 发现问题严重性了吗？
 
-当用户id等于9的时候，`err !=nil` 直接 `return` 了，导致 `waitGroup` 计数器根本没机会减1，
-最终 `wait` 阻塞在那，多么可怕的bug。
+当用户`id`等于9的时候，`err !=nil` 直接 `return` 了，导致 `waitGroup` 计数器根本没机会减1，
+最终 `wait` 会阻塞，多么可怕的 `bug`。
 
-所以一般，不，是绝大多数的场景下，我们都必须这样:
+在绝大多数的场景下，我们都必须这样:
 ```go
-go func(item int) {
+func main() {
+	var userList []User
+	for i := 0; i < 10; i++ {
+		userList = append(userList, User{userId: i})
+	}
+	var wg sync.WaitGroup
+	for i, _ := range userList {
+		wg.Add(1)
+		go func(item int) {
 			defer wg.Done()
+
 			//....业务代码
 			//....业务代码
 			_, err := Do(userList[item])
@@ -147,82 +156,14 @@ go func(item int) {
 				return
 			}
 		}(i)
-```
-### goroutine 泄露
-
-```go
-package main
-
-import (
-	"context"
-	"github.com/prometheus/common/log"
-	"time"
-)
-
-func main() {
-	ch := make(chan struct{})
-	c, cancel := context.WithCancel(context.Background())
-
-	go func() {
-		ch<- struct{}{}
-		time.Sleep(3 * time.Second)
-		cancel()
-	}()
-
-	for {
-		select {
-		case res := <-ch:
-			log.Infof("item:%v", res)
-		case <-c.Done():
-			log.Infof("结束")
-			break
-		}
 	}
-}
-
-```
-我们的本意是三秒后终止 `for` 循环，我们这里用了 `break`。
-`break` 与 `select` 有关，和 `for` 语句无关！
-可以借助带标签的 break，比如下面这种 
-`return`。
-```go
-package main
-
-import (
-	"context"
-	"github.com/prometheus/common/log"
-	"time"
-)
-
-func main() {
-	ch := make(chan struct{})
-	c, can := context.WithCancel(context.Background())
-
-	go func() {
-		ch <- struct{}{}
-		time.Sleep(2 * time.Second)
-		can()
-	}()
-
-loop:
-	for {
-		select {
-		case res := <-ch:
-			log.Infof("item:%v", res)
-		case <-c.Done():
-			log.Infof("结束")
-			break loop
-		}
-	}
+	wg.Wait()
 }
 ```
-
-或者如果不需要往下走的直接 `return`。
-
 
 ### 野生 goroutine
 
-我不知道你们公司是咋么处理异步操作的，是下面这样的吗
+我不知道你们公司是咋么处理异步操作的，是下面这样吗
 ```go
 func main() {
 	// doSomething
@@ -262,7 +203,7 @@ func main() {
 此时最外层的 `recover` 并不能捕获，程序会直接挂掉，就像下面这样。
 ![image](https://image.syst.top/image/mistake/mistake-2.png)
 
-但是你总不能每次都在开启一个新的 `goroutine` 像下面这样写,
+但是你总不能每次开启一个新的 `goroutine` 就在里面 `recover`,
 ```go
 func main() {
 	defer func() {
@@ -344,15 +285,17 @@ func RunSafe(fn func()) {
 
 `channel` 在 `go` 中的地位实在太高了，各大开源项目到处都是 `channel` 的影子，
 以至于你在工业级的项目 issues 中搜索 `channel` ，能看到很多的 `bug`，
-比如 etcd 这个 `issues`,
+比如 etcd 这个 `issue`,
 ![image](https://image.syst.top/image/mistake/mistake-3.png)
 
-一个往已关闭的 `channel` 中发送数据数据引发的 `panic`,等等很多。
-这个故事告诉我们，否管大不大佬，改写的 `bug` 还是会写。
+一个往已关闭的 `channel` 中发送数据引发的 `panic`,等等类似场景很多。
+
+这个故事告诉我们，否管大不大佬，改写的 `bug` 还是会写，手动狗头。
+
 
 `channel` 除了上述高频出现的错误，还有以下几点:
 
-直接关闭一个 nil 值 channel 会引发 panic
+#### 直接关闭一个 nil 值 channel 会引发 panic
 ```go
 package main
 
@@ -363,7 +306,7 @@ func main() {
 
 ```
 
-关闭一个已关闭的 channel 会引发 panic。
+#### 关闭一个已关闭的 channel 会引发 panic。
 ```go
 package main
 
@@ -374,7 +317,7 @@ func main() {
 }
 ```
 
-还有一点，有时候使用 channel 不小心会导致 goroutine 泄露，比如下面这种情况,
+另外，有时候使用 `channel` 不小心会导致 `goroutine` 泄露，比如下面这种情况,
 
 ```go
 package main
@@ -405,12 +348,17 @@ func main() {
 
 ```
 
-启动一个 goroutine 去处理业务，业务需要执行2秒，超时时间是1秒，
-会导致 channel 从未被读取，
-我们知道没有缓冲的 channel 必须等发送方和接收方都准备好才能操作。
-此时子 `goroutine` 会被永久阻塞在  `ch <- struct{}` 这行代码，除非程序结束，而这就是 goroutine 泄露。
+启动一个 `goroutine` 去处理业务，业务需要执行2秒，而我们设置的超时时间是1秒。
+这就会导致 `channel` 从未被读取，
+我们知道没有缓冲的 `channel` 必须等发送方和接收方都准备好才能操作。
+此时 `goroutine` 会被永久阻塞在  `ch <- struct{}{}` 这行代码，除非程序结束。
+而这就是 `goroutine` 泄露。
 
-解决这个也很简单，把无缓冲的 channel 改成缓冲为1。 
+解决这个也很简单，把无缓冲的 `channel` 改成缓冲为1。 
+
+### 总结
+这篇文章主要介绍了使用 `Go` 在日常开发中容易犯下的错。
+当然还远远不止这些，你可以在下方留言中补充你犯过的错。
  
 
 

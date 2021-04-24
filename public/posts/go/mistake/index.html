@@ -11,12 +11,12 @@
 <meta itemprop="description" content="在迭代器变量上使用 goroutine 这算高频吧。
 package main import ( &#34;fmt&#34; &#34;sync&#34; ) func main() { var wg sync.WaitGroup items := []int{1, 2, 3, 4, 5} for index, _ := range items { wg.Add(1) go func() { defer wg.Done() fmt.Printf(&#34;item:%v\n&#34;, items[index]) }() } wg.Wait() } 一个很简单的利用 sync.waitGroup 做任务编排的场景，看一下好像没啥问题，运行看看结果。
 为啥不是1-5(当然不是顺序的)。
-原因很简单，循环器中的 i 实际上是一个单变量，go func 里的闭包只绑定在一个变量上， 每个 goroutine 可能要等到循环结束才真正的运行，这时候运行的 i 值大概率就是5了, 大概率的意思是没人能保证这个过程，有的只是手段。
+原因很简单，循环器中的 i 实际上是一个单变量，go func 里的闭包只绑定在一个变量上， 每个 goroutine 可能要等到循环结束才真正的运行，这时候运行的 i 值大概率就是5了, 没人能保证这个过程，有的只是手段。
 正确的做法
 func main() { var wg sync.WaitGroup items := []int{1, 2, 3, 4, 5} for index, _ := range items { wg.">
 <meta itemprop="datePublished" content="2021-04-21T23:54:52+08:00" />
 <meta itemprop="dateModified" content="2021-04-21T23:54:52+08:00" />
-<meta itemprop="wordCount" content="706">
+<meta itemprop="wordCount" content="637">
 
 
 
@@ -25,7 +25,7 @@ func main() { var wg sync.WaitGroup items := []int{1, 2, 3, 4, 5} for index, _ :
 <meta property="og:description" content="在迭代器变量上使用 goroutine 这算高频吧。
 package main import ( &#34;fmt&#34; &#34;sync&#34; ) func main() { var wg sync.WaitGroup items := []int{1, 2, 3, 4, 5} for index, _ := range items { wg.Add(1) go func() { defer wg.Done() fmt.Printf(&#34;item:%v\n&#34;, items[index]) }() } wg.Wait() } 一个很简单的利用 sync.waitGroup 做任务编排的场景，看一下好像没啥问题，运行看看结果。
 为啥不是1-5(当然不是顺序的)。
-原因很简单，循环器中的 i 实际上是一个单变量，go func 里的闭包只绑定在一个变量上， 每个 goroutine 可能要等到循环结束才真正的运行，这时候运行的 i 值大概率就是5了, 大概率的意思是没人能保证这个过程，有的只是手段。
+原因很简单，循环器中的 i 实际上是一个单变量，go func 里的闭包只绑定在一个变量上， 每个 goroutine 可能要等到循环结束才真正的运行，这时候运行的 i 值大概率就是5了, 没人能保证这个过程，有的只是手段。
 正确的做法
 func main() { var wg sync.WaitGroup items := []int{1, 2, 3, 4, 5} for index, _ := range items { wg." />
 <meta property="og:type" content="article" />
@@ -37,7 +37,7 @@ func main() { var wg sync.WaitGroup items := []int{1, 2, 3, 4, 5} for index, _ :
 <meta name="twitter:description" content="在迭代器变量上使用 goroutine 这算高频吧。
 package main import ( &#34;fmt&#34; &#34;sync&#34; ) func main() { var wg sync.WaitGroup items := []int{1, 2, 3, 4, 5} for index, _ := range items { wg.Add(1) go func() { defer wg.Done() fmt.Printf(&#34;item:%v\n&#34;, items[index]) }() } wg.Wait() } 一个很简单的利用 sync.waitGroup 做任务编排的场景，看一下好像没啥问题，运行看看结果。
 为啥不是1-5(当然不是顺序的)。
-原因很简单，循环器中的 i 实际上是一个单变量，go func 里的闭包只绑定在一个变量上， 每个 goroutine 可能要等到循环结束才真正的运行，这时候运行的 i 值大概率就是5了, 大概率的意思是没人能保证这个过程，有的只是手段。
+原因很简单，循环器中的 i 实际上是一个单变量，go func 里的闭包只绑定在一个变量上， 每个 goroutine 可能要等到循环结束才真正的运行，这时候运行的 i 值大概率就是5了, 没人能保证这个过程，有的只是手段。
 正确的做法
 func main() { var wg sync.WaitGroup items := []int{1, 2, 3, 4, 5} for index, _ := range items { wg."/>
 
@@ -115,7 +115,7 @@ func main() { var wg sync.WaitGroup items := []int{1, 2, 3, 4, 5} for index, _ :
 <p>为啥不是1-5(当然不是顺序的)。</p>
 <p>原因很简单，循环器中的 i 实际上是一个单变量，<code>go func</code>  里的闭包只绑定在一个变量上，
 每个 <code>goroutine</code> 可能要等到循环结束才真正的运行，这时候运行的 i 值大概率就是5了,
-大概率的意思是没人能保证这个过程，有的只是手段。</p>
+没人能保证这个过程，有的只是手段。</p>
 <p>正确的做法</p>
 <div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kd">func</span> <span class="nf">main</span><span class="p">()</span> <span class="p">{</span>
 	<span class="kd">var</span> <span class="nx">wg</span> <span class="nx">sync</span><span class="p">.</span><span class="nx">WaitGroup</span>
@@ -142,7 +142,7 @@ func main() { var wg sync.WaitGroup items := []int{1, 2, 3, 4, 5} for index, _ :
 		<span class="p">}()</span>
 	<span class="p">}</span>
 </code></pre></div><h3 id="waitgroup">WaitGroup<a href="#waitgroup" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h3>
-<p>上面的例子有用到 <code>sync.waitGroup</code>，它也有犯错的地方。</p>
+<p>上面的例子有用到 <code>sync.waitGroup</code>，使用不当，也会犯错。</p>
 <p>我把上面的例子稍微改动复杂一点点。</p>
 <div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kn">package</span> <span class="nx">main</span>
 
@@ -188,11 +188,20 @@ func main() { var wg sync.WaitGroup items := []int{1, 2, 3, 4, 5} for index, _ :
 	<span class="k">return</span> <span class="s">&#34;成功&#34;</span><span class="p">,</span> <span class="kc">nil</span>
 <span class="p">}</span>
 </code></pre></div><p>发现问题严重性了吗？</p>
-<p>当用户id等于9的时候，<code>err !=nil</code> 直接 <code>return</code> 了，导致 <code>waitGroup</code> 计数器根本没机会减1，
-最终 <code>wait</code> 阻塞在那，多么可怕的bug。</p>
-<p>所以一般，不，是绝大多数的场景下，我们都必须这样:</p>
-<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="k">go</span> <span class="kd">func</span><span class="p">(</span><span class="nx">item</span> <span class="kt">int</span><span class="p">)</span> <span class="p">{</span>
+<p>当用户<code>id</code>等于9的时候，<code>err !=nil</code> 直接 <code>return</code> 了，导致 <code>waitGroup</code> 计数器根本没机会减1，
+最终 <code>wait</code> 会阻塞，多么可怕的 <code>bug</code>。</p>
+<p>在绝大多数的场景下，我们都必须这样:</p>
+<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kd">func</span> <span class="nf">main</span><span class="p">()</span> <span class="p">{</span>
+	<span class="kd">var</span> <span class="nx">userList</span> <span class="p">[]</span><span class="nx">User</span>
+	<span class="k">for</span> <span class="nx">i</span> <span class="o">:=</span> <span class="mi">0</span><span class="p">;</span> <span class="nx">i</span> <span class="p">&lt;</span> <span class="mi">10</span><span class="p">;</span> <span class="nx">i</span><span class="o">++</span> <span class="p">{</span>
+		<span class="nx">userList</span> <span class="p">=</span> <span class="nb">append</span><span class="p">(</span><span class="nx">userList</span><span class="p">,</span> <span class="nx">User</span><span class="p">{</span><span class="nx">userId</span><span class="p">:</span> <span class="nx">i</span><span class="p">})</span>
+	<span class="p">}</span>
+	<span class="kd">var</span> <span class="nx">wg</span> <span class="nx">sync</span><span class="p">.</span><span class="nx">WaitGroup</span>
+	<span class="k">for</span> <span class="nx">i</span><span class="p">,</span> <span class="nx">_</span> <span class="o">:=</span> <span class="k">range</span> <span class="nx">userList</span> <span class="p">{</span>
+		<span class="nx">wg</span><span class="p">.</span><span class="nf">Add</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+		<span class="k">go</span> <span class="kd">func</span><span class="p">(</span><span class="nx">item</span> <span class="kt">int</span><span class="p">)</span> <span class="p">{</span>
 			<span class="k">defer</span> <span class="nx">wg</span><span class="p">.</span><span class="nf">Done</span><span class="p">()</span>
+
 			<span class="c1">//....业务代码
 </span><span class="c1"></span>			<span class="c1">//....业务代码
 </span><span class="c1"></span>			<span class="nx">_</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nf">Do</span><span class="p">(</span><span class="nx">userList</span><span class="p">[</span><span class="nx">item</span><span class="p">])</span>
@@ -201,72 +210,11 @@ func main() { var wg sync.WaitGroup items := []int{1, 2, 3, 4, 5} for index, _ :
 				<span class="k">return</span>
 			<span class="p">}</span>
 		<span class="p">}(</span><span class="nx">i</span><span class="p">)</span>
-</code></pre></div><h3 id="goroutine-泄露">goroutine 泄露<a href="#goroutine-泄露" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h3>
-<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kn">package</span> <span class="nx">main</span>
-
-<span class="kn">import</span> <span class="p">(</span>
-	<span class="s">&#34;context&#34;</span>
-	<span class="s">&#34;github.com/prometheus/common/log&#34;</span>
-	<span class="s">&#34;time&#34;</span>
-<span class="p">)</span>
-
-<span class="kd">func</span> <span class="nf">main</span><span class="p">()</span> <span class="p">{</span>
-	<span class="nx">ch</span> <span class="o">:=</span> <span class="nb">make</span><span class="p">(</span><span class="kd">chan</span> <span class="kd">struct</span><span class="p">{})</span>
-	<span class="nx">c</span><span class="p">,</span> <span class="nx">cancel</span> <span class="o">:=</span> <span class="nx">context</span><span class="p">.</span><span class="nf">WithCancel</span><span class="p">(</span><span class="nx">context</span><span class="p">.</span><span class="nf">Background</span><span class="p">())</span>
-
-	<span class="k">go</span> <span class="kd">func</span><span class="p">()</span> <span class="p">{</span>
-		<span class="nx">ch</span><span class="o">&lt;-</span> <span class="kd">struct</span><span class="p">{}{}</span>
-		<span class="nx">time</span><span class="p">.</span><span class="nf">Sleep</span><span class="p">(</span><span class="mi">3</span> <span class="o">*</span> <span class="nx">time</span><span class="p">.</span><span class="nx">Second</span><span class="p">)</span>
-		<span class="nf">cancel</span><span class="p">()</span>
-	<span class="p">}()</span>
-
-	<span class="k">for</span> <span class="p">{</span>
-		<span class="k">select</span> <span class="p">{</span>
-		<span class="k">case</span> <span class="nx">res</span> <span class="o">:=</span> <span class="o">&lt;-</span><span class="nx">ch</span><span class="p">:</span>
-			<span class="nx">log</span><span class="p">.</span><span class="nf">Infof</span><span class="p">(</span><span class="s">&#34;item:%v&#34;</span><span class="p">,</span> <span class="nx">res</span><span class="p">)</span>
-		<span class="k">case</span> <span class="o">&lt;-</span><span class="nx">c</span><span class="p">.</span><span class="nf">Done</span><span class="p">():</span>
-			<span class="nx">log</span><span class="p">.</span><span class="nf">Infof</span><span class="p">(</span><span class="s">&#34;结束&#34;</span><span class="p">)</span>
-			<span class="k">break</span>
-		<span class="p">}</span>
 	<span class="p">}</span>
+	<span class="nx">wg</span><span class="p">.</span><span class="nf">Wait</span><span class="p">()</span>
 <span class="p">}</span>
-
-</code></pre></div><p>我们的本意是三秒后终止 <code>for</code> 循环，我们这里用了 <code>break</code>。
-<code>break</code> 与 <code>select</code> 有关，和 <code>for</code> 语句无关！
-可以借助带标签的 break，比如下面这种
-<code>return</code>。</p>
-<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kn">package</span> <span class="nx">main</span>
-
-<span class="kn">import</span> <span class="p">(</span>
-	<span class="s">&#34;context&#34;</span>
-	<span class="s">&#34;github.com/prometheus/common/log&#34;</span>
-	<span class="s">&#34;time&#34;</span>
-<span class="p">)</span>
-
-<span class="kd">func</span> <span class="nf">main</span><span class="p">()</span> <span class="p">{</span>
-	<span class="nx">ch</span> <span class="o">:=</span> <span class="nb">make</span><span class="p">(</span><span class="kd">chan</span> <span class="kd">struct</span><span class="p">{})</span>
-	<span class="nx">c</span><span class="p">,</span> <span class="nx">can</span> <span class="o">:=</span> <span class="nx">context</span><span class="p">.</span><span class="nf">WithCancel</span><span class="p">(</span><span class="nx">context</span><span class="p">.</span><span class="nf">Background</span><span class="p">())</span>
-
-	<span class="k">go</span> <span class="kd">func</span><span class="p">()</span> <span class="p">{</span>
-		<span class="nx">ch</span> <span class="o">&lt;-</span> <span class="kd">struct</span><span class="p">{}{}</span>
-		<span class="nx">time</span><span class="p">.</span><span class="nf">Sleep</span><span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="nx">time</span><span class="p">.</span><span class="nx">Second</span><span class="p">)</span>
-		<span class="nf">can</span><span class="p">()</span>
-	<span class="p">}()</span>
-
-<span class="nx">loop</span><span class="p">:</span>
-	<span class="k">for</span> <span class="p">{</span>
-		<span class="k">select</span> <span class="p">{</span>
-		<span class="k">case</span> <span class="nx">res</span> <span class="o">:=</span> <span class="o">&lt;-</span><span class="nx">ch</span><span class="p">:</span>
-			<span class="nx">log</span><span class="p">.</span><span class="nf">Infof</span><span class="p">(</span><span class="s">&#34;item:%v&#34;</span><span class="p">,</span> <span class="nx">res</span><span class="p">)</span>
-		<span class="k">case</span> <span class="o">&lt;-</span><span class="nx">c</span><span class="p">.</span><span class="nf">Done</span><span class="p">():</span>
-			<span class="nx">log</span><span class="p">.</span><span class="nf">Infof</span><span class="p">(</span><span class="s">&#34;结束&#34;</span><span class="p">)</span>
-			<span class="k">break</span> <span class="nx">loop</span>
-		<span class="p">}</span>
-	<span class="p">}</span>
-<span class="p">}</span>
-</code></pre></div><p>或者如果不需要往下走的直接 <code>return</code>。</p>
-<h3 id="野生-goroutine">野生 goroutine<a href="#野生-goroutine" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h3>
-<p>我不知道你们公司是咋么处理异步操作的，是下面这样的吗</p>
+</code></pre></div><h3 id="野生-goroutine">野生 goroutine<a href="#野生-goroutine" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h3>
+<p>我不知道你们公司是咋么处理异步操作的，是下面这样吗</p>
 <div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kd">func</span> <span class="nf">main</span><span class="p">()</span> <span class="p">{</span>
 	<span class="c1">// doSomething
 </span><span class="c1"></span>	<span class="k">go</span> <span class="kd">func</span><span class="p">()</span> <span class="p">{</span>
@@ -297,7 +245,7 @@ func main() { var wg sync.WaitGroup items := []int{1, 2, 3, 4, 5} for index, _ :
 <span class="p">}</span>
 </code></pre></div><p>此时最外层的 <code>recover</code> 并不能捕获，程序会直接挂掉，就像下面这样。
 <img src="https://image.syst.top/image/mistake/mistake-2.png" alt="image"></p>
-<p>但是你总不能每次都在开启一个新的 <code>goroutine</code> 像下面这样写,</p>
+<p>但是你总不能每次开启一个新的 <code>goroutine</code> 就在里面 <code>recover</code>,</p>
 <div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kd">func</span> <span class="nf">main</span><span class="p">()</span> <span class="p">{</span>
 	<span class="k">defer</span> <span class="kd">func</span><span class="p">()</span> <span class="p">{</span>
 		<span class="k">if</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nb">recover</span><span class="p">();</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
@@ -371,12 +319,12 @@ func main() { var wg sync.WaitGroup items := []int{1, 2, 3, 4, 5} for index, _ :
 <h3 id="channel">channel<a href="#channel" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h3>
 <p><code>channel</code> 在 <code>go</code> 中的地位实在太高了，各大开源项目到处都是 <code>channel</code> 的影子，
 以至于你在工业级的项目 issues 中搜索 <code>channel</code> ，能看到很多的 <code>bug</code>，
-比如 etcd 这个 <code>issues</code>,
+比如 etcd 这个 <code>issue</code>,
 <img src="https://image.syst.top/image/mistake/mistake-3.png" alt="image"></p>
-<p>一个往已关闭的 <code>channel</code> 中发送数据数据引发的 <code>panic</code>,等等很多。
-这个故事告诉我们，否管大不大佬，改写的 <code>bug</code> 还是会写。</p>
+<p>一个往已关闭的 <code>channel</code> 中发送数据引发的 <code>panic</code>,等等类似场景很多。</p>
+<p>这个故事告诉我们，否管大不大佬，改写的 <code>bug</code> 还是会写，手动狗头。</p>
 <p><code>channel</code> 除了上述高频出现的错误，还有以下几点:</p>
-<p>直接关闭一个 nil 值 channel 会引发 panic</p>
+<h4 id="直接关闭一个-nil-值-channel-会引发-panic">直接关闭一个 nil 值 channel 会引发 panic<a href="#直接关闭一个-nil-值-channel-会引发-panic" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h4>
 <div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kn">package</span> <span class="nx">main</span>
 
 <span class="kd">func</span> <span class="nf">main</span><span class="p">()</span> <span class="p">{</span>
@@ -384,7 +332,7 @@ func main() { var wg sync.WaitGroup items := []int{1, 2, 3, 4, 5} for index, _ :
   <span class="nb">close</span><span class="p">(</span><span class="nx">ch</span><span class="p">)</span>
 <span class="p">}</span>
 
-</code></pre></div><p>关闭一个已关闭的 channel 会引发 panic。</p>
+</code></pre></div><h4 id="关闭一个已关闭的-channel-会引发-panic">关闭一个已关闭的 channel 会引发 panic。<a href="#关闭一个已关闭的-channel-会引发-panic" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h4>
 <div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kn">package</span> <span class="nx">main</span>
 
 <span class="kd">func</span> <span class="nf">main</span><span class="p">()</span> <span class="p">{</span>
@@ -392,7 +340,7 @@ func main() { var wg sync.WaitGroup items := []int{1, 2, 3, 4, 5} for index, _ :
   <span class="nb">close</span><span class="p">(</span><span class="nx">ch</span><span class="p">)</span>
   <span class="nb">close</span><span class="p">(</span><span class="nx">ch</span><span class="p">)</span>
 <span class="p">}</span>
-</code></pre></div><p>还有一点，有时候使用 channel 不小心会导致 goroutine 泄露，比如下面这种情况,</p>
+</code></pre></div><p>另外，有时候使用 <code>channel</code> 不小心会导致 <code>goroutine</code> 泄露，比如下面这种情况,</p>
 <div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kn">package</span> <span class="nx">main</span>
 
 <span class="kn">import</span> <span class="p">(</span>
@@ -419,11 +367,15 @@ func main() { var wg sync.WaitGroup items := []int{1, 2, 3, 4, 5} for index, _ :
 	<span class="nx">time</span><span class="p">.</span><span class="nf">Sleep</span><span class="p">(</span><span class="mi">5</span> <span class="o">*</span> <span class="nx">time</span><span class="p">.</span><span class="nx">Second</span><span class="p">)</span>
 <span class="p">}</span>
 
-</code></pre></div><p>启动一个 goroutine 去处理业务，业务需要执行2秒，超时时间是1秒，
-会导致 channel 从未被读取，
-我们知道没有缓冲的 channel 必须等发送方和接收方都准备好才能操作。
-此时子 <code>goroutine</code> 会被永久阻塞在  <code>ch &lt;- struct{}</code> 这行代码，除非程序结束，而这就是 goroutine 泄露。</p>
-<p>解决这个也很简单，把无缓冲的 channel 改成缓冲为1。</p>
+</code></pre></div><p>启动一个 <code>goroutine</code> 去处理业务，业务需要执行2秒，而我们设置的超时时间是1秒。
+这就会导致 <code>channel</code> 从未被读取，
+我们知道没有缓冲的 <code>channel</code> 必须等发送方和接收方都准备好才能操作。
+此时 <code>goroutine</code> 会被永久阻塞在  <code>ch &lt;- struct{}{}</code> 这行代码，除非程序结束。
+而这就是 <code>goroutine</code> 泄露。</p>
+<p>解决这个也很简单，把无缓冲的 <code>channel</code> 改成缓冲为1。</p>
+<h3 id="总结">总结<a href="#总结" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h3>
+<p>这篇文章主要介绍了使用 <code>Go</code> 在日常开发中容易犯下的错。
+当然还远远不止这些，你可以在下方留言中补充你犯过的错。</p>
 
 			</div>
 			<div class="content"><br><img src="https://image.syst.top/image/wechat-qr.png"></div>
@@ -432,7 +384,7 @@ func main() { var wg sync.WaitGroup items := []int{1, 2, 3, 4, 5} for index, _ :
 				<p>
 					<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-tag meta-icon"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"></path><line x1="7" y1="7" x2="7" y2="7"></line></svg><span class="tag"><a href="https://www.syst.top/tags/go">go</a></span><span class="tag"><a href="https://www.syst.top/tags/mistake">mistake</a></span>
 				</p>
-				<p><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-file-text"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>706 Words</p>
+				<p><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-file-text"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>637 Words</p>
 				<p><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-calendar"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>2021-04-21 23:54 &#43;0800</p>
 			</footer>
 		</article>
@@ -444,9 +396,9 @@ func main() { var wg sync.WaitGroup items := []int{1, 2, 3, 4, 5} for index, _ :
       <ul>
         <li><a href="#在迭代器变量上使用-goroutine">在迭代器变量上使用 goroutine</a></li>
         <li><a href="#waitgroup">WaitGroup</a></li>
-        <li><a href="#goroutine-泄露">goroutine 泄露</a></li>
         <li><a href="#野生-goroutine">野生 goroutine</a></li>
         <li><a href="#channel">channel</a></li>
+        <li><a href="#总结">总结</a></li>
       </ul>
     </li>
   </ul>
