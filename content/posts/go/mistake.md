@@ -67,7 +67,7 @@ func main() {
 通过将 `i`  作为一个参数传入闭包中，i 每次迭代都会被求值，
 并放置在 `goroutine` 的堆栈中，因此每个切片元素最终都会被执行打印。
 
-或者这样,道理是一样的。
+或者这样。
 ```go
 for index, _ := range items {
 		wg.Add(1)
@@ -172,7 +172,7 @@ func main() {
 	}()
 }
 ```
-我们为了防止程序中出现不可预知的 `panic`，导致程序直接挂掉，都会加入 `recover`，比如这样
+我们为了防止程序中出现不可预知的 `panic`，导致程序直接挂掉，都会加入 `recover`，
 ```go
 func main() {
 	defer func() {
@@ -184,7 +184,7 @@ func main() {
 }
 ```
 
-但是如果这时候我们直接开启一个 `goroutine`，在这个 `goroutine` 里面发生了  `panic`，比如这样
+但是如果这时候我们直接开启一个 `goroutine`，在这个 `goroutine` 里面发生了  `panic`，
 
 ```go
 func main() {
@@ -200,7 +200,7 @@ func main() {
 	time.Sleep(2 * time.Second)
 }
 ```
-此时最外层的 `recover` 并不能捕获，程序会直接挂掉，就像下面这样。
+此时最外层的 `recover` 并不能捕获，程序会直接挂掉。
 ![image](https://image.syst.top/image/mistake/mistake-2.png)
 
 但是你总不能每次开启一个新的 `goroutine` 就在里面 `recover`,
@@ -235,7 +235,7 @@ func main() {
 	time.Sleep(2 * time.Second)
 }
 ```
-所以基本上大家都会包一层。比如这样写,
+多蠢啊。所以基本上大家都会包一层。
 ```go
 package main
 
