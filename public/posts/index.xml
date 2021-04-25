@@ -6,8 +6,245 @@
 		<generator>Hugo -- gohugo.io</generator>
 		<language>zh-hans</language>
 		<copyright>This work is licensed under a Creative Commons Attribution-NonCommercial 4.0 International License.</copyright>
-		<lastBuildDate>Wed, 21 Apr 2021 23:54:52 +0800</lastBuildDate>
+		<lastBuildDate>Sun, 25 Apr 2021 22:25:52 +0800</lastBuildDate>
 		<atom:link href="https://www.syst.top/posts/index.xml" rel="self" type="application/rss+xml" />
+		
+		<item>
+			<title>iota 在 Go 中的使用 </title>
+			<link>https://www.syst.top/posts/go/enum/</link>
+			<pubDate>Sun, 25 Apr 2021 22:25:52 +0800</pubDate>
+			
+			<guid>https://www.syst.top/posts/go/enum/</guid>
+			<description>介绍 Go 语言实际上没有直接支持枚举的关键字。一般我们都是通过 const + iota 实现枚举的能力。
+有人要问了，为什么一定要使用枚举呢？stackoverflow 上有一个高赞的回答，如下:
+You should always use enums when a variable (especially a method parameter) can only take one out of a small set of possible values. Examples would be things like type constants (contract status: &amp;quot;permanent&amp;quot;, &amp;quot;temp&amp;quot;, &amp;quot;apprentice&amp;quot;), or flags (&amp;quot;execute now&amp;quot;, &amp;quot;defer execution&amp;quot;). If you use enums instead of integers (or String codes), you increase compile-time checking and avoid errors from passing in invalid constants, and you document which values are legal to use.</description>
+			<content type="html"><![CDATA[<h3 id="介绍">介绍</h3>
+<p>Go 语言实际上没有直接支持枚举的关键字。一般我们都是通过 <code>const</code> + <code>iota</code> 实现枚举的能力。</p>
+<p>有人要问了，为什么一定要使用枚举呢？<code>stackoverflow</code> 上有一个高赞的回答，如下:</p>
+<pre><code>You should always use enums when a variable (especially a method parameter) can only take one out of a small set of possible values. Examples would be things like type constants (contract status: &quot;permanent&quot;, &quot;temp&quot;, &quot;apprentice&quot;), or flags (&quot;execute now&quot;, &quot;defer execution&quot;).
+
+If you use enums instead of integers (or String codes), you increase compile-time checking and avoid errors from passing in invalid constants, and you document which values are legal to use.
+
+BTW, overuse of enums might mean that your methods do too much (it's often better to have several separate methods, rather than one method that takes several flags which modify what it does), but if you have to use flags or type codes, enums are the way to go.
+
+</code></pre><p>简单翻译一下， 两点很重要。</p>
+<ul>
+<li>当一个变量(尤其是方法参数) 只能从一小部分可能的值中取出一个时，理应使用枚举。
+例如类型常量(合同状态：永久、临时工、学徒)， 或者在做任务程序时，是立即执行还是延迟执行的标记。</li>
+<li>如果使用枚举而不是整形，则会增加编译时的检查，避免错误无效值的传入，记录哪些值是合法使用的。</li>
+</ul>
+<h3 id="如何实现枚举">如何实现枚举</h3>
+<p><code>iota</code> 是 Go 中预声明的一个特殊常量。它会被预声明为0，但是它的值在编译阶段并非是固定的，当预声明的 <code>iota</code> 出现在一个常量声明中的时候，它的值在第n个常量描述中的值为n(从0开始)。所以它只在同类型多个常量声明的情况下才显得有意义。</p>
+<p>比如，大家都了解的电商，订单系统一定会涉及到订单状态的流转。那么这时候，我们一般可以这样做:</p>
+<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kn">package</span> <span class="nx">main</span>
+
+<span class="kn">import</span> <span class="s">&#34;fmt&#34;</span>
+
+<span class="kd">type</span> <span class="nx">OrderStatus</span> <span class="kt">int</span>
+
+<span class="kd">const</span> <span class="p">(</span>
+	<span class="nx">Cancelled</span> <span class="nx">OrderStatus</span> <span class="p">=</span> <span class="kc">iota</span> <span class="c1">//订单已取消 0
+</span><span class="c1"></span>	<span class="nx">NoPay</span>     <span class="nx">OrderStatus</span> <span class="p">=</span> <span class="kc">iota</span> <span class="c1">//未支付  1
+</span><span class="c1"></span>	<span class="nx">PendIng</span>   <span class="nx">OrderStatus</span> <span class="p">=</span> <span class="kc">iota</span> <span class="c1">// 未发货 2
+</span><span class="c1"></span>	<span class="nx">Delivered</span> <span class="nx">OrderStatus</span> <span class="p">=</span> <span class="kc">iota</span> <span class="c1">// 已发货 3
+</span><span class="c1"></span>	<span class="nx">Received</span>  <span class="nx">OrderStatus</span> <span class="p">=</span> <span class="kc">iota</span> <span class="c1">// 已收货 4
+</span><span class="c1"></span><span class="p">)</span>
+
+<span class="kd">func</span> <span class="nf">main</span><span class="p">()</span> <span class="p">{</span>
+	<span class="nx">fmt</span><span class="p">.</span><span class="nf">Println</span><span class="p">(</span><span class="nx">Cancelled</span><span class="p">,</span> <span class="nx">NoPay</span><span class="p">)</span> <span class="c1">// 打印:0,1
+</span><span class="c1"></span><span class="p">}</span>
+
+</code></pre></div><p>当然，这样看着好麻烦。其实，其他常量可以重复上一行 <code>iota</code> 表达式，我们可以改成这样。</p>
+<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kn">package</span> <span class="nx">main</span>
+
+<span class="kn">import</span> <span class="s">&#34;fmt&#34;</span>
+
+<span class="kd">type</span> <span class="nx">OrderStatus</span> <span class="kt">int</span>
+
+<span class="kd">const</span> <span class="p">(</span>
+	<span class="nx">Cancelled</span> <span class="nx">OrderStatus</span> <span class="p">=</span> <span class="kc">iota</span> <span class="c1">//订单已取消 0
+</span><span class="c1"></span>	<span class="nx">NoPay</span>                        <span class="c1">//未支付 1
+</span><span class="c1"></span>	<span class="nx">PendIng</span>                      <span class="c1">// 未发货 2
+</span><span class="c1"></span>	<span class="nx">Delivered</span>                    <span class="c1">// 已发货 3
+</span><span class="c1"></span>	<span class="nx">Received</span>                     <span class="c1">// 已收货 4
+</span><span class="c1"></span><span class="p">)</span>
+
+<span class="kd">func</span> <span class="nf">main</span><span class="p">()</span> <span class="p">{</span>
+	<span class="nx">fmt</span><span class="p">.</span><span class="nf">Println</span><span class="p">(</span><span class="nx">Cancelled</span><span class="p">,</span> <span class="nx">NoPay</span><span class="p">)</span> <span class="c1">// 打印:0,1
+</span><span class="c1"></span><span class="p">}</span>
+
+</code></pre></div><p>有人会用 0 的值来表示状态吗？一般都不会，我们想以1开头，那么可以这样。</p>
+<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kn">package</span> <span class="nx">main</span>
+
+<span class="kn">import</span> <span class="s">&#34;fmt&#34;</span>
+
+<span class="kd">type</span> <span class="nx">OrderStatus</span> <span class="kt">int</span>
+
+<span class="kd">const</span> <span class="p">(</span>
+	<span class="nx">Cancelled</span> <span class="nx">OrderStatus</span> <span class="p">=</span> <span class="kc">iota</span><span class="o">+</span><span class="mi">1</span> <span class="c1">//订单已取消 1
+</span><span class="c1"></span>	<span class="nx">NoPay</span>                        <span class="c1">//未支付 2
+</span><span class="c1"></span>	<span class="nx">PendIng</span>                      <span class="c1">// 未发货 3
+</span><span class="c1"></span>	<span class="nx">Delivered</span>                    <span class="c1">// 已发货 4
+</span><span class="c1"></span>	<span class="nx">Received</span>                     <span class="c1">// 已收货 5
+</span><span class="c1"></span><span class="p">)</span>
+
+<span class="kd">func</span> <span class="nf">main</span><span class="p">()</span> <span class="p">{</span>
+	<span class="nx">fmt</span><span class="p">.</span><span class="nf">Println</span><span class="p">(</span><span class="nx">Cancelled</span><span class="p">,</span> <span class="nx">NoPay</span><span class="p">)</span> <span class="c1">// 打印:1,2
+</span><span class="c1"></span><span class="p">}</span>
+</code></pre></div><p>我们还想在 <code>Delivered</code> 后跳过一个数字，才是 <code>Received</code> 的值,也就是 <code>Received=6</code>，那么可以借助 <code>_</code> 符号。</p>
+<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kn">package</span> <span class="nx">main</span>
+
+<span class="kn">import</span> <span class="s">&#34;fmt&#34;</span>
+
+<span class="kd">type</span> <span class="nx">OrderStatus</span> <span class="kt">int</span>
+
+<span class="kd">const</span> <span class="p">(</span>
+	<span class="nx">Cancelled</span> <span class="nx">OrderStatus</span> <span class="p">=</span> <span class="kc">iota</span><span class="o">+</span><span class="mi">1</span> <span class="c1">//订单已取消 1
+</span><span class="c1"></span>	<span class="nx">NoPay</span>                        <span class="c1">//未支付 2
+</span><span class="c1"></span>	<span class="nx">PendIng</span>                      <span class="c1">// 未发货 3
+</span><span class="c1"></span>	<span class="nx">Delivered</span>                    <span class="c1">// 已发货 4
+</span><span class="c1"></span>	<span class="nx">_</span>
+	<span class="nx">Received</span>                     <span class="c1">// 已收货 6
+</span><span class="c1"></span><span class="p">)</span>
+
+<span class="kd">func</span> <span class="nf">main</span><span class="p">()</span> <span class="p">{</span>
+	<span class="nx">fmt</span><span class="p">.</span><span class="nf">Println</span><span class="p">(</span><span class="nx">Received</span><span class="p">)</span> <span class="c1">// 打印:6
+</span><span class="c1"></span><span class="p">}</span>
+
+</code></pre></div><p>顺着来可以，倒着当然也行。</p>
+<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kn">package</span> <span class="nx">main</span>
+
+<span class="kn">import</span> <span class="s">&#34;fmt&#34;</span>
+
+<span class="kd">type</span> <span class="nx">OrderStatus</span> <span class="kt">int</span>
+
+<span class="kd">const</span> <span class="p">(</span>
+	<span class="nx">Max</span> <span class="p">=</span> <span class="mi">5</span>
+<span class="p">)</span>
+
+<span class="kd">const</span> <span class="p">(</span>
+	<span class="nx">Received</span>  <span class="nx">OrderStatus</span> <span class="p">=</span> <span class="nx">Max</span> <span class="o">-</span> <span class="kc">iota</span> <span class="c1">// 已收货  5
+</span><span class="c1"></span>	<span class="nx">Delivered</span>                          <span class="c1">// 已发货 4
+</span><span class="c1"></span>	<span class="nx">PendIng</span>                            <span class="c1">// 未发货 3
+</span><span class="c1"></span>	<span class="nx">NoPay</span>                              <span class="c1">//未支付 2
+</span><span class="c1"></span>	<span class="nx">Cancelled</span>                          <span class="c1">//订单已取消 1
+</span><span class="c1"></span><span class="p">)</span>
+
+<span class="kd">func</span> <span class="nf">main</span><span class="p">()</span> <span class="p">{</span>
+	<span class="nx">fmt</span><span class="p">.</span><span class="nf">Println</span><span class="p">(</span><span class="nx">Received</span><span class="p">,</span><span class="nx">Delivered</span><span class="p">)</span> <span class="c1">// 打印:5,4
+</span><span class="c1"></span><span class="p">}</span>
+</code></pre></div><p>你还可以使用位运算，比如在 go 源码中的包 <code>sync</code> 中的锁上面有这么一段代码。</p>
+<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kd">const</span> <span class="p">(</span>
+    <span class="nx">mutexLocked</span> <span class="p">=</span> <span class="mi">1</span> <span class="o">&lt;&lt;</span> <span class="kc">iota</span>  <span class="c1">//1&lt;&lt;0
+</span><span class="c1"></span>    <span class="nx">mutexWoken</span>               <span class="c1">//1&lt;&lt;1
+</span><span class="c1"></span>    <span class="nx">mutexStarving</span>            <span class="c1">//1&lt;&lt;2
+</span><span class="c1"></span>    <span class="nx">mutexWaiterShift</span> <span class="p">=</span> <span class="kc">iota</span>  <span class="c1">//3
+</span><span class="c1"></span>
+<span class="p">)</span>
+
+<span class="kd">func</span> <span class="nf">main</span><span class="p">()</span> <span class="p">{</span>
+    <span class="nx">fmt</span><span class="p">.</span><span class="nf">Println</span><span class="p">(</span><span class="s">&#34;mutexLocked的值&#34;</span><span class="p">,</span><span class="nx">mutexLocked</span><span class="p">)</span> <span class="c1">//打印：1
+</span><span class="c1"></span>    <span class="nx">fmt</span><span class="p">.</span><span class="nf">Println</span><span class="p">(</span><span class="s">&#34;mutexWoken的值&#34;</span><span class="p">,</span><span class="nx">mutexWoken</span><span class="p">)</span> <span class="c1">//打印：2
+</span><span class="c1"></span>    <span class="nx">fmt</span><span class="p">.</span><span class="nf">Println</span><span class="p">(</span><span class="s">&#34;mutexStarving的值&#34;</span><span class="p">,</span><span class="nx">mutexStarving</span><span class="p">)</span> <span class="c1">//打印：4
+</span><span class="c1"></span>    <span class="nx">fmt</span><span class="p">.</span><span class="nf">Println</span><span class="p">(</span><span class="s">&#34;mutexWaiterShift的值&#34;</span><span class="p">,</span><span class="nx">mutexWaiterShift</span><span class="p">)</span> <span class="c1">// 打印：3
+</span><span class="c1"></span><span class="p">}</span>
+
+</code></pre></div><p>可能有人平常是直接定义常量值或者用字符串来表示的。</p>
+<p>比如，上面这些我完全可以用 <code>string</code> 来表示，我还真见过用字符串来表示订单状态的。</p>
+<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kn">package</span> <span class="nx">main</span>
+
+<span class="kn">import</span> <span class="s">&#34;fmt&#34;</span>
+
+<span class="kd">const</span> <span class="p">(</span>
+	<span class="nx">Cancelled</span> <span class="p">=</span> <span class="s">&#34;cancelled&#34;</span>
+	<span class="nx">NoPay</span>     <span class="p">=</span> <span class="s">&#34;noPay&#34;</span>
+	<span class="nx">PendIng</span>   <span class="p">=</span> <span class="s">&#34;pendIng&#34;</span>
+	<span class="nx">Delivered</span> <span class="p">=</span> <span class="s">&#34;delivered&#34;</span>
+	<span class="nx">Received</span>  <span class="p">=</span> <span class="s">&#34;received&#34;</span>
+<span class="p">)</span>
+
+<span class="kd">var</span> <span class="nx">OrderStatusMsg</span> <span class="p">=</span> <span class="kd">map</span><span class="p">[</span><span class="kt">string</span><span class="p">]</span><span class="kt">string</span><span class="p">{</span>
+	<span class="nx">Cancelled</span><span class="p">:</span> <span class="s">&#34;订单已取消&#34;</span><span class="p">,</span>
+	<span class="nx">NoPay</span><span class="p">:</span>     <span class="s">&#34;未付款&#34;</span><span class="p">,</span>
+	<span class="nx">PendIng</span><span class="p">:</span>   <span class="s">&#34;未发货&#34;</span><span class="p">,</span>
+	<span class="nx">Delivered</span><span class="p">:</span> <span class="s">&#34;已发货&#34;</span><span class="p">,</span>
+	<span class="nx">Received</span><span class="p">:</span>  <span class="s">&#34;已收货&#34;</span><span class="p">,</span>
+<span class="p">}</span>
+
+<span class="kd">func</span> <span class="nf">main</span><span class="p">()</span> <span class="p">{</span>
+	<span class="nx">fmt</span><span class="p">.</span><span class="nf">Println</span><span class="p">(</span><span class="nx">OrderStatusMsg</span><span class="p">[</span><span class="nx">Cancelled</span><span class="p">])</span>
+<span class="p">}</span>
+</code></pre></div><p>或者直接定义整形常量值。</p>
+<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kn">package</span> <span class="nx">main</span>
+
+<span class="kn">import</span> <span class="s">&#34;fmt&#34;</span>
+
+<span class="kd">const</span> <span class="p">(</span>
+	<span class="nx">Cancelled</span> <span class="p">=</span> <span class="mi">1</span>
+	<span class="nx">NoPay</span>     <span class="p">=</span> <span class="mi">2</span>
+	<span class="nx">PendIng</span>   <span class="p">=</span> <span class="mi">3</span>
+	<span class="nx">Delivered</span> <span class="p">=</span> <span class="mi">4</span>
+	<span class="nx">Received</span>  <span class="p">=</span> <span class="mi">5</span>
+<span class="p">)</span>
+
+<span class="kd">var</span> <span class="nx">OrderStatusMsg</span> <span class="p">=</span> <span class="kd">map</span><span class="p">[</span><span class="kt">int</span><span class="p">]</span><span class="kt">string</span><span class="p">{</span>
+	<span class="nx">Cancelled</span><span class="p">:</span> <span class="s">&#34;订单已取消&#34;</span><span class="p">,</span>
+	<span class="nx">NoPay</span><span class="p">:</span>     <span class="s">&#34;未付款&#34;</span><span class="p">,</span>
+	<span class="nx">PendIng</span><span class="p">:</span>   <span class="s">&#34;未发货&#34;</span><span class="p">,</span>
+	<span class="nx">Delivered</span><span class="p">:</span> <span class="s">&#34;已发货&#34;</span><span class="p">,</span>
+	<span class="nx">Received</span><span class="p">:</span>  <span class="s">&#34;已收货&#34;</span><span class="p">,</span>
+<span class="p">}</span>
+
+<span class="kd">func</span> <span class="nf">main</span><span class="p">()</span> <span class="p">{</span>
+	<span class="nx">fmt</span><span class="p">.</span><span class="nf">Println</span><span class="p">(</span><span class="nx">OrderStatusMsg</span><span class="p">[</span><span class="nx">Cancelled</span><span class="p">])</span>
+<span class="p">}</span>
+
+</code></pre></div><p>其实上述两种都可以，但是相比之下使用 <code>iota</code> 更有优势。</p>
+<ul>
+<li>能保证一组常量的唯一性，人工定义的不能保证。</li>
+<li>可以为一组动作分享同一种行为。</li>
+<li>避免无效值。</li>
+<li>提高代码阅读性以及维护。</li>
+</ul>
+<h3 id="延伸">延伸</h3>
+<p>按照上面我们所演示的，最后我们可以这样操作。</p>
+<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kn">package</span> <span class="nx">main</span>
+
+<span class="kn">import</span> <span class="p">(</span>
+	<span class="s">&#34;fmt&#34;</span>
+<span class="p">)</span>
+
+<span class="kd">type</span> <span class="nx">OrderStatus</span> <span class="kt">int</span>
+
+<span class="kd">const</span> <span class="p">(</span>
+	<span class="nx">Cancelled</span> <span class="nx">OrderStatus</span> <span class="p">=</span> <span class="kc">iota</span> <span class="o">+</span> <span class="mi">1</span> <span class="c1">//订单已取消 1
+</span><span class="c1"></span>	<span class="nx">NoPay</span>                            <span class="c1">//未支付 2
+</span><span class="c1"></span>	<span class="nx">PendIng</span>                          <span class="c1">// 未发货 3
+</span><span class="c1"></span>	<span class="nx">Delivered</span>                        <span class="c1">// 已发货 4
+</span><span class="c1"></span>	<span class="nx">Received</span>                         <span class="c1">// 已收货 5
+</span><span class="c1"></span><span class="p">)</span>
+
+<span class="c1">//公共行为 赋予类型 String() 函数，方便打印值含义
+</span><span class="c1"></span><span class="kd">func</span> <span class="p">(</span><span class="nx">order</span> <span class="nx">OrderStatus</span><span class="p">)</span> <span class="nf">String</span><span class="p">()</span> <span class="kt">string</span> <span class="p">{</span>
+	<span class="k">return</span> <span class="p">[</span><span class="o">...</span><span class="p">]</span><span class="kt">string</span><span class="p">{</span><span class="s">&#34;cancelled&#34;</span><span class="p">,</span> <span class="s">&#34;noPay&#34;</span><span class="p">,</span> <span class="s">&#34;pendIng&#34;</span><span class="p">,</span> <span class="s">&#34;delivered&#34;</span><span class="p">,</span> <span class="s">&#34;received&#34;</span><span class="p">}[</span><span class="nx">order</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+<span class="p">}</span>
+
+<span class="c1">//创建公共行为 赋予类型 int 函数 EnumIndex()
+</span><span class="c1"></span><span class="kd">func</span> <span class="p">(</span><span class="nx">order</span> <span class="nx">OrderStatus</span><span class="p">)</span> <span class="nf">EnumIndex</span><span class="p">()</span> <span class="kt">int</span> <span class="p">{</span>
+	<span class="k">return</span> <span class="nb">int</span><span class="p">(</span><span class="nx">order</span><span class="p">)</span>
+<span class="p">}</span>
+
+<span class="kd">func</span> <span class="nf">main</span><span class="p">()</span> <span class="p">{</span>
+	<span class="kd">var</span> <span class="nx">order</span> <span class="nx">OrderStatus</span> <span class="p">=</span> <span class="nx">Received</span>
+	<span class="nx">fmt</span><span class="p">.</span><span class="nf">Println</span><span class="p">(</span><span class="nx">order</span><span class="p">.</span><span class="nf">String</span><span class="p">())</span>    <span class="c1">// 打印:received
+</span><span class="c1"></span>	<span class="nx">fmt</span><span class="p">.</span><span class="nf">Println</span><span class="p">(</span><span class="nx">order</span><span class="p">.</span><span class="nf">EnumIndex</span><span class="p">())</span> <span class="c1">// 打印:5
+</span><span class="c1"></span><span class="p">}</span>
+
+</code></pre></div><h3 id="总结">总结</h3>
+<p>这篇文章主要介绍了 <code>Golang</code> 中对 <code>iota</code> 的使用介绍，以及我们为什么要使用它。</p>
+<p>不知道大家平常对于此类场景是用的什么招数，欢迎下方留言交流。</p>
+]]></content>
+		</item>
 		
 		<item>
 			<title>在Go中你犯过的错</title>
