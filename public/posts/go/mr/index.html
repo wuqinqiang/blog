@@ -7,53 +7,50 @@
 	<meta http-equiv="X-UA-Compatible" content="ie=edge">
 	<meta name="theme-color" content="#494f5c">
 	<meta name="msapplication-TileColor" content="#494f5c">
-<meta itemprop="name" content="业务中，经常需要的工具(1)">
+<meta itemprop="name" content="如何优雅地实现并发编排任务">
 <meta itemprop="description" content="业务场景 在做任务开发的时候，你们一定会碰到以下场景:
-场景1：在调用外部第三方接口的时候， 某些第三方我严重怀疑他们自己开发的接口从来没有用到自己的业务上， 然后你就会发现，一个需求你需要调用不同的接口，做数据组装。
-场景2:一个应用首页可能依托于很多服务。那就涉及到在加载页面时需要同时请求多个服务的接口。 这一步往往是由后端统一调用组装数据再返回给前端，也就是所谓的 BFF(Backend For Frontend) 层。 调用这些服务往往没有前后的依赖关系，可以同时调用。
-针对以上两种场景，假设在没有强依赖关系下，选择串行话调用，那么总耗时即:
+场景1：调用第三方接口的时候， 一个需求你需要调用不同的接口，做数据组装。 场景2:一个应用首页可能依托于很多服务。那就涉及到在加载页面时需要同时请求多个服务的接口。这一步往往是由后端统一调用组装数据再返回给前端，也就是所谓的 BFF(Backend For Frontend) 层。
+针对以上两种场景，假设在没有强依赖关系下，选择串行调用，那么总耗时即:
 time=s1&#43;s2&#43;....sn 按照当代秒入百万的有为青年，这么长时间早就把你祖宗十八代问候了一遍。
-为了伟大的KPI，我们往往会选择并发的调用这些依赖接口。那么总耗时就是:
-time=max(s1,s2,s3.....,sn) 当然开始堆业务的时候可以先串行化，等到上面的人着急的时候，亮出绝招。 这样，年底 PPT 就可以加上浓重的一笔流水账:为业务某个接口提高百分之XXX性能，间接产生XXX价值。
-当然这一切的前提是，做老板不懂技术，做技术&quot;懂&quot;你。
-言归正传,
-如果修改成并发调用，你可能会这么写，
+为了伟大的KPI，我们往往会选择并发地调用这些依赖接口。那么总耗时就是:
+time=max(s1,s2,s3.....,sn) 当然开始堆业务的时候可以先串行化，等到上面的人着急的时候，亮出绝招。
+这样，年底 PPT 就可以加上浓重的一笔流水账:为业务某个接口提高百分之XXX性能，间接产生XXX价值。
+当然这一切的前提是，做老板不懂技术，做技术”懂”你。
+言归正传,如果修改成并发调用，你可能会这么写，
 package main import ( &#34;fmt&#34; &#34;sync&#34; &#34;time&#34; ) func main() { var wg sync.WaitGroup wg.Add(2) var userInfo *User var productList []Product go func() { defer wg.Done() userInfo, _ = getUser() }() go func() { defer wg.Done() productList, _ = getProductList() }() wg.Wait() fmt.Printf(&#34;用户信息:%&#43;v\n&#34;, userInfo) fmt.Printf(&#34;商品信息:%&#43;v\n&#34;, productList) } /********用户服务**********/ type User struct { Name string Age uint8 } func getUser() (*User, error) { time.">
 <meta itemprop="datePublished" content="2021-04-21T23:54:52+08:00" />
 <meta itemprop="dateModified" content="2021-04-21T23:54:52+08:00" />
-<meta itemprop="wordCount" content="892">
+<meta itemprop="wordCount" content="891">
 
 
 
 <meta itemprop="keywords" content="go,mistake," />
-<meta property="og:title" content="业务中，经常需要的工具(1)" />
+<meta property="og:title" content="如何优雅地实现并发编排任务" />
 <meta property="og:description" content="业务场景 在做任务开发的时候，你们一定会碰到以下场景:
-场景1：在调用外部第三方接口的时候， 某些第三方我严重怀疑他们自己开发的接口从来没有用到自己的业务上， 然后你就会发现，一个需求你需要调用不同的接口，做数据组装。
-场景2:一个应用首页可能依托于很多服务。那就涉及到在加载页面时需要同时请求多个服务的接口。 这一步往往是由后端统一调用组装数据再返回给前端，也就是所谓的 BFF(Backend For Frontend) 层。 调用这些服务往往没有前后的依赖关系，可以同时调用。
-针对以上两种场景，假设在没有强依赖关系下，选择串行话调用，那么总耗时即:
+场景1：调用第三方接口的时候， 一个需求你需要调用不同的接口，做数据组装。 场景2:一个应用首页可能依托于很多服务。那就涉及到在加载页面时需要同时请求多个服务的接口。这一步往往是由后端统一调用组装数据再返回给前端，也就是所谓的 BFF(Backend For Frontend) 层。
+针对以上两种场景，假设在没有强依赖关系下，选择串行调用，那么总耗时即:
 time=s1&#43;s2&#43;....sn 按照当代秒入百万的有为青年，这么长时间早就把你祖宗十八代问候了一遍。
-为了伟大的KPI，我们往往会选择并发的调用这些依赖接口。那么总耗时就是:
-time=max(s1,s2,s3.....,sn) 当然开始堆业务的时候可以先串行化，等到上面的人着急的时候，亮出绝招。 这样，年底 PPT 就可以加上浓重的一笔流水账:为业务某个接口提高百分之XXX性能，间接产生XXX价值。
-当然这一切的前提是，做老板不懂技术，做技术&quot;懂&quot;你。
-言归正传,
-如果修改成并发调用，你可能会这么写，
+为了伟大的KPI，我们往往会选择并发地调用这些依赖接口。那么总耗时就是:
+time=max(s1,s2,s3.....,sn) 当然开始堆业务的时候可以先串行化，等到上面的人着急的时候，亮出绝招。
+这样，年底 PPT 就可以加上浓重的一笔流水账:为业务某个接口提高百分之XXX性能，间接产生XXX价值。
+当然这一切的前提是，做老板不懂技术，做技术”懂”你。
+言归正传,如果修改成并发调用，你可能会这么写，
 package main import ( &#34;fmt&#34; &#34;sync&#34; &#34;time&#34; ) func main() { var wg sync.WaitGroup wg.Add(2) var userInfo *User var productList []Product go func() { defer wg.Done() userInfo, _ = getUser() }() go func() { defer wg.Done() productList, _ = getProductList() }() wg.Wait() fmt.Printf(&#34;用户信息:%&#43;v\n&#34;, userInfo) fmt.Printf(&#34;商品信息:%&#43;v\n&#34;, productList) } /********用户服务**********/ type User struct { Name string Age uint8 } func getUser() (*User, error) { time." />
 <meta property="og:type" content="article" />
 <meta property="og:url" content="https://www.syst.top/posts/go/mr/" />
 <meta property="article:published_time" content="2021-04-21T23:54:52+08:00" />
 <meta property="article:modified_time" content="2021-04-21T23:54:52+08:00" />
 <meta name="twitter:card" content="summary"/>
-<meta name="twitter:title" content="业务中，经常需要的工具(1)"/>
+<meta name="twitter:title" content="如何优雅地实现并发编排任务"/>
 <meta name="twitter:description" content="业务场景 在做任务开发的时候，你们一定会碰到以下场景:
-场景1：在调用外部第三方接口的时候， 某些第三方我严重怀疑他们自己开发的接口从来没有用到自己的业务上， 然后你就会发现，一个需求你需要调用不同的接口，做数据组装。
-场景2:一个应用首页可能依托于很多服务。那就涉及到在加载页面时需要同时请求多个服务的接口。 这一步往往是由后端统一调用组装数据再返回给前端，也就是所谓的 BFF(Backend For Frontend) 层。 调用这些服务往往没有前后的依赖关系，可以同时调用。
-针对以上两种场景，假设在没有强依赖关系下，选择串行话调用，那么总耗时即:
+场景1：调用第三方接口的时候， 一个需求你需要调用不同的接口，做数据组装。 场景2:一个应用首页可能依托于很多服务。那就涉及到在加载页面时需要同时请求多个服务的接口。这一步往往是由后端统一调用组装数据再返回给前端，也就是所谓的 BFF(Backend For Frontend) 层。
+针对以上两种场景，假设在没有强依赖关系下，选择串行调用，那么总耗时即:
 time=s1&#43;s2&#43;....sn 按照当代秒入百万的有为青年，这么长时间早就把你祖宗十八代问候了一遍。
-为了伟大的KPI，我们往往会选择并发的调用这些依赖接口。那么总耗时就是:
-time=max(s1,s2,s3.....,sn) 当然开始堆业务的时候可以先串行化，等到上面的人着急的时候，亮出绝招。 这样，年底 PPT 就可以加上浓重的一笔流水账:为业务某个接口提高百分之XXX性能，间接产生XXX价值。
-当然这一切的前提是，做老板不懂技术，做技术&quot;懂&quot;你。
-言归正传,
-如果修改成并发调用，你可能会这么写，
+为了伟大的KPI，我们往往会选择并发地调用这些依赖接口。那么总耗时就是:
+time=max(s1,s2,s3.....,sn) 当然开始堆业务的时候可以先串行化，等到上面的人着急的时候，亮出绝招。
+这样，年底 PPT 就可以加上浓重的一笔流水账:为业务某个接口提高百分之XXX性能，间接产生XXX价值。
+当然这一切的前提是，做老板不懂技术，做技术”懂”你。
+言归正传,如果修改成并发调用，你可能会这么写，
 package main import ( &#34;fmt&#34; &#34;sync&#34; &#34;time&#34; ) func main() { var wg sync.WaitGroup wg.Add(2) var userInfo *User var productList []Product go func() { defer wg.Done() userInfo, _ = getUser() }() go func() { defer wg.Done() productList, _ = getProductList() }() wg.Wait() fmt.Printf(&#34;用户信息:%&#43;v\n&#34;, userInfo) fmt.Printf(&#34;商品信息:%&#43;v\n&#34;, productList) } /********用户服务**********/ type User struct { Name string Age uint8 } func getUser() (*User, error) { time."/>
 
 	<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
@@ -63,7 +60,7 @@ package main import ( &#34;fmt&#34; &#34;sync&#34; &#34;time&#34; ) func main() 
 	<link rel="mask-icon" href="/safari-pinned-tab.svg" color="">
 	<link rel="shortcut icon" href="/favicon.ico">
 
-	<title>业务中，经常需要的工具(1)</title>
+	<title>如何优雅地实现并发编排任务</title>
 	<link rel="stylesheet" href="https://www.syst.top/css/style.min.d3141168199607bf3a517216ce3c263814eecdbc8fca72a9a88700799a838219.css">
 	
 </head>
@@ -100,26 +97,22 @@ package main import ( &#34;fmt&#34; &#34;sync&#34; &#34;time&#34; ) func main() 
 		<article class="thin">
 			<header class="post-header">
 				<div class="post-meta"><span>Apr 21, 2021</span></div>
-				<h1>业务中，经常需要的工具(1)</h1>
+				<h1>如何优雅地实现并发编排任务</h1>
 			</header>
 			<div class="content">
 				<h3 id="业务场景">业务场景<a href="#业务场景" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h3>
 <p>在做任务开发的时候，你们一定会碰到以下场景:</p>
-<p>场景1：在调用外部第三方接口的时候， 某些第三方我严重怀疑他们自己开发的接口从来没有用到自己的业务上，
-然后你就会发现，一个需求你需要调用不同的接口，做数据组装。</p>
-<p>场景2:一个应用首页可能依托于很多服务。那就涉及到在加载页面时需要同时请求多个服务的接口。
-这一步往往是由后端统一调用组装数据再返回给前端，也就是所谓的 BFF(Backend For Frontend) 层。
-调用这些服务往往没有前后的依赖关系，可以同时调用。</p>
-<p>针对以上两种场景，假设在没有强依赖关系下，选择串行话调用，那么总耗时即:</p>
+<p>场景1：调用第三方接口的时候， 一个需求你需要调用不同的接口，做数据组装。
+场景2:一个应用首页可能依托于很多服务。那就涉及到在加载页面时需要同时请求多个服务的接口。这一步往往是由后端统一调用组装数据再返回给前端，也就是所谓的 BFF(Backend For Frontend) 层。</p>
+<p>针对以上两种场景，假设在没有强依赖关系下，选择串行调用，那么总耗时即:</p>
 <pre><code>time=s1+s2+....sn
 </code></pre><p>按照当代秒入百万的有为青年，这么长时间早就把你祖宗十八代问候了一遍。</p>
-<p>为了伟大的KPI，我们往往会选择并发的调用这些依赖接口。那么总耗时就是:</p>
+<p>为了伟大的KPI，我们往往会选择并发地调用这些依赖接口。那么总耗时就是:</p>
 <pre><code>time=max(s1,s2,s3.....,sn)
-</code></pre><p>当然开始堆业务的时候可以先串行化，等到上面的人着急的时候，亮出绝招。
-这样，年底 <code>PPT</code> 就可以加上浓重的一笔流水账:为业务某个接口提高百分之XXX性能，间接产生XXX价值。</p>
-<p>当然这一切的前提是，做老板不懂技术，做技术&quot;懂&quot;你。</p>
-<p>言归正传,</p>
-<p>如果修改成并发调用，你可能会这么写，</p>
+</code></pre><p>当然开始堆业务的时候可以先串行化，等到上面的人着急的时候，亮出绝招。</p>
+<p>这样，年底 PPT 就可以加上浓重的一笔流水账:为业务某个接口提高百分之XXX性能，间接产生XXX价值。</p>
+<p>当然这一切的前提是，做老板不懂技术，做技术”懂”你。</p>
+<p>言归正传,如果修改成并发调用，你可能会这么写，</p>
 <div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kn">package</span> <span class="nx">main</span>
 
 <span class="kn">import</span> <span class="p">(</span>
@@ -434,11 +427,14 @@ package main import ( &#34;fmt&#34; &#34;sync&#34; &#34;time&#34; ) func main() 
 </code></pre></div><p>上面的代码，假如执行 <code>reducer</code>，<code>writer</code> 写入引发 <code>panic</code>,那么<code>drain(collector)</code> 会直接卡住。</p>
 <p>不过作者已经修复了这个问题，直接把 <code>drain(collector)</code> 放入到 <code>defer</code>。
 <img src="https://image.syst.top/image/mr/mr-2.png" alt="image"></p>
-<p>具体 issues。</p>
+<p>具体 issues[1]。</p>
 <p>到这里，关于 <code>Finish</code> 的源码也就结束了。感兴趣的可以看看其他源码。</p>
 <p>很喜欢 <code>go-zero</code> 里的一些工具，但是往往用的一些工具并不独立，
 依赖于其他文件包，导致明明只想使用其中一个工具却需要安装整个包。
 所以最终的结果就是扒源码，创建无依赖库工具集，遵循 <code>MIT</code> 即可。</p>
+<p>附录
+[1]
+<a href="https://github.com/tal-tech/go-zero/issues/676">https://github.com/tal-tech/go-zero/issues/676</a></p>
 
 			</div>
 			<div class="content"><br><img src="https://image.syst.top/image/wechat-qr.png"></div>
@@ -447,7 +443,7 @@ package main import ( &#34;fmt&#34; &#34;sync&#34; &#34;time&#34; ) func main() 
 				<p>
 					<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-tag meta-icon"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"></path><line x1="7" y1="7" x2="7" y2="7"></line></svg><span class="tag"><a href="https://www.syst.top/tags/go">go</a></span><span class="tag"><a href="https://www.syst.top/tags/mistake">mistake</a></span>
 				</p>
-				<p><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-file-text"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>892 Words</p>
+				<p><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-file-text"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>891 Words</p>
 				<p><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-calendar"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>2021-04-21 23:54 &#43;0800</p>
 			</footer>
 		</article>
@@ -466,11 +462,11 @@ package main import ( &#34;fmt&#34; &#34;sync&#34; &#34;time&#34; ) func main() 
 </nav>
 		</aside>
 		<div class="post-nav thin">
-			<a class="next-post" href="https://www.syst.top/posts/go/enum/">
-				<span class="post-nav-label"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-arrow-left"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>&nbsp;Newer</span><br><span>iota 在 Go 中的使用 </span>
+			<a class="next-post" href="https://www.syst.top/posts/go/mistake/">
+				<span class="post-nav-label"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-arrow-left"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>&nbsp;Newer</span><br><span>在Go中你犯过的错</span>
 			</a>
-			<a class="prev-post" href="https://www.syst.top/posts/go/mistake/">
-				<span class="post-nav-label">Older&nbsp;<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-arrow-right"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg></span><br><span>在Go中你犯过的错</span>
+			<a class="prev-post" href="https://www.syst.top/posts/go/etcd-2021-04-10/">
+				<span class="post-nav-label">Older&nbsp;<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-arrow-right"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg></span><br><span>etcd 实战基础篇(一) </span>
 			</a>
 		</div>
 		<div id="comments" class="thin">

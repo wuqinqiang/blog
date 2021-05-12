@@ -98,25 +98,6 @@ You should always use enums when a variable (especially a method parameter) can 
     </item>
     
     <item>
-      <title>业务中，经常需要的工具(1)</title>
-      <link>https://www.syst.top/posts/go/mr/</link>
-      <pubDate>Wed, 21 Apr 2021 23:54:52 +0800</pubDate>
-      
-      <guid>https://www.syst.top/posts/go/mr/</guid>
-      <description>业务场景 在做任务开发的时候，你们一定会碰到以下场景:
-场景1：在调用外部第三方接口的时候， 某些第三方我严重怀疑他们自己开发的接口从来没有用到自己的业务上， 然后你就会发现，一个需求你需要调用不同的接口，做数据组装。
-场景2:一个应用首页可能依托于很多服务。那就涉及到在加载页面时需要同时请求多个服务的接口。 这一步往往是由后端统一调用组装数据再返回给前端，也就是所谓的 BFF(Backend For Frontend) 层。 调用这些服务往往没有前后的依赖关系，可以同时调用。
-针对以上两种场景，假设在没有强依赖关系下，选择串行话调用，那么总耗时即:
-time=s1+s2+....sn 按照当代秒入百万的有为青年，这么长时间早就把你祖宗十八代问候了一遍。
-为了伟大的KPI，我们往往会选择并发的调用这些依赖接口。那么总耗时就是:
-time=max(s1,s2,s3.....,sn) 当然开始堆业务的时候可以先串行化，等到上面的人着急的时候，亮出绝招。 这样，年底 PPT 就可以加上浓重的一笔流水账:为业务某个接口提高百分之XXX性能，间接产生XXX价值。
-当然这一切的前提是，做老板不懂技术，做技术&amp;quot;懂&amp;quot;你。
-言归正传,
-如果修改成并发调用，你可能会这么写，
-package main import ( &amp;#34;fmt&amp;#34; &amp;#34;sync&amp;#34; &amp;#34;time&amp;#34; ) func main() { var wg sync.WaitGroup wg.Add(2) var userInfo *User var productList []Product go func() { defer wg.Done() userInfo, _ = getUser() }() go func() { defer wg.Done() productList, _ = getProductList() }() wg.Wait() fmt.Printf(&amp;#34;用户信息:%+v\n&amp;#34;, userInfo) fmt.Printf(&amp;#34;商品信息:%+v\n&amp;#34;, productList) } /********用户服务**********/ type User struct { Name string Age uint8 } func getUser() (*User, error) { time.</description>
-    </item>
-    
-    <item>
       <title>在Go中你犯过的错</title>
       <link>https://www.syst.top/posts/go/mistake/</link>
       <pubDate>Wed, 21 Apr 2021 23:54:52 +0800</pubDate>
@@ -128,6 +109,24 @@ package main import ( &amp;#34;fmt&amp;#34; &amp;#34;sync&amp;#34; ) func main()
 原因很简单，循环器中的 i 实际上是一个单变量，go func 里的闭包只绑定在一个变量上， 每个 goroutine 可能要等到循环结束才真正的运行，这时候运行的 i 值大概率就是5了, 没人能保证这个过程，有的只是手段。
 正确的做法
 func main() { var wg sync.WaitGroup items := []int{1, 2, 3, 4, 5} for index, _ := range items { wg.</description>
+    </item>
+    
+    <item>
+      <title>如何优雅地实现并发编排任务</title>
+      <link>https://www.syst.top/posts/go/mr/</link>
+      <pubDate>Wed, 21 Apr 2021 23:54:52 +0800</pubDate>
+      
+      <guid>https://www.syst.top/posts/go/mr/</guid>
+      <description>业务场景 在做任务开发的时候，你们一定会碰到以下场景:
+场景1：调用第三方接口的时候， 一个需求你需要调用不同的接口，做数据组装。 场景2:一个应用首页可能依托于很多服务。那就涉及到在加载页面时需要同时请求多个服务的接口。这一步往往是由后端统一调用组装数据再返回给前端，也就是所谓的 BFF(Backend For Frontend) 层。
+针对以上两种场景，假设在没有强依赖关系下，选择串行调用，那么总耗时即:
+time=s1+s2+....sn 按照当代秒入百万的有为青年，这么长时间早就把你祖宗十八代问候了一遍。
+为了伟大的KPI，我们往往会选择并发地调用这些依赖接口。那么总耗时就是:
+time=max(s1,s2,s3.....,sn) 当然开始堆业务的时候可以先串行化，等到上面的人着急的时候，亮出绝招。
+这样，年底 PPT 就可以加上浓重的一笔流水账:为业务某个接口提高百分之XXX性能，间接产生XXX价值。
+当然这一切的前提是，做老板不懂技术，做技术”懂”你。
+言归正传,如果修改成并发调用，你可能会这么写，
+package main import ( &amp;#34;fmt&amp;#34; &amp;#34;sync&amp;#34; &amp;#34;time&amp;#34; ) func main() { var wg sync.WaitGroup wg.Add(2) var userInfo *User var productList []Product go func() { defer wg.Done() userInfo, _ = getUser() }() go func() { defer wg.Done() productList, _ = getProductList() }() wg.Wait() fmt.Printf(&amp;#34;用户信息:%+v\n&amp;#34;, userInfo) fmt.Printf(&amp;#34;商品信息:%+v\n&amp;#34;, productList) } /********用户服务**********/ type User struct { Name string Age uint8 } func getUser() (*User, error) { time.</description>
     </item>
     
     <item>
