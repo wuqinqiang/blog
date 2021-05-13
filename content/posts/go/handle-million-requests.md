@@ -10,7 +10,7 @@ tags:
 ### 介绍
 
 偶然间看到一篇写于15年的文章，说实话，标题确实吸引了我，不过看了几遍之后，确实精彩。 关于这篇文章，我就不直接翻译了。 项目的需求就是 客户端发送请求，服务端接收请求处理数据(原文是把资源上传至 Amazon S3 资源中)。本质上就是这样,
-![image](https://image.aabbccm.com/image/handle-million.png)
+![image](https://image.syst.top/image/handle-million.png)
 
 我稍微改动了原文的业务代码，但是并不影响核心模块。在第一版中，每收到一个 Request,开启一个 G 进行处理，快速响应，很常规的操作。
 
@@ -250,7 +250,7 @@ func main() {
 最终采用的是两级 channel，一级是将用户请求数据放入到 chan Job 中，这个 channel job 相当于待处理的任务队列。
 
 另一级用来存放可以处理任务的 work 缓存队列，类型为 chan chan Job。调度器把待处理的任务放入一个空闲的缓存队列当中，work 会一直处理它的缓存队列。通过这种方式，实现了一个 worker 池。大致画了一个图帮助理解
-![image](https://image.aabbccm.com/image/work-pool.png)
+![image](https://image.syst.top/image/work-pool.png)
 
 首先我们在接收到一个请求后，创建 Job 任务，把它放入到任务队列中等待 work 池处理。
 
