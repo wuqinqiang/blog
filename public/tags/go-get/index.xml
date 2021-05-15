@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>go get on 记得</title>
+    <link>https://www.syst.top/tags/go-get/</link>
+    <description>Recent content in go get on 记得</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>zh-hans</language>
+    <copyright>This work is licensed under a Creative Commons Attribution-NonCommercial 4.0 International License.</copyright>
+    <lastBuildDate>Thu, 13 May 2021 22:12:01 +0800</lastBuildDate><atom:link href="https://www.syst.top/tags/go-get/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>iota 在 Go 中的使用 </title>
+      <link>https://www.syst.top/posts/go/go-get-happen/</link>
+      <pubDate>Thu, 13 May 2021 22:12:01 +0800</pubDate>
+      
+      <guid>https://www.syst.top/posts/go/go-get-happen/</guid>
+      <description></description>
+    </item>
+    
+  </channel>
+</rss>
