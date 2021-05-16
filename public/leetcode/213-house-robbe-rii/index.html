@@ -8,8 +8,7 @@
 	<meta name="theme-color" content="#494f5c">
 	<meta name="msapplication-TileColor" content="#494f5c">
 <meta itemprop="name" content="leetcode 213 House Robber II">
-<meta itemprop="description" content="介绍 这是 House Robber II，也就是 I 的变型版本。II 和 I 的最大区别在于 II 把房子围城一个圈了. 你可以理解成环形链表。这样对小偷打击还是蛮大的，这意味着第一幢房子和最后一幢房子是紧挨着的。不能同时偷。
-之前我们提到，相邻两家不能同时偷。如果只有一家，那么根本构不成相邻的条件，就偷唯一的那户人家。 如果有两家，那么偷的必然是两家中钱多的那家。
+<meta itemprop="description" content="介绍 这是 House Robber II，也就是 I 的变型版本。II 和 I 的最大区别在于 II 把房子围城一个圈了. 你可以理解成环形链表。这样对小偷打击还是蛮大的，这意味着第一幢房子和最后一幢房子是紧挨着的。不能同时偷。 之前我们提到，相邻两家不能同时偷。如果只有一家，那么根本构不成相邻的条件，就偷唯一的那户人家。 如果有两家，那么偷的必然是两家中钱多的那家。
 那如果总数大于 2 家呢？
 对于第 n 家来说，只有两种选择:偷或者不偷。
 是咋么计算出当前这家是否要偷的呢。
@@ -28,8 +27,7 @@ func rob(nums []int) int { n := len(nums) if n == 0 { return 0 } if n == 1 { ret
 
 <meta itemprop="keywords" content="go,leetcode," />
 <meta property="og:title" content="leetcode 213 House Robber II" />
-<meta property="og:description" content="介绍 这是 House Robber II，也就是 I 的变型版本。II 和 I 的最大区别在于 II 把房子围城一个圈了. 你可以理解成环形链表。这样对小偷打击还是蛮大的，这意味着第一幢房子和最后一幢房子是紧挨着的。不能同时偷。
-之前我们提到，相邻两家不能同时偷。如果只有一家，那么根本构不成相邻的条件，就偷唯一的那户人家。 如果有两家，那么偷的必然是两家中钱多的那家。
+<meta property="og:description" content="介绍 这是 House Robber II，也就是 I 的变型版本。II 和 I 的最大区别在于 II 把房子围城一个圈了. 你可以理解成环形链表。这样对小偷打击还是蛮大的，这意味着第一幢房子和最后一幢房子是紧挨着的。不能同时偷。 之前我们提到，相邻两家不能同时偷。如果只有一家，那么根本构不成相邻的条件，就偷唯一的那户人家。 如果有两家，那么偷的必然是两家中钱多的那家。
 那如果总数大于 2 家呢？
 对于第 n 家来说，只有两种选择:偷或者不偷。
 是咋么计算出当前这家是否要偷的呢。
@@ -46,8 +44,7 @@ func rob(nums []int) int { n := len(nums) if n == 0 { return 0 } if n == 1 { ret
 <meta property="article:modified_time" content="2021-05-16T00:17:52+08:00" />
 <meta name="twitter:card" content="summary"/>
 <meta name="twitter:title" content="leetcode 213 House Robber II"/>
-<meta name="twitter:description" content="介绍 这是 House Robber II，也就是 I 的变型版本。II 和 I 的最大区别在于 II 把房子围城一个圈了. 你可以理解成环形链表。这样对小偷打击还是蛮大的，这意味着第一幢房子和最后一幢房子是紧挨着的。不能同时偷。
-之前我们提到，相邻两家不能同时偷。如果只有一家，那么根本构不成相邻的条件，就偷唯一的那户人家。 如果有两家，那么偷的必然是两家中钱多的那家。
+<meta name="twitter:description" content="介绍 这是 House Robber II，也就是 I 的变型版本。II 和 I 的最大区别在于 II 把房子围城一个圈了. 你可以理解成环形链表。这样对小偷打击还是蛮大的，这意味着第一幢房子和最后一幢房子是紧挨着的。不能同时偷。 之前我们提到，相邻两家不能同时偷。如果只有一家，那么根本构不成相邻的条件，就偷唯一的那户人家。 如果有两家，那么偷的必然是两家中钱多的那家。
 那如果总数大于 2 家呢？
 对于第 n 家来说，只有两种选择:偷或者不偷。
 是咋么计算出当前这家是否要偷的呢。
@@ -106,7 +103,8 @@ func rob(nums []int) int { n := len(nums) if n == 0 { return 0 } if n == 1 { ret
 			<h3 id="介绍">介绍<a href="#介绍" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h3>
 <p><img src="https://image.syst.top/image/leetcode/213.png" alt="image"></p>
 <p>这是 House Robber II，也就是 I 的变型版本。II 和 I 的最大区别在于 II 把房子围城一个圈了.
-你可以理解成环形链表。这样对小偷打击还是蛮大的，这意味着第一幢房子和最后一幢房子是紧挨着的。不能同时偷。</p>
+你可以理解成环形链表。这样对小偷打击还是蛮大的，这意味着第一幢房子和最后一幢房子是紧挨着的。不能同时偷。
+<img src="https://image.syst.top/image/leetcode/213-2.png" alt="image"></p>
 <p>之前我们提到，相邻两家不能同时偷。如果只有一家，那么根本构不成相邻的条件，就偷唯一的那户人家。
 如果有两家，那么偷的必然是两家中钱多的那家。</p>
 <p>那如果总数大于 2 家呢？</p>
