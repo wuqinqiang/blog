@@ -126,6 +126,21 @@ You should always use enums when a variable (especially a method parameter) can 
     </item>
     
     <item>
+      <title>无限缓冲的channel(1)</title>
+      <link>https://www.syst.top/posts/go/unlimited/</link>
+      <pubDate>Sun, 25 Apr 2021 22:25:52 +0800</pubDate>
+      
+      <guid>https://www.syst.top/posts/go/unlimited/</guid>
+      <description>事情的起因是前几周看到鸟窝的一篇关于实现无限缓冲的 channel 的文章，但是那时候忙着别的事，所以也一直没看。
+正好今天来瞧瞧，不过这篇文章不会涉及到鸟窝自己实现的 chanx，我们会在第二篇的时候提到。
+我们都知道，可以创建无缓冲和有缓冲的 channel。一旦创建的时候指定了 channel 的容量，那么在这个 channel 的生命周期内，我们将无法改变它的容量。
+有时候，我们并不知道也无法预估塞入通道的数量规模，并且此时通道的写入速度远远超过通道的消费速度，那么必然会在某个时间点通道塞满，导致发送方阻塞。 此时有人就会提到，能不能提供一个无限缓冲的 channel。
+这个问题早在 2017 年就有人提过 issues，最终 go 官方没有实现这个提案。 不过，这个 issues 下面总共产生了 67 个 comments，评论很精彩。
+比如有人提到:
+cznic:Unlimited capacity channels ask for a machine with unlimited memory. rsc:The limited capacity of channels is an important source of backpressure in a set of communicating goroutines. It is typically a mistake to use an unbounded channel, because you lose that backpressure. If one goroutine falls sufficiently behind, you usually want to take some action in response, not just queue its messages forever.</description>
+    </item>
+    
+    <item>
       <title>在Go中你犯过的错</title>
       <link>https://www.syst.top/posts/go/mistake/</link>
       <pubDate>Wed, 21 Apr 2021 23:54:52 +0800</pubDate>
@@ -176,17 +191,6 @@ package main import ( &amp;#34;fmt&amp;#34; &amp;#34;sync&amp;#34; &amp;#34;time
 Etcd是什么 Etcd 是由 Go 编写的。它是一个强一致性的分布式键值存储，提供一种可靠的方式来存储需要由分布式系统或者机器集群访问的数据。 同时 Etcd 各节点中的通信是通过 Raft 一致性算法来处理的。 有很多大型开源项目的底层都基于 Etcd，举几个比较有名的工业级项目:kubernetes、 CoreDNS、ROOK&amp;hellip;&amp;hellip;
 Etcd 的场景  服务发现。(可以把服务存储到某个 prefix 开头的 key中，然后消费端或者服务信息以调用， 同时消费者也可以通过 watch 获得 key 的变化) 消息分布和订阅 分布式锁 Leader 选举 分布式队列 负载均衡 &amp;hellip;&amp;hellip;  和 redis 的区别 面试的时候可能有面试官喜欢问，
  redis 的数据类型更丰富(string, hash, set ,zset, list)，etcd 仅仅就是 key-val。 etcd 的底层是 Raft 算法，可以保证数据的强一致性。而 redis 数据复制上是主备异步复制，只能最终一致性。 读写性能上，因为 etcd 保证强一致性，所以会比 redis 差。 存储方面，etcd 使用的是持久化存储boltdb，而 redis 的方案是可持久化的 aof/rdb -&amp;hellip;&amp;hellip;  环境与说明 直接下载编译好的二进制文件也好，还是自己下载源码编译运行，先开启一个单节点服务就行。我本地使用 goreman 搭建了三个实例。 这里稍微说明一下:PEER ADDRS 指的是向其他 etcd server 暴露的通信地址,比如上图 name=infra1 要调用 infra2， 调用的就是 http://127.</description>
-    </item>
-    
-    <item>
-      <title>etcd 实战基础篇(二) </title>
-      <link>https://www.syst.top/posts/go/etcd-2021-04-15/</link>
-      <pubDate>Sat, 10 Apr 2021 09:54:52 +0800</pubDate>
-      
-      <guid>https://www.syst.top/posts/go/etcd-2021-04-15/</guid>
-      <description>上一篇我们主要介绍了 etcd 使用场景以及最基础性的一些操作(put、get、watch)。 这一篇我们接着实战etcd其他业务场景。
-基于 etcd 的分布式锁 基于 etcd 实现一个分布式锁特别简单。etcd 提供了开箱即用的包 concurrency，几行代码就实现一个分布式锁。
-package src import ( &amp;#34;context&amp;#34; &amp;#34;flag&amp;#34; &amp;#34;fmt&amp;#34; &amp;#34;github.com/coreos/etcd/clientv3&amp;#34; &amp;#34;github.com/coreos/etcd/clientv3/concurrency&amp;#34; &amp;#34;log&amp;#34; &amp;#34;strings&amp;#34; &amp;#34;time&amp;#34; ) var addr = flag.String(&amp;#34;addr&amp;#34;, &amp;#34;http://127.0.0.1:2379&amp;#34;, &amp;#34;etcd address&amp;#34;) // 初始化etcd客户端 func initEtcdClient() *clientv3.Client { var client *clientv3.Client var err error // 解析etcd的地址，编程[]string 	endpoints := strings.Split(*addr, &amp;#34;,&amp;#34;) // 创建一个 etcd 的客户端 	client, err = clientv3.New(clientv3.Config{Endpoints: endpoints, DialTimeout: 5 * time.Second}) if err != nil { fmt.</description>
     </item>
     
   </channel>

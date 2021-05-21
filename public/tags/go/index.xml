@@ -48,6 +48,21 @@ You should always use enums when a variable (especially a method parameter) can 
     </item>
     
     <item>
+      <title>无限缓冲的channel(1)</title>
+      <link>https://www.syst.top/posts/go/unlimited/</link>
+      <pubDate>Sun, 25 Apr 2021 22:25:52 +0800</pubDate>
+      
+      <guid>https://www.syst.top/posts/go/unlimited/</guid>
+      <description>事情的起因是前几周看到鸟窝的一篇关于实现无限缓冲的 channel 的文章，但是那时候忙着别的事，所以也一直没看。
+正好今天来瞧瞧，不过这篇文章不会涉及到鸟窝自己实现的 chanx，我们会在第二篇的时候提到。
+我们都知道，可以创建无缓冲和有缓冲的 channel。一旦创建的时候指定了 channel 的容量，那么在这个 channel 的生命周期内，我们将无法改变它的容量。
+有时候，我们并不知道也无法预估塞入通道的数量规模，并且此时通道的写入速度远远超过通道的消费速度，那么必然会在某个时间点通道塞满，导致发送方阻塞。 此时有人就会提到，能不能提供一个无限缓冲的 channel。
+这个问题早在 2017 年就有人提过 issues，最终 go 官方没有实现这个提案。 不过，这个 issues 下面总共产生了 67 个 comments，评论很精彩。
+比如有人提到:
+cznic:Unlimited capacity channels ask for a machine with unlimited memory. rsc:The limited capacity of channels is an important source of backpressure in a set of communicating goroutines. It is typically a mistake to use an unbounded channel, because you lose that backpressure. If one goroutine falls sufficiently behind, you usually want to take some action in response, not just queue its messages forever.</description>
+    </item>
+    
+    <item>
       <title>在Go中你犯过的错</title>
       <link>https://www.syst.top/posts/go/mistake/</link>
       <pubDate>Wed, 21 Apr 2021 23:54:52 +0800</pubDate>
