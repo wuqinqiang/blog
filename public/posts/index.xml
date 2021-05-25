@@ -6,18 +6,8 @@
 		<generator>Hugo -- gohugo.io</generator>
 		<language>zh-hans</language>
 		<copyright>This work is licensed under a Creative Commons Attribution-NonCommercial 4.0 International License.</copyright>
-		<lastBuildDate>Thu, 13 May 2021 22:12:01 +0800</lastBuildDate>
+		<lastBuildDate>Sun, 25 Apr 2021 22:25:52 +0800</lastBuildDate>
 		<atom:link href="https://www.syst.top/posts/index.xml" rel="self" type="application/rss+xml" />
-		
-		<item>
-			<title>iota 在 Go 中的使用 </title>
-			<link>https://www.syst.top/posts/go/go-get-happen/</link>
-			<pubDate>Thu, 13 May 2021 22:12:01 +0800</pubDate>
-			
-			<guid>https://www.syst.top/posts/go/go-get-happen/</guid>
-			<description></description>
-			<content type="html"><![CDATA[]]></content>
-		</item>
 		
 		<item>
 			<title>iota 在 Go 中的使用 </title>
@@ -262,48 +252,163 @@ BTW, overuse of enums might mean that your methods do too much (it's often bette
 			<pubDate>Sun, 25 Apr 2021 22:25:52 +0800</pubDate>
 			
 			<guid>https://www.syst.top/posts/go/unlimited/</guid>
-			<description>事情的起因是前几周看到鸟窝的一篇关于实现无限缓冲的 channel 的文章，但是那时候忙着别的事，所以也一直没看。
-正好今天来瞧瞧，不过这篇文章不会涉及到鸟窝自己实现的 chanx，我们会在第二篇的时候提到。
-我们都知道，channel 有两种类型:无缓冲和有缓冲的。一旦创建的时候指定了 channel 的类型(即容量)，那么在这个 channel 的生命周期内，我们将无法改变它的容量。
-有时候，我们并不知道也无法预估塞入通道的数量规模，并且通道的写入速度远远超过读取速度，那么必然会在某个时间点通道塞满，导致写入阻塞。 此时有人就会提到，能不能提供一个无限缓冲(unbounded or Unlimited)的 通道。
+			<description>介绍 事情的起因是前几周看到鸟窝写了一篇关于实现无限缓冲 channel 的文章，当时忙着和小姐姐聊天没看，今天想起来了。
+不过这篇文章不会涉及到鸟窝自己实现的 chanx，我们会在下一篇提到。
+我们都知道，channel 有两种类型:无缓冲和有缓冲的。
+当我们创建一个有缓冲的通道并指定了容量，那么在这个通道的生命周期内，我们将再也无法改变它的容量。
+有时候，我们并不知道也无法预估写入通道的数量规模。如果此时通道的写入速度远远超过读取速度，那么必然会在某个时间点塞满通道，导致写入阻塞。 比如之前我翻译的一篇文章 使用 Go 每分钟处理百万请求 中，作者就出现处理速度太慢，导致通道塞满，其他请求被阻塞，响应时间慢慢增加。
+此时有人就会提到，能不能提供一个无限缓冲(Unbounded or Unlimited)的通道。
 这个问题早在 2017 年就有人提过 issues，最终 go 官方没有实现这个提案。
 不过，这个 issues 下面总共产生了 67 个 comments，评论很精彩。 比如有人提到:
 cznic:Unlimited capacity channels ask for a machine with unlimited memory. rsc:The limited capacity of channels is an important source of backpressure in a set of communicating goroutines. It is typically a mistake to use an unbounded channel, because you lose that backpressure.</description>
-			<content type="html"><![CDATA[<p>事情的起因是前几周看到鸟窝的一篇关于实现无限缓冲的 channel 的文章，但是那时候忙着别的事，所以也一直没看。</p>
-<p>正好今天来瞧瞧，不过这篇文章不会涉及到鸟窝自己实现的 chanx，我们会在第二篇的时候提到。</p>
-<p>我们都知道，channel 有两种类型:无缓冲和有缓冲的。一旦创建的时候指定了 channel 的类型(即容量)，那么在这个 channel 的生命周期内，我们将无法改变它的容量。</p>
-<p>有时候，我们并不知道也无法预估塞入通道的数量规模，并且通道的写入速度远远超过读取速度，那么必然会在某个时间点通道塞满，导致写入阻塞。
-此时有人就会提到，能不能提供一个无限缓冲(unbounded or Unlimited)的 通道。</p>
+			<content type="html"><![CDATA[<h2 id="介绍">介绍</h2>
+<p>事情的起因是前几周看到鸟窝写了一篇关于实现无限缓冲 <code>channel</code> 的文章，当时忙着和小姐姐聊天没看，今天想起来了。</p>
+<p>不过这篇文章不会涉及到鸟窝自己实现的 <code>chanx</code>，我们会在下一篇提到。</p>
+<p>我们都知道，<code>channel</code> 有两种类型:无缓冲和有缓冲的。</p>
+<p>当我们创建一个有缓冲的通道并指定了容量，那么在这个通道的生命周期内，我们将再也无法改变它的容量。</p>
+<p>有时候，我们并不知道也无法预估写入通道的数量规模。如果此时通道的写入速度远远超过读取速度，那么必然会在某个时间点塞满通道，导致写入阻塞。
+比如之前我翻译的一篇文章 <a href="https://www.syst.top/posts/go/handle-million-requests/">使用 Go 每分钟处理百万请求</a> 中，作者就出现处理速度太慢，导致通道塞满，其他请求被阻塞，响应时间慢慢增加。</p>
+<p>此时有人就会提到，能不能提供一个无限缓冲(Unbounded or Unlimited)的通道。</p>
 <p>这个问题早在 2017 年就有人提过 issues，最终 go 官方没有实现这个提案。</p>
 <p>不过，这个 issues 下面总共产生了 67 个 comments，评论很精彩。
 <img src="https://image.syst.top/image/unlimited/unlimit-1.png" alt="image"></p>
 <p>比如有人提到:</p>
 <pre><code>cznic:Unlimited capacity channels ask for a machine with unlimited memory.
+
 rsc:The limited capacity of channels is an important source of backpressure in a set of communicating goroutines. It is typically a mistake to use an unbounded channel, because you lose that backpressure. If one goroutine falls sufficiently behind, you usually want to take some action in response, not just queue its messages forever. The appropriate response varies by situation: maybe you want to drop messages, maybe you want to keep summary messages, maybe you want to take different responses as the goroutine falls further and further behind. Making it trivial to reach for unbounded channels keeps developers from thinking about this, which I believe is a strong disadvantage.
-</code></pre><p>那么如何实现一个无限缓冲的 channel 呢？</p>
+</code></pre><p>那么如何实现一个无限缓冲的通道呢？</p>
 <p>针对这类需求，有很多版本的实现，我们来看其中的一个实现。鸟窝的 chanx 就是在这个基础上做修改的。</p>
 <p>我们一步步还原它的实现，这其中还能知道作者的思考过程。</p>
+<h2 id="代码">代码</h2>
 <p>第一版,</p>
 <p><img src="https://image.syst.top/image/unlimited/unlimit-2.png" alt="image"></p>
+<p><code>MakeInfinite</code> 函数返回两个通道，第一个用于数据的写入，第二个用于数据的读取。</p>
+<p>注意看这里的细节，在返回的时候就约束了通道的操作类型:一个只写，一个只读，这样避免了用户破坏通道的操作流程。
+这里面的代码也简单，只要写入通道 <code>in</code> 未被关闭，那么就把从 <code>in</code> 通道中读取的值 <code>append</code> 到 <code>inQueue</code> 切片中。
+<code>inQueue</code> 在这里就是实现无限缓冲的中间层。</p>
 <p>然后有个 test。</p>
 <p><img src="https://image.syst.top/image/unlimited/unlimit-3.png" alt="image"></p>
 <p><img src="https://image.syst.top/image/unlimited/unlimit-4.png" alt="image"></p>
-<p>当走到第二个 case 的时候，由于 inQueue 一开始是空的，那么必然会出现  index out。
+<p>当走到第二个 <code>case</code> 的时候，由于 <code>inQueue</code> 一开始是空的，那么必然会出现  <code>index out</code>。
 不仅是一开始，在运行中，如果读取比写入快，那么必然也会导致相同的情况。</p>
-<p>改了一版，
-<img src="https://image.syst.top/image/unlimited/unlimit-5.jpg" alt="image">
+<p><img src="https://image.syst.top/image/unlimited/unlimit-5.jpg" alt="image">
 <img src="https://image.syst.top/image/unlimited/unlimit-6.png" alt="image"></p>
-<p>在 inQueue 没有值的时候，我们把 nil 也写入到通道，
-然后测试代码中我们从 out channel 读取数值试图传唤成 int 失败了。
-当队列中没有数据时，我们不应该写入 out 通道。</p>
+<p>在 <code>inQueue</code> 没有值的时候，我们把 <code>nil</code> 也写入到通道，
+然后测试代码中我们从 <code>out channel</code> 读取数值试图把值断言 <code>int</code> 失败了。 那么，当队列中没有数据时，我们不应该写入 <code>out</code> 通道。</p>
 <p><img src="https://image.syst.top/image/unlimited/unlimit-7.jpg" alt="image">
-作者使用了一个技巧，如果 inQueue 没有数据，那么尝试写入一个 nil 通道将永远阻塞。
-通常，永久阻塞是一个不好的行为，但是这个是包含在 select 语句中的，所以问题不大。</p>
-<p><img src="https://image.syst.top/image/unlimited/unlimit-8.png" alt="image">
-还是有问题，原因很简单，我们再发送完数据就马上关闭了 in 通道。随后 break loop。接下来关闭 out 通道，程序运行结束。
-inQueue 还有值未被读取。</p>
-<p>只要写比多快，那么就永远存在这个问题。我们需要保证在通道关闭的时候，inQueue 已为空。
-<img src="https://image.syst.top/image/unlimited/unlimit-9.png" alt="image"></p>
+作者使用了一个技巧，如果 <code>inQueue</code> 没有数据，那么尝试写入一个 <code>nil</code> 通道将永远阻塞。
+通常，永久阻塞是一个不好的行为，但是这个是包含在 <code>select</code> 语句中的，所以问题不大。</p>
+<p><img src="https://image.syst.top/image/unlimited/unlimit-8.png" alt="image"></p>
+<p>还有问题。原因很简单，我们再发送完数据就马上关闭了 <code>in</code> 通道。随后 <code>break loop</code>。接下来关闭 <code>out</code> 通道，程序运行结束。
+此时 <code>inQueue</code> 还有值未被取出。</p>
+<p>只要写比读快，那么就永远存在这个问题。我们需要保证在通道关闭的时候，<code>inQueue</code> 已为空。
+<img src="https://image.syst.top/image/unlimited/unlimit-9.jpg" alt="image"></p>
+<h2 id="总结">总结</h2>
+<p>上面是如何实现一个无限缓冲的 <code>channel</code>？</p>
+<p>借助了一个临时存储数据的中间层。</p>
+<p>上面的实现有没有哪些地方可以改进？</p>
+<p><code>inQueue</code> 作为中间层，本质上是一个切片。明明 <code>inQueue</code> 已经扩容到很大的值了，但是并没有对应的 <code>reset</code>。会导致 <code>inQueue</code> 指向还在底层数组靠后的位置，并不能复用数组前面的空间，造成浪费。</p>
+<p><code>chanx</code> 是咋么改进的？</p>
+<p>下一篇</p>
+]]></content>
+		</item>
+		
+		<item>
+			<title>无限缓冲的channel(2)</title>
+			<link>https://www.syst.top/posts/go/unlimited-2/</link>
+			<pubDate>Sun, 25 Apr 2021 22:25:52 +0800</pubDate>
+			
+			<guid>https://www.syst.top/posts/go/unlimited-2/</guid>
+			<description>chanx 上篇文章我们提到，当我们创建一个有缓冲的通道并指定了容量，那么在这个通道的生命周期内，我们将再也无法改变它的容量。 容量是有限的。在典型的写比读快的场景，容易导致通道被塞满，由此引发了关于无限缓存的 channel 讨论。 最终我们分析了一个实现的方案。 最后，我们也提到了此方案还可以优化的点。
+鸟窝的 chanx 正是基于此方案改造而成的。
+上篇文章说过，所谓的无限缓冲，无非是借助一个中间层的数据结构，暂存数据。
+在 chanx 中是这样的:
+type UnboundedChan struct { In chan&amp;lt;- T // channel for write 	Out &amp;lt;-chan T // channel for read 	buffer *RingBuffer // buffer } in 和 out 的职责在上篇文章已经说明，这里的 buffer 就是我们所谓的中间层。这里的 RingBuffer 我们后面再说。
+func NewUnboundedChan(initCapacity int) UnboundedChan { return NewUnboundedChanSize(initCapacity, initCapacity, initCapacity) } func NewUnboundedChanSize(initInCapacity, initOutCapacity, initBufCapacity int) UnboundedChan { in := make(chan T, initInCapacity) out := make(chan T, initOutCapacity) ch := UnboundedChan{In: in, Out: out, buffer: NewRingBuffer(initBufCapacity)} go process(in, out, ch) return ch } 提供了两个 初始化 UnboundedChan 的方法，从代码中我们可以明显的看出,NewUnboundedChanSize 可以给每个属性自定义自己的容量大小。仅此而已。</description>
+			<content type="html"><![CDATA[<h2 id="chanx">chanx</h2>
+<p>上篇文章我们提到，当我们创建一个有缓冲的通道并指定了容量，那么在这个通道的生命周期内，我们将再也无法改变它的容量。
+容量是有限的。在典型的写比读快的场景，容易导致通道被塞满，由此引发了关于无限缓存的 channel 讨论。
+最终我们分析了一个实现的方案。
+最后，我们也提到了此方案还可以优化的点。</p>
+<p>鸟窝的 chanx 正是基于此方案改造而成的。</p>
+<p>上篇文章说过，所谓的无限缓冲，无非是借助一个中间层的数据结构，暂存数据。</p>
+<p>在 chanx 中是这样的:</p>
+<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kd">type</span> <span class="nx">UnboundedChan</span> <span class="kd">struct</span> <span class="p">{</span>
+	<span class="nx">In</span>     <span class="kd">chan</span><span class="o">&lt;-</span> <span class="nx">T</span>    <span class="c1">// channel for write
+</span><span class="c1"></span>	<span class="nx">Out</span>    <span class="o">&lt;-</span><span class="kd">chan</span> <span class="nx">T</span>    <span class="c1">// channel for read
+</span><span class="c1"></span>	<span class="nx">buffer</span> <span class="o">*</span><span class="nx">RingBuffer</span> <span class="c1">// buffer
+</span><span class="c1"></span><span class="p">}</span>
+</code></pre></div><p><code>in</code> 和 <code>out</code> 的职责在上篇文章已经说明，这里的 <code>buffer</code> 就是我们所谓的中间层。这里的 <code>RingBuffer</code> 我们后面再说。</p>
+<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kd">func</span> <span class="nf">NewUnboundedChan</span><span class="p">(</span><span class="nx">initCapacity</span> <span class="kt">int</span><span class="p">)</span> <span class="nx">UnboundedChan</span> <span class="p">{</span>
+	<span class="k">return</span> <span class="nf">NewUnboundedChanSize</span><span class="p">(</span><span class="nx">initCapacity</span><span class="p">,</span> <span class="nx">initCapacity</span><span class="p">,</span> <span class="nx">initCapacity</span><span class="p">)</span>
+<span class="p">}</span>
+
+<span class="kd">func</span> <span class="nf">NewUnboundedChanSize</span><span class="p">(</span><span class="nx">initInCapacity</span><span class="p">,</span> <span class="nx">initOutCapacity</span><span class="p">,</span> <span class="nx">initBufCapacity</span> <span class="kt">int</span><span class="p">)</span> <span class="nx">UnboundedChan</span> <span class="p">{</span>
+	<span class="nx">in</span> <span class="o">:=</span> <span class="nb">make</span><span class="p">(</span><span class="kd">chan</span> <span class="nx">T</span><span class="p">,</span> <span class="nx">initInCapacity</span><span class="p">)</span>
+	<span class="nx">out</span> <span class="o">:=</span> <span class="nb">make</span><span class="p">(</span><span class="kd">chan</span> <span class="nx">T</span><span class="p">,</span> <span class="nx">initOutCapacity</span><span class="p">)</span>
+	<span class="nx">ch</span> <span class="o">:=</span> <span class="nx">UnboundedChan</span><span class="p">{</span><span class="nx">In</span><span class="p">:</span> <span class="nx">in</span><span class="p">,</span> <span class="nx">Out</span><span class="p">:</span> <span class="nx">out</span><span class="p">,</span> <span class="nx">buffer</span><span class="p">:</span> <span class="nf">NewRingBuffer</span><span class="p">(</span><span class="nx">initBufCapacity</span><span class="p">)}</span>
+
+	<span class="k">go</span> <span class="nf">process</span><span class="p">(</span><span class="nx">in</span><span class="p">,</span> <span class="nx">out</span><span class="p">,</span> <span class="nx">ch</span><span class="p">)</span>
+
+	<span class="k">return</span> <span class="nx">ch</span>
+<span class="p">}</span>
+</code></pre></div><p>提供了两个 初始化 <code>UnboundedChan</code> 的方法，从代码中我们可以明显的看出,<code>NewUnboundedChanSize</code> 可以给每个属性自定义自己的容量大小。仅此而已。</p>
+<p>这里就有和上篇文章的不同之处了。
+<img src="https://image.syst.top/image/unlimited/unlimit-2.png" alt="image"></p>
+<p>可以清楚得看到，上篇的 <code>in</code> 和 <code>out</code> 是一个无缓冲的通道，而这里是两个缓冲通道，这和他们对数据的流转处理有很大关系。</p>
+<p>我们接下去看 <code>process(in,out,ch)</code> 最核心的方法。
+<img src="https://image.syst.top/image/unlimited-2/unlimit-1.png" alt="image"></p>
+<p>这时候，我们再放上上一篇的核心操作代码,
+<img src="https://image.syst.top/image/unlimited/unlimit-7.jpg" alt="image"></p>
+<p>可以很明显他们两的区别。
+上篇从 in 取数据会先塞入到 buffer，然后从 buffer 中取数据赛到 out。
+而 chanx 从 in 取出数据后先直接塞到 out(没有中间商赚差价)，只有在 out 已经满的情况下，才塞入到 buffer。</p>
+<p>chanx 还有一段小细节代码。
+<img src="https://image.syst.top/image/unlimited-2/unlimit-2.jpg" alt="image"></p>
+<p>能走到这里，一定是因为 out 满了。我们在把值塞入到 buffer 的同时，需要尝试把 buffer 中的数据塞入到 out 。此时 in 并没有关闭，还在持续的写入数据，
+为了避免 in 塞满，我们还需要尝试从 in 中取数据到 buffer。</p>
+<h2 id="buffer">buffer</h2>
+<p>上篇文章我提到了关于 buffer 优化的点。chanx 是如何优化的。</p>
+<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="c1">// type T interface{}
+</span><span class="c1"></span>
+<span class="kd">type</span> <span class="nx">RingBuffer</span> <span class="kd">struct</span> <span class="p">{</span>
+	<span class="nx">buf</span>         <span class="p">[]</span><span class="nx">T</span> 
+	<span class="nx">initialSize</span> <span class="kt">int</span>
+	<span class="nx">size</span>        <span class="kt">int</span>
+	<span class="nx">r</span>           <span class="kt">int</span> <span class="c1">// read pointer
+</span><span class="c1"></span>	<span class="nx">w</span>           <span class="kt">int</span> <span class="c1">// write pointer
+</span><span class="c1"></span><span class="p">}</span>
+</code></pre></div><p>这是 <code>buffer</code> 的结构，其中</p>
+<ul>
+<li>buf 具体存储数据的结构。</li>
+<li>initialSize 舒适化 buf 的长度</li>
+<li>size 当前 buf 的长度</li>
+<li>r 当前读数据位置</li>
+<li>w 当前写入数据位置</li>
+</ul>
+<p>本质上就是一个环形的缓冲区，达到资源的复用，当 buffer 满了，提供自动扩容的功能。
+我们来看一个写入操作。
+<img src="https://image.syst.top/image/unlimited-2/unlimit-3.png" alt="image"></p>
+<p>接着看扩容。
+<img src="https://image.syst.top/image/unlimited-2/unlimit-4.png" alt="image"></p>
+<p>这段代码唯一难理解的就是数据迁移了。这里的数据迁移目的是为了保证先入先出的原则。
+可能加了注释有些人也无法理解，那么就再加一个草率图。
+假设我们 buffer 的长度是 8。 当前读和写的 index 都是5。
+<img src="https://image.syst.top/image/unlimited-2/unlimit-5.png" alt="image"></p>
+<p>当 buffer 为空并且当前的 <code>size</code> 比初始化 <code>size</code> 还大，那么可以考虑重置 <code>buffer</code> 了。</p>
+<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="c1">//if ch.buffer.IsEmpty() &amp;&amp; ch.buffer.size &gt; ch.buffer.initialSize { 
+</span><span class="c1">//						ch.buffer.Reset()
+</span><span class="c1">//					}
+</span><span class="c1"></span><span class="kd">func</span> <span class="p">(</span><span class="nx">r</span> <span class="o">*</span><span class="nx">RingBuffer</span><span class="p">)</span> <span class="nf">Reset</span><span class="p">()</span> <span class="p">{</span>
+<span class="nx">r</span><span class="p">.</span><span class="nx">r</span> <span class="p">=</span> <span class="mi">0</span>
+<span class="nx">r</span><span class="p">.</span><span class="nx">w</span> <span class="p">=</span> <span class="mi">0</span>
+<span class="nx">r</span><span class="p">.</span><span class="nx">size</span> <span class="p">=</span> <span class="nx">r</span><span class="p">.</span><span class="nx">initialSize</span>
+<span class="nx">r</span><span class="p">.</span><span class="nx">buf</span> <span class="p">=</span> <span class="nb">make</span><span class="p">([]</span><span class="nx">T</span><span class="p">,</span> <span class="nx">r</span><span class="p">.</span><span class="nx">initialSize</span><span class="p">)</span>
+<span class="p">}</span>
+</code></pre></div><p>剩下的代码就没什么好说的了。</p>
+<h3 id="总结">总结</h3>
+<p>继上篇文章后，这篇文章我们主要讲解了 chanx 是如何实现无限缓冲的 channel 的。
+其中最重要的一个点在于 chanx 中 buffer 的实现采用的是 <code>ringbuffer</code>，达到资源的复用的同时还能自动扩容。</p>
 ]]></content>
 		</item>
 		
@@ -1928,96 +2033,6 @@ G(2) 可以在第5秒的时候获取到锁，然后它执行任务也得7秒。�
 </code></pre></div><p>这里&quot;不可控&quot;的 G 和上面还是又所不同的。仅仅极短时间内处于阻塞读 Chan 状态， 当有空闲的 worker 被唤醒，然后分发任务，整个生命周期远远短于上面的操作。</p>
 <p>最后，强烈建议看一下原文，原文地址在：http://marcio.io/2015/07/handling-1-million-requests-per-minute-with-golang/</p>
 <h3 id="最终方案">最终方案</h3>
-]]></content>
-		</item>
-		
-		<item>
-			<title>Kubernetes 本地快速启动（基于 Docker）</title>
-			<link>https://www.syst.top/posts/kubernetes/2020-05-01-install/</link>
-			<pubDate>Fri, 01 May 2020 11:25:52 +0800</pubDate>
-			
-			<guid>https://www.syst.top/posts/kubernetes/2020-05-01-install/</guid>
-			<description>Kubernetes 在容器编排大战结束后已经在云原生中占据了明确的一席，最近几年越来越火热，目前搜索趋势：
-Kubernetes 的热度很明显是不断地在上涨，因此学习和使用 Kubernetes 是一件相对正确的事，同时公司大多都在往容器化上接近，在拥抱 Kubernetes，所以我们所开发的应用也总是跑在容器环境中。更甚的是，需要对接 Kubernetes API 来做一些功能的开发。
-这个时候，我们就需要一个 Kubernetes 环境来进行开发和调试，但你准备开始时，又遇到了一个问题，虽然在 2020 年的现在，Kubernetes 的安装已经有了极大的简化，教程也满地跑，但 Kubernetes 的安装和运行依然有一定的要求，像我，就遇到了如下问题：
-显然，我的小水管 Mac 承受不起，但是又需要对 Kubernetes 进行学习和使用，除了买云服务器，又或是再在台式机上搭虚拟机，还有没有什么办法呢。
-非运维开发的情况下，入门级中最简单的方式就是采用 Docker 所提供的 Kubernetes 支持。
-Docker for Mac/Windows with Kubernetes Docker 在 17.12.ce 起就提供了 Mac 版本的 Kubernetes Beta 支持，在初始使用上来说非常的方便。首先我们检查 Docker 的版本，点击 Docker -&amp;gt; Check for Updates 确保你的 Docker 在最新版本。
-快速安装 Kubernetes 在升级完成后，我们可以点击 Docker -&amp;gt; Preferences -&amp;gt; Kubernetes，如下图：
-你会发现存在三个选项，分别是：Enable Kubernete、Deploy Docker Stacks to Kubernetes by default、Show system containers (advanced)。</description>
-			<content type="html"><![CDATA[<p>Kubernetes 在容器编排大战结束后已经在云原生中占据了明确的一席，最近几年越来越火热，目前搜索趋势：</p>
-<p><img src="https://image.eddycjy.com/2583d073cc05df561c735564bb3e9e81.jpg" alt="image"></p>
-<p>Kubernetes 的热度很明显是不断地在上涨，因此学习和使用 Kubernetes 是一件相对正确的事，同时公司大多都在往容器化上接近，在拥抱 Kubernetes，所以我们所开发的应用也总是跑在容器环境中。更甚的是，需要对接 Kubernetes API 来做一些功能的开发。</p>
-<p>这个时候，我们就需要一个 Kubernetes 环境来进行开发和调试，但你准备开始时，又遇到了一个问题，虽然在 2020 年的现在，Kubernetes 的安装已经有了极大的简化，教程也满地跑，但 Kubernetes 的安装和运行依然有一定的要求，像我，就遇到了如下问题：</p>
-<p><img src="https://image.eddycjy.com/9ee9dd19241bfc9099603abcc455787d.jpg" alt="image"></p>
-<p>显然，我的小水管 Mac 承受不起，但是又需要对 Kubernetes 进行学习和使用，除了买云服务器，又或是再在台式机上搭虚拟机，还有没有什么办法呢。</p>
-<p>非运维开发的情况下，入门级中最简单的方式就是采用 Docker 所提供的 Kubernetes 支持。</p>
-<h2 id="docker-for-macwindows-with-kubernetes">Docker for Mac/Windows with Kubernetes</h2>
-<p>Docker 在 17.12.ce 起就提供了 Mac 版本的 <a href="https://www.docker.com/blog/docker-mac-kubernetes/">Kubernetes Beta</a> 支持，在初始使用上来说非常的方便。首先我们检查 Docker 的版本，点击 Docker -&gt; Check for Updates 确保你的 Docker 在最新版本。</p>
-<h2 id="快速安装-kubernetes">快速安装 Kubernetes</h2>
-<p>在升级完成后，我们可以点击 Docker -&gt; Preferences -&gt; Kubernetes，如下图：</p>
-<p><img src="https://image.eddycjy.com/85e953f790c6b6955aa307445a8cf67a.jpg" alt="image"></p>
-<p>你会发现存在三个选项，分别是：Enable Kubernete、Deploy Docker Stacks to Kubernetes by default、Show system containers (advanced)。</p>
-<p>一般我们只勾选 “Enable Kubernetes” 选项，如果你还想通过 <code>docker ps</code> 查看到 Kubernetes 的相关容器信息，那么还可以勾选 “Show system containers” 选项，在勾选完毕后点击右下角的 “Apply” 按钮就可以了。</p>
-<p>这个时候 Docker Preferences 界面上的 Kubernetes 选项将会进入 <code>kubernetes is starting...</code> 状态，也就是在拉取各类镜像，需要一定的时间。</p>
-<p>这一步有一点需要注意，Kubernetes 大多数的镜像都在国外，如果不翻墙你是无法正常下载的，就会导致一直阻塞在 <code>kubernetes is starting...</code>，等半天也没有响应，这种情况下你可以把镜像源改为国内，又或是参考 <a href="https://github.com/gotok8s/k8s-docker-desktop-for-mac">k8s-docker-desktop-for-mac</a> 项目来安装。</p>
-<p>最后在安装完毕后，你可以检查 Docker Preferences 界面左下角的 Kubernetes 状态是否正常就可以了，如下图：</p>
-<p><img src="https://image.eddycjy.com/2e626b97af3549deff1f693800bd1275.jpg" alt="image"></p>
-<h2 id="安装-dashboard">安装 Dashboard</h2>
-<p>在完成 Kubernetes 的安装后，我们需要安装 Dashboard，执行如下命令：</p>
-<div class="highlight"><pre class="chroma"><code class="language-bash" data-lang="bash">$ kubectl apply -f https://raw.githubusercontent.com/kubernetes/dashboard/v1.10.1/src/deploy/recommended/kubernetes-dashboard.yaml
-</code></pre></div><p>该 Dashboard 对应 <a href="https://github.com/kubernetes/dashboard">kubernetes/dashboard</a> 项目，而所选择的版本号（兼容性问题），大家可以根据 Releases 中的 Compatibility 来进行选择，但一般不需要太在意，因为 Kubernetes 在 Dashboard 上的建设重心已经逐渐偏向 Promethues 体系了，因此在这一块是比较滞后的，如果想特别依赖 Dashboard 来进行分析，也可以自行选择一些成熟的开源产品。</p>
-<p>在完成 <code>apply</code> 后，进行代理，执行如下命令：</p>
-<pre><code>// 默认 8001 端口，若有需要可通过 --port=8080 进行指定
-$ kubectl proxy
-</code></pre><p>执行完毕完毕后，我们可以直接在通过浏览器访问 <code>http://localhost:8001/api/v1/namespaces/kube-system/services/https:kubernetes-dashboard:/proxy/#!/login</code> 地址，如下图：</p>
-<p><img src="https://image.eddycjy.com/905246b8d5150f90282b2b56eaf6a5c8.jpg" alt="image"></p>
-<h2 id="创建-serviceaccount">创建 ServiceAccount</h2>
-<p>我们在本地创建一个 k8s-admin.yaml 文件，创建一个 ServiceAccount 和角色绑定关系，写入如下文件内容：</p>
-<pre><code>apiVersion: v1
-kind: ServiceAccount
-metadata:
-  name: dashboard-admin
-  namespace: kube-system
----
-kind: ClusterRoleBinding
-apiVersion: rbac.authorization.k8s.io/v1beta1
-metadata:
-  name: dashboard-admin
-subjects:
-  - kind: ServiceAccount
-    name: dashboard-admin
-    namespace: kube-system
-roleRef:
-  kind: ClusterRole
-  name: cluster-admin
-  apiGroup: rbac.authorization.k8s.io
-</code></pre><p>获取管理员角色的 <code>secret</code> 名称：</p>
-<pre><code>$ kubectl get secrets -n kube-system | grep dashboard-admin | awk '{print $1}'
-dashboard-admin-token-dknqx
-</code></pre><p>获取对应的管理员的 <code>token</code> 值：</p>
-<pre><code>$ kubectl describe secret dashboard-admin-token-dknqx -n kube-system
-Name:         dashboard-admin-token-dknqx
-Namespace:    kube-system
-Labels:       &lt;none&gt;
-Annotations:  kubernetes.io/service-account.name: dashboard-admin
-              kubernetes.io/service-account.uid: 2f817ddd-5802-4e8b-8c38-f4affc16a6fe
-
-Type:  kubernetes.io/service-account-token
-
-Data
-====
-ca.crt:     1025 bytes
-namespace:  11 bytes
-token:      eyJhbGciOiJSUzI1NiIsImtpZCI6IiJ9.eyJpc3MiOiJrdWJlcm5ldGVzL3NlcnZpY2VhY2NvdW50Iiwia3ViZXJuZXRlcy5pby9zZXJ2aWNlYWNjb3VudC9uYW1lc3BhY2UiOiJrdWJlLXN5c3RlbSIsImt1YmVybmV0ZXMuaW8vc2VydmljZWFjY291bnQvc2VjcmV0Lm5hbWUiOiJkYXNoYm9hcmQtYWRtaW4tdG9rZW4tZGtucXgiLCJrdWJlcm5ldGVzLmlvL3NlcnZpY2VhY2NvdW50L3NlcnZpY2UtYWNjb3VudC5uYW1lIjoiZGFzaGJvYXJkLWFkbWluIiwia3ViZXJuZXRlcy5pby9zZXJ2aWNlYWNjb3VudC9zZXJ2aWNlLWFjY291bnQudWlkIjoiMmY4MTdkZGQtNTgwMi00ZThiLThjMzgtZjRhZmZjMTZhNmZlIiwic3ViIjoic3lzdGVtOnNlcnZpY2VhY2NvdW50Omt1YmUtc3lzdGVtOmRhc2hib2FyZC1hZG1pbiJ9.NKa8OESUsvrolyxezo8w_auKr7jC94gmCm2ZyvQda5X1wOImYYqnH482sDPsQ5Y_V-RH2UD-4eBIuZP6gh0p50nxz-gPqEEPdRln_7osbRMCgcGzqajVo3bx7UOLTJC9ka9S-0rv5HYbn3yeVi6Pt4sVW5GF6KInDcbyyYgse5B_nySIpw4AjdWXNG0npLjneBCQWrVKAQSYYw2mLPZAPPjw6yjXnBvqZmtH1wyvCsKAXbZqBtTp7ddIVvtmveeBuELsX5yIzWqD7qhcpZz4v07FrsfqK0_QJ18BBDBGYMJaaoaK0h2pl_E9sIlAXoBCJ6ol_wwUzfuOshPo9adqww
-</code></pre><p>如果已经熟悉了，可以直接通过组合命令直接获取 token 值：</p>
-<pre><code>$ kubectl describe secret dashboard-admin-token-dknqx -n kube-system | grep -E '^token' | awk '{print $2}'
-</code></pre><h2 id="登陆-dashboard">登陆 Dashboard</h2>
-<p>最后我们将 <code>token</code> 保存并复制到 Kubernetes Dashboard 的仪表盘并登陆，我们就可以看到如下界面：</p>
-<p><img src="https://image.eddycjy.com/980b8975a010b6321de4e87cb29fb009.jpg" alt="image"></p>
-<h2 id="小结">小结</h2>
-<p>我们又回到最初的问题，要学习和使用 Kubernetes，最快最正确的方式，那就是尽快的进行实践，因为本质上我们不是运维开发人员，部署环境的 Kubernetes 也大多不是由你亲自搭建，因为中小微会直接用某云厂商的 Kubernetes，大厂有专职的人员，也不愁这个问题。</p>
-<p>因此尽快行动，完成迭代中的需求是我们的目的，等完成后，再回过头来一步步手动搭建 Kubernetes 也未尝不可，所以我认为 Docker for Mac/Windows with Kubernetes 在初级入门阶段是一个很好的安装和使用方法。</p>
 ]]></content>
 		</item>
 		
