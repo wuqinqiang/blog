@@ -319,26 +319,24 @@ rsc:The limited capacity of channels is an important source of backpressure in a
 			<pubDate>Sun, 25 Apr 2021 22:25:52 +0800</pubDate>
 			
 			<guid>https://www.syst.top/posts/go/unlimited-2/</guid>
-			<description>chanx 上篇文章我们提到，当我们创建一个有缓冲的通道并指定了容量，那么在这个通道的生命周期内，我们将再也无法改变它的容量。 容量是有限的。在典型的写比读快的场景，容易导致通道被塞满，由此引发了关于无限缓存的 channel 讨论。 最终我们分析了一个实现的方案。 最后，我们也提到了此方案还可以优化的点。
-鸟窝的 chanx 正是基于此方案改造而成的。
-上篇文章说过，所谓的无限缓冲，无非是借助一个中间层的数据结构，暂存数据。
-在 chanx 中是这样的:
-type UnboundedChan struct { In chan&amp;lt;- T // channel for write 	Out &amp;lt;-chan T // channel for read 	buffer *RingBuffer // buffer } in 和 out 的职责在上篇文章已经说明，这里的 buffer 就是我们所谓的中间层。这里的 RingBuffer 我们后面再说。
-func NewUnboundedChan(initCapacity int) UnboundedChan { return NewUnboundedChanSize(initCapacity, initCapacity, initCapacity) } func NewUnboundedChanSize(initInCapacity, initOutCapacity, initBufCapacity int) UnboundedChan { in := make(chan T, initInCapacity) out := make(chan T, initOutCapacity) ch := UnboundedChan{In: in, Out: out, buffer: NewRingBuffer(initBufCapacity)} go process(in, out, ch) return ch } 提供了两个 初始化 UnboundedChan 的方法，从代码中我们可以明显的看出,NewUnboundedChanSize 可以给每个属性自定义自己的容量大小。仅此而已。</description>
+			<description>chanx 上篇文章我们提到，当我们创建一个有缓冲的通道并指定了容量，那么在这个通道的生命周期内，我们将再也无法改变它的容量。 由此引发了关于无限缓存的 channel 话题讨论。 我们分析了一个实现无限缓冲的代码。 最后，我们也提到了它还可以继续优化的点。
+鸟窝的 chanx 正是基于此方案改造而成的，我们来看看他俩的不同之处。
+上篇文章说过，所谓的无限缓冲，无非是借助一个中间层的数据结构，暂存临时数据。
+在 chanx 中，结构是这样的:
+type UnboundedChan struct { In chan&amp;lt;- T // channel for write 	Out &amp;lt;-chan T // channel for read 	buffer *RingBuffer // buffer } in 和 out 的职责在上篇文章已经说明，这里的 buffer 就是我们所谓的中间临时存储层。其中的 RingBuffer 结构我们后面再说。
+func NewUnboundedChan(initCapacity int) UnboundedChan { return NewUnboundedChanSize(initCapacity, initCapacity, initCapacity) } func NewUnboundedChanSize(initInCapacity, initOutCapacity, initBufCapacity int) UnboundedChan { in := make(chan T, initInCapacity) out := make(chan T, initOutCapacity) ch := UnboundedChan{In: in, Out: out, buffer: NewRingBuffer(initBufCapacity)} go process(in, out, ch) return ch } 它提供了两个初始化 UnboundedChan 的方法，从代码中我们可以明显的看出,NewUnboundedChanSize 可以给每个属性自定义自己的容量大小。仅此而已。</description>
 			<content type="html"><![CDATA[<h2 id="chanx">chanx</h2>
-<p>上篇文章我们提到，当我们创建一个有缓冲的通道并指定了容量，那么在这个通道的生命周期内，我们将再也无法改变它的容量。
-容量是有限的。在典型的写比读快的场景，容易导致通道被塞满，由此引发了关于无限缓存的 channel 讨论。
-最终我们分析了一个实现的方案。
-最后，我们也提到了此方案还可以优化的点。</p>
-<p>鸟窝的 chanx 正是基于此方案改造而成的。</p>
-<p>上篇文章说过，所谓的无限缓冲，无非是借助一个中间层的数据结构，暂存数据。</p>
-<p>在 chanx 中是这样的:</p>
+<p>上篇文章我们提到，当我们创建一个有缓冲的通道并指定了容量，那么在这个通道的生命周期内，我们将再也无法改变它的容量。 由此引发了关于无限缓存的 <code>channel</code> 话题讨论。
+我们分析了一个实现无限缓冲的代码。 最后，我们也提到了它还可以继续优化的点。</p>
+<p>鸟窝的 <code>chanx</code> 正是基于此方案改造而成的，我们来看看他俩的不同之处。</p>
+<p>上篇文章说过，所谓的无限缓冲，无非是借助一个中间层的数据结构，暂存临时数据。</p>
+<p>在 <code>chanx</code> 中，结构是这样的:</p>
 <div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kd">type</span> <span class="nx">UnboundedChan</span> <span class="kd">struct</span> <span class="p">{</span>
 	<span class="nx">In</span>     <span class="kd">chan</span><span class="o">&lt;-</span> <span class="nx">T</span>    <span class="c1">// channel for write
 </span><span class="c1"></span>	<span class="nx">Out</span>    <span class="o">&lt;-</span><span class="kd">chan</span> <span class="nx">T</span>    <span class="c1">// channel for read
 </span><span class="c1"></span>	<span class="nx">buffer</span> <span class="o">*</span><span class="nx">RingBuffer</span> <span class="c1">// buffer
 </span><span class="c1"></span><span class="p">}</span>
-</code></pre></div><p><code>in</code> 和 <code>out</code> 的职责在上篇文章已经说明，这里的 <code>buffer</code> 就是我们所谓的中间层。这里的 <code>RingBuffer</code> 我们后面再说。</p>
+</code></pre></div><p><code>in</code> 和 <code>out</code> 的职责在上篇文章已经说明，这里的 <code>buffer</code> 就是我们所谓的中间临时存储层。其中的 <code>RingBuffer</code> 结构我们后面再说。</p>
 <div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kd">func</span> <span class="nf">NewUnboundedChan</span><span class="p">(</span><span class="nx">initCapacity</span> <span class="kt">int</span><span class="p">)</span> <span class="nx">UnboundedChan</span> <span class="p">{</span>
 	<span class="k">return</span> <span class="nf">NewUnboundedChanSize</span><span class="p">(</span><span class="nx">initCapacity</span><span class="p">,</span> <span class="nx">initCapacity</span><span class="p">,</span> <span class="nx">initCapacity</span><span class="p">)</span>
 <span class="p">}</span>
@@ -352,26 +350,25 @@ func NewUnboundedChan(initCapacity int) UnboundedChan { return NewUnboundedChanS
 
 	<span class="k">return</span> <span class="nx">ch</span>
 <span class="p">}</span>
-</code></pre></div><p>提供了两个 初始化 <code>UnboundedChan</code> 的方法，从代码中我们可以明显的看出,<code>NewUnboundedChanSize</code> 可以给每个属性自定义自己的容量大小。仅此而已。</p>
-<p>这里就有和上篇文章的不同之处了。
-<img src="https://image.syst.top/image/unlimited/unlimit-2.png" alt="image"></p>
-<p>可以清楚得看到，上篇的 <code>in</code> 和 <code>out</code> 是一个无缓冲的通道，而这里是两个缓冲通道，这和他们对数据的流转处理有很大关系。</p>
+</code></pre></div><p>它提供了两个初始化 <code>UnboundedChan</code> 的方法，从代码中我们可以明显的看出,<code>NewUnboundedChanSize</code> 可以给每个属性自定义自己的容量大小。仅此而已。</p>
+<p><code>chanx</code> 中 关于 <code>in</code> 和 <code>out</code> 都是带缓冲的通道，而上篇文章中的 <code>in</code> 和 <code>out</code> 都是无缓冲的通道。
+这和他们对数据的流转处理有很大关系。</p>
 <p>我们接下去看 <code>process(in,out,ch)</code> 最核心的方法。
-<img src="https://image.syst.top/image/unlimited-2/unlimit-1.png" alt="image"></p>
-<p>这时候，我们再放上上一篇的核心操作代码,
-<img src="https://image.syst.top/image/unlimited/unlimit-7.jpg" alt="image"></p>
-<p>可以很明显他们两的区别。
-上篇从 in 取数据会先塞入到 buffer，然后从 buffer 中取数据赛到 out。
-而 chanx 从 in 取出数据后先直接塞到 out(没有中间商赚差价)，只有在 out 已经满的情况下，才塞入到 buffer。</p>
-<p>chanx 还有一段小细节代码。
+<img src="https://image.syst.top/image/unlimited-2/unlimit-1.jpg" alt="image"></p>
+<p>这时候，我们再放上一篇核心代码。</p>
+<p><img src="https://image.syst.top/image/unlimited/unlimit-7.jpg" alt="image"></p>
+<p>可以很明显他们看出它俩的区别。</p>
+<p>上篇从 <code>in</code> 通道读数据会先 <code>append</code> 到 <code>buffer</code>，然后从 <code>buffer</code> 中取数据写入 <code>out</code> 通道。
+而 <code>chanx</code> 从 <code>in</code> 通道取出数据先尝试写入 <code>out</code>(没有中间商赚差价?)，只有在 <code>out</code> 已经满的情况下，才塞入到 <code>buffer</code>。</p>
+<p><code>chanx</code> 还有一段小细节代码。
 <img src="https://image.syst.top/image/unlimited-2/unlimit-2.jpg" alt="image"></p>
-<p>能走到这里，一定是因为 out 满了。我们在把值塞入到 buffer 的同时，需要尝试把 buffer 中的数据塞入到 out 。此时 in 并没有关闭，还在持续的写入数据，
-为了避免 in 塞满，我们还需要尝试从 in 中取数据到 buffer。</p>
+<p>能走到这里，一定是因为 <code>out</code> 通道满了。我们把值追加到 <code>buffer</code> 的同时，需要尝试把 <code>buffer</code> 中的数据写入 <code>out</code> 。
+此时 <code>in</code> 通道也许还在持续的写入数据， 为了避免 <code>in</code> 通道塞满，阻塞业务写入，我们同时需要尝试从 <code>in</code> 通道中读数据追加到 <code>buffer</code>。</p>
 <h2 id="buffer">buffer</h2>
-<p>上篇文章我提到了关于 buffer 优化的点。chanx 是如何优化的。</p>
+<p>上篇文章我提到了关于 <code>buffer</code> 优化的点。</p>
+<p><code>chanx</code> 是如何优化的?</p>
 <div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="c1">// type T interface{}
-</span><span class="c1"></span>
-<span class="kd">type</span> <span class="nx">RingBuffer</span> <span class="kd">struct</span> <span class="p">{</span>
+</span><span class="c1"></span><span class="kd">type</span> <span class="nx">RingBuffer</span> <span class="kd">struct</span> <span class="p">{</span>
 	<span class="nx">buf</span>         <span class="p">[]</span><span class="nx">T</span> 
 	<span class="nx">initialSize</span> <span class="kt">int</span>
 	<span class="nx">size</span>        <span class="kt">int</span>
@@ -380,22 +377,24 @@ func NewUnboundedChan(initCapacity int) UnboundedChan { return NewUnboundedChanS
 </span><span class="c1"></span><span class="p">}</span>
 </code></pre></div><p>这是 <code>buffer</code> 的结构，其中</p>
 <ul>
-<li>buf 具体存储数据的结构。</li>
-<li>initialSize 舒适化 buf 的长度</li>
-<li>size 当前 buf 的长度</li>
-<li>r 当前读数据位置</li>
-<li>w 当前写入数据位置</li>
+<li><code>buf</code> 具体存储数据的结构。</li>
+<li><code>initialSize</code> 初始化化 <code>buf</code> 的长度</li>
+<li><code>size</code> 当前 <code>buf</code> 的长度</li>
+<li><code>r</code> 当前读数据位置</li>
+<li><code>w</code> 当前写入数据位置</li>
 </ul>
-<p>本质上就是一个环形的缓冲区，达到资源的复用，当 buffer 满了，提供自动扩容的功能。
-我们来看一个写入操作。
+<p><code>buffer</code> 本质上就是一个环形的队列，目的是达到资源的复用。
+并且当 <code>buffer</code> 满时，提供自动扩容的功能。</p>
+<p>我们来看具体把数据写入 <code>buffer</code> 的源码。
 <img src="https://image.syst.top/image/unlimited-2/unlimit-3.png" alt="image"></p>
 <p>接着看扩容。
 <img src="https://image.syst.top/image/unlimited-2/unlimit-4.png" alt="image"></p>
-<p>这段代码唯一难理解的就是数据迁移了。这里的数据迁移目的是为了保证先入先出的原则。
-可能加了注释有些人也无法理解，那么就再加一个草率图。
-假设我们 buffer 的长度是 8。 当前读和写的 index 都是5。
-<img src="https://image.syst.top/image/unlimited-2/unlimit-5.png" alt="image"></p>
-<p>当 buffer 为空并且当前的 <code>size</code> 比初始化 <code>size</code> 还大，那么可以考虑重置 <code>buffer</code> 了。</p>
+<p>这段代码唯一难理解的就是数据迁移了。这里的数据迁移目的是为了保证先入先出的原则。</p>
+<p>可能加了注释有些人也无法理解，那么就再加一个草率图。</p>
+<p>假设我们 <code>buffer</code> 的长度是 8。 当前读和写的 <code>index</code> 都是5。说明 <code>buffer</code> 满了，触发自动扩容规则，进行数据迁移。</p>
+<p>那么迁移的过程就是下图这样的。</p>
+<p><img src="https://image.syst.top/image/unlimited-2/unlimit-5.png" alt="image"></p>
+<p>还有，当 <code>buffer</code> 为空并且当前的 <code>size</code> 比初始化 <code>size</code> 还大，那么可以考虑重置 <code>buffer</code> 了。</p>
 <div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="c1">//if ch.buffer.IsEmpty() &amp;&amp; ch.buffer.size &gt; ch.buffer.initialSize { 
 </span><span class="c1">//						ch.buffer.Reset()
 </span><span class="c1">//					}
@@ -405,10 +404,10 @@ func NewUnboundedChan(initCapacity int) UnboundedChan { return NewUnboundedChanS
 <span class="nx">r</span><span class="p">.</span><span class="nx">size</span> <span class="p">=</span> <span class="nx">r</span><span class="p">.</span><span class="nx">initialSize</span>
 <span class="nx">r</span><span class="p">.</span><span class="nx">buf</span> <span class="p">=</span> <span class="nb">make</span><span class="p">([]</span><span class="nx">T</span><span class="p">,</span> <span class="nx">r</span><span class="p">.</span><span class="nx">initialSize</span><span class="p">)</span>
 <span class="p">}</span>
-</code></pre></div><p>剩下的代码就没什么好说的了。</p>
+</code></pre></div><p>剩下的代码,就没什么好说的了。</p>
 <h3 id="总结">总结</h3>
-<p>继上篇文章后，这篇文章我们主要讲解了 chanx 是如何实现无限缓冲的 channel 的。
-其中最重要的一个点在于 chanx 中 buffer 的实现采用的是 <code>ringbuffer</code>，达到资源的复用的同时还能自动扩容。</p>
+<p>继上篇文章后，这篇文章我们主要讲解了 <code>chanx</code> 是如何实现无限缓冲的 <code>channel</code>。
+其中最重要的一个点在于 <code>chanx</code> 中 <code>buffer</code> 实现采用的是 <code>ringbuffer</code>，达到资源复用的同时还能自动扩容。</p>
 ]]></content>
 		</item>
 		

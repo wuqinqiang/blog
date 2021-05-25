@@ -139,12 +139,12 @@ cznic:Unlimited capacity channels ask for a machine with unlimited memory. rsc:T
       <pubDate>Sun, 25 Apr 2021 22:25:52 +0800</pubDate>
       
       <guid>https://www.syst.top/posts/go/unlimited-2/</guid>
-      <description>chanx 上篇文章我们提到，当我们创建一个有缓冲的通道并指定了容量，那么在这个通道的生命周期内，我们将再也无法改变它的容量。 容量是有限的。在典型的写比读快的场景，容易导致通道被塞满，由此引发了关于无限缓存的 channel 讨论。 最终我们分析了一个实现的方案。 最后，我们也提到了此方案还可以优化的点。
-鸟窝的 chanx 正是基于此方案改造而成的。
-上篇文章说过，所谓的无限缓冲，无非是借助一个中间层的数据结构，暂存数据。
-在 chanx 中是这样的:
-type UnboundedChan struct { In chan&amp;lt;- T // channel for write 	Out &amp;lt;-chan T // channel for read 	buffer *RingBuffer // buffer } in 和 out 的职责在上篇文章已经说明，这里的 buffer 就是我们所谓的中间层。这里的 RingBuffer 我们后面再说。
-func NewUnboundedChan(initCapacity int) UnboundedChan { return NewUnboundedChanSize(initCapacity, initCapacity, initCapacity) } func NewUnboundedChanSize(initInCapacity, initOutCapacity, initBufCapacity int) UnboundedChan { in := make(chan T, initInCapacity) out := make(chan T, initOutCapacity) ch := UnboundedChan{In: in, Out: out, buffer: NewRingBuffer(initBufCapacity)} go process(in, out, ch) return ch } 提供了两个 初始化 UnboundedChan 的方法，从代码中我们可以明显的看出,NewUnboundedChanSize 可以给每个属性自定义自己的容量大小。仅此而已。</description>
+      <description>chanx 上篇文章我们提到，当我们创建一个有缓冲的通道并指定了容量，那么在这个通道的生命周期内，我们将再也无法改变它的容量。 由此引发了关于无限缓存的 channel 话题讨论。 我们分析了一个实现无限缓冲的代码。 最后，我们也提到了它还可以继续优化的点。
+鸟窝的 chanx 正是基于此方案改造而成的，我们来看看他俩的不同之处。
+上篇文章说过，所谓的无限缓冲，无非是借助一个中间层的数据结构，暂存临时数据。
+在 chanx 中，结构是这样的:
+type UnboundedChan struct { In chan&amp;lt;- T // channel for write 	Out &amp;lt;-chan T // channel for read 	buffer *RingBuffer // buffer } in 和 out 的职责在上篇文章已经说明，这里的 buffer 就是我们所谓的中间临时存储层。其中的 RingBuffer 结构我们后面再说。
+func NewUnboundedChan(initCapacity int) UnboundedChan { return NewUnboundedChanSize(initCapacity, initCapacity, initCapacity) } func NewUnboundedChanSize(initInCapacity, initOutCapacity, initBufCapacity int) UnboundedChan { in := make(chan T, initInCapacity) out := make(chan T, initOutCapacity) ch := UnboundedChan{In: in, Out: out, buffer: NewRingBuffer(initBufCapacity)} go process(in, out, ch) return ch } 它提供了两个初始化 UnboundedChan 的方法，从代码中我们可以明显的看出,NewUnboundedChanSize 可以给每个属性自定义自己的容量大小。仅此而已。</description>
     </item>
     
     <item>
