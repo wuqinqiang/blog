@@ -9,23 +9,23 @@
 	<meta name="msapplication-TileColor" content="#494f5c">
 <meta itemprop="name" content="leetcode 337 House Robber III">
 <meta itemprop="description" content="介绍 这是 House Robber III。
-这道题和之前的两个版本最大不同在于引入了二叉树。 树的每个节点(场景带入:具体的房子)都有对应的值(金额)。每个节点有两种状态，偷或者不偷。 规则是不能同时偷父子节点， 比如上图，如果选择偷A节点，那么 B和C 就不能偷，既然 B和C不能偷，那么 D、E、F、G 就可以偷的。 因为 B、C 和 A 是子孙关系，而不是父子关系。
-这样的背景下，求小偷能偷的最大金额。
-暴力递归 我们还是用上图的那个例子。在上图的这种情况下，我们可以直接求出最大金额,伪代码如下
-/** * Definition for a binary tree node. * type TreeNode struct { * Val int * Left *TreeNode * Right *TreeNode * } */ // 求当前A节点能偷的最大金额res // 伪代码 func rob(node *TreeNode) int { item1 := node.Val &#43; node.Left.Left.Val &#43; node.Left.Right.Val &#43; node.Right.Left.Val &#43; node.Right.Right.Val res := max(item1, node.">
+这道题和之前两个版本最大不同在于引入了二叉树。 树的每个节点(具体的房子)都有对应的值(金额)。每个节点有两种状态，偷或者不偷。 规则是不能同时偷父子节点， 比如上图，如果选择偷 A 节点，那么 B 和 C 就不能偷，既然 B 和 C 不能偷，那么 DEFG 就可以偷的。 因为 DEFG 和 A 是子孙关系，而不是父子关系。
+这样的背景下，求小偷能偷的最大金额?
+暴力递归 我们还是用上图的那个例子。我们可以直接求出最大金额,伪代码如下
+/** * Definition for a binary tree node. * type TreeNode struct { * Val int * Left *TreeNode * Right *TreeNode * } */ // 求当前A节点能偷的最大金额res // 伪代码 item := node.Val &#43; node.Left.Left.Val &#43; node.Left.Right.Val &#43; node.Right.Left.Val &#43; node.Right.Right.Val res := max(item, node.">
 <meta itemprop="datePublished" content="2021-05-31T00:36:26+08:00" />
 <meta itemprop="dateModified" content="2021-05-31T00:36:26+08:00" />
-<meta itemprop="wordCount" content="459">
+<meta itemprop="wordCount" content="471">
 
 
 
 <meta itemprop="keywords" content="go,leetcode," />
 <meta property="og:title" content="leetcode 337 House Robber III" />
 <meta property="og:description" content="介绍 这是 House Robber III。
-这道题和之前的两个版本最大不同在于引入了二叉树。 树的每个节点(场景带入:具体的房子)都有对应的值(金额)。每个节点有两种状态，偷或者不偷。 规则是不能同时偷父子节点， 比如上图，如果选择偷A节点，那么 B和C 就不能偷，既然 B和C不能偷，那么 D、E、F、G 就可以偷的。 因为 B、C 和 A 是子孙关系，而不是父子关系。
-这样的背景下，求小偷能偷的最大金额。
-暴力递归 我们还是用上图的那个例子。在上图的这种情况下，我们可以直接求出最大金额,伪代码如下
-/** * Definition for a binary tree node. * type TreeNode struct { * Val int * Left *TreeNode * Right *TreeNode * } */ // 求当前A节点能偷的最大金额res // 伪代码 func rob(node *TreeNode) int { item1 := node.Val &#43; node.Left.Left.Val &#43; node.Left.Right.Val &#43; node.Right.Left.Val &#43; node.Right.Right.Val res := max(item1, node." />
+这道题和之前两个版本最大不同在于引入了二叉树。 树的每个节点(具体的房子)都有对应的值(金额)。每个节点有两种状态，偷或者不偷。 规则是不能同时偷父子节点， 比如上图，如果选择偷 A 节点，那么 B 和 C 就不能偷，既然 B 和 C 不能偷，那么 DEFG 就可以偷的。 因为 DEFG 和 A 是子孙关系，而不是父子关系。
+这样的背景下，求小偷能偷的最大金额?
+暴力递归 我们还是用上图的那个例子。我们可以直接求出最大金额,伪代码如下
+/** * Definition for a binary tree node. * type TreeNode struct { * Val int * Left *TreeNode * Right *TreeNode * } */ // 求当前A节点能偷的最大金额res // 伪代码 item := node.Val &#43; node.Left.Left.Val &#43; node.Left.Right.Val &#43; node.Right.Left.Val &#43; node.Right.Right.Val res := max(item, node." />
 <meta property="og:type" content="article" />
 <meta property="og:url" content="https://www.syst.top/leetcode/337-house-robbe-riil/" />
 <meta property="article:published_time" content="2021-05-31T00:36:26+08:00" />
@@ -33,10 +33,10 @@
 <meta name="twitter:card" content="summary"/>
 <meta name="twitter:title" content="leetcode 337 House Robber III"/>
 <meta name="twitter:description" content="介绍 这是 House Robber III。
-这道题和之前的两个版本最大不同在于引入了二叉树。 树的每个节点(场景带入:具体的房子)都有对应的值(金额)。每个节点有两种状态，偷或者不偷。 规则是不能同时偷父子节点， 比如上图，如果选择偷A节点，那么 B和C 就不能偷，既然 B和C不能偷，那么 D、E、F、G 就可以偷的。 因为 B、C 和 A 是子孙关系，而不是父子关系。
-这样的背景下，求小偷能偷的最大金额。
-暴力递归 我们还是用上图的那个例子。在上图的这种情况下，我们可以直接求出最大金额,伪代码如下
-/** * Definition for a binary tree node. * type TreeNode struct { * Val int * Left *TreeNode * Right *TreeNode * } */ // 求当前A节点能偷的最大金额res // 伪代码 func rob(node *TreeNode) int { item1 := node.Val &#43; node.Left.Left.Val &#43; node.Left.Right.Val &#43; node.Right.Left.Val &#43; node.Right.Right.Val res := max(item1, node."/>
+这道题和之前两个版本最大不同在于引入了二叉树。 树的每个节点(具体的房子)都有对应的值(金额)。每个节点有两种状态，偷或者不偷。 规则是不能同时偷父子节点， 比如上图，如果选择偷 A 节点，那么 B 和 C 就不能偷，既然 B 和 C 不能偷，那么 DEFG 就可以偷的。 因为 DEFG 和 A 是子孙关系，而不是父子关系。
+这样的背景下，求小偷能偷的最大金额?
+暴力递归 我们还是用上图的那个例子。我们可以直接求出最大金额,伪代码如下
+/** * Definition for a binary tree node. * type TreeNode struct { * Val int * Left *TreeNode * Right *TreeNode * } */ // 求当前A节点能偷的最大金额res // 伪代码 item := node.Val &#43; node.Left.Left.Val &#43; node.Left.Right.Val &#43; node.Right.Left.Val &#43; node.Right.Right.Val res := max(item, node."/>
 
 	<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
 	<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
@@ -85,15 +85,15 @@
 			<h3 id="介绍">介绍<a href="#介绍" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h3>
 <p><img src="https://image.syst.top/image/leetcode/337.jpg" alt="image"></p>
 <p>这是 House Robber III。</p>
-<p>这道题和之前的两个版本最大不同在于引入了二叉树。
-树的每个节点(场景带入:具体的房子)都有对应的值(金额)。每个节点有两种状态，偷或者不偷。
+<p>这道题和之前两个版本最大不同在于引入了二叉树。
+树的每个节点(具体的房子)都有对应的值(金额)。每个节点有两种状态，偷或者不偷。
 规则是不能同时偷父子节点，
 <img src="https://image.syst.top/image/leetcode/337-2.png" alt="image"></p>
-<p>比如上图，如果选择偷A节点，那么 B和C 就不能偷，既然 B和C不能偷，那么 D、E、F、G 就可以偷的。
-因为 B、C 和 A 是子孙关系，而不是父子关系。</p>
-<p>这样的背景下，求小偷能偷的最大金额。</p>
+<p>比如上图，如果选择偷 <code>A</code> 节点，那么 <code>B</code> 和 <code>C</code> 就不能偷，既然 <code>B</code> 和 <code>C</code> 不能偷，那么 <code>DEFG</code> 就可以偷的。
+因为 <code>DEFG</code> 和 <code>A</code> 是子孙关系，而不是父子关系。</p>
+<p>这样的背景下，求小偷能偷的最大金额?</p>
 <h3 id="暴力递归">暴力递归<a href="#暴力递归" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h3>
-<p>我们还是用上图的那个例子。在上图的这种情况下，我们可以直接求出最大金额,伪代码如下</p>
+<p>我们还是用上图的那个例子。我们可以直接求出最大金额,伪代码如下</p>
 <div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go">
 <span class="cm">/**
 </span><span class="cm"> * Definition for a binary tree node.
@@ -105,14 +105,12 @@
 </span><span class="cm"> */</span>
 
 <span class="c1">// 求当前A节点能偷的最大金额res
-</span><span class="c1">// 伪代码
-</span><span class="c1"></span><span class="kd">func</span> <span class="nf">rob</span><span class="p">(</span><span class="nx">node</span> <span class="o">*</span><span class="nx">TreeNode</span><span class="p">)</span> <span class="kt">int</span> <span class="p">{</span>
-	<span class="nx">item1</span> <span class="o">:=</span> <span class="nx">node</span><span class="p">.</span><span class="nx">Val</span> <span class="o">+</span> <span class="nx">node</span><span class="p">.</span><span class="nx">Left</span><span class="p">.</span><span class="nx">Left</span><span class="p">.</span><span class="nx">Val</span> <span class="o">+</span> <span class="nx">node</span><span class="p">.</span><span class="nx">Left</span><span class="p">.</span><span class="nx">Right</span><span class="p">.</span><span class="nx">Val</span> <span class="o">+</span>
+</span><span class="c1">// 伪代码 
+</span><span class="c1"></span><span class="nx">item</span> <span class="o">:=</span> <span class="nx">node</span><span class="p">.</span><span class="nx">Val</span> <span class="o">+</span> <span class="nx">node</span><span class="p">.</span><span class="nx">Left</span><span class="p">.</span><span class="nx">Left</span><span class="p">.</span><span class="nx">Val</span> <span class="o">+</span> <span class="nx">node</span><span class="p">.</span><span class="nx">Left</span><span class="p">.</span><span class="nx">Right</span><span class="p">.</span><span class="nx">Val</span> <span class="o">+</span>
 		<span class="nx">node</span><span class="p">.</span><span class="nx">Right</span><span class="p">.</span><span class="nx">Left</span><span class="p">.</span><span class="nx">Val</span> <span class="o">+</span> <span class="nx">node</span><span class="p">.</span><span class="nx">Right</span><span class="p">.</span><span class="nx">Right</span><span class="p">.</span><span class="nx">Val</span>
-	<span class="nx">res</span> <span class="o">:=</span> <span class="nf">max</span><span class="p">(</span><span class="nx">item1</span><span class="p">,</span> <span class="nx">node</span><span class="p">.</span><span class="nx">Left</span><span class="p">.</span><span class="nx">Val</span><span class="o">+</span><span class="nx">node</span><span class="p">.</span><span class="nx">Right</span><span class="p">.</span><span class="nx">val</span><span class="p">)</span>
-<span class="p">}</span>
-</code></pre></div><p>实际中，D、E 是 B 的子节点，它也会变成别人的父节点，甚至是爷爷节点。
-任意一个节点，求对应能偷的最大值本质是一样的。我们可以通过这个思路写出递推公式。</p>
+<span class="nx">res</span> <span class="o">:=</span> <span class="nf">max</span><span class="p">(</span><span class="nx">item</span><span class="p">,</span> <span class="nx">node</span><span class="p">.</span><span class="nx">Left</span><span class="p">.</span><span class="nx">Val</span><span class="o">+</span><span class="nx">node</span><span class="p">.</span><span class="nx">Right</span><span class="p">.</span><span class="nx">val</span><span class="p">)</span>
+</code></pre></div><p>实际中，<code>DE</code> 是 <code>B</code> 的子节点，<code>DE</code> 也会变成别人的父节点，甚至是爷爷节点。</p>
+<p>对于任意一个节点，求对应能偷的最大值本质就是上述的代码，我们需要改成递推公式。</p>
 <div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="c1">// 递推公式伪代码
 </span><span class="c1"></span><span class="kd">func</span> <span class="nf">rob</span><span class="p">(</span><span class="nx">node</span> <span class="o">*</span><span class="nx">TreeNode</span><span class="p">)</span> <span class="kt">int</span> <span class="p">{</span>
 	<span class="nx">item1</span> <span class="o">:=</span> <span class="nx">node</span><span class="p">.</span><span class="nx">Val</span> <span class="o">+</span> <span class="nf">rob</span><span class="p">(</span><span class="nx">node</span><span class="p">.</span><span class="nx">Left</span><span class="p">.</span><span class="nx">Left</span><span class="p">)</span> <span class="o">+</span> <span class="nf">rob</span><span class="p">(</span><span class="nx">node</span><span class="p">.</span><span class="nx">Left</span><span class="p">.</span><span class="nx">Right</span><span class="p">)</span> <span class="o">+</span>
@@ -155,12 +153,13 @@
 	<span class="p">}</span>
 	<span class="k">return</span> <span class="nx">item2</span>
 <span class="p">}</span>
-</code></pre></div><p>要是这样直接运行，一般会报错。
+</code></pre></div><p>要是这样直接运行，Leetcode 一般会报以下错误。
 <img src="https://image.syst.top/image/leetcode/337-3.png" alt="image"></p>
-<p>大量重复计算节点。我们会发现在计算 A 节点的值时，会计算B和C，同时也会计算 D、E、F、G 的值。
-这种情况下，当计算 B 、C的时候，又会重新计算一遍 D、E、F、G&hellip;&hellip;</p>
+<p>存在大量重复计算节点。比如在计算 <code>A</code> 节点的值时，会计算<code>BC</code>，同时也会计算 <code>DEFG</code> 的值。
+这种情况下，当计算 <code>BC</code> 的时候，又会重新计算一遍 <code>DEFG</code>&hellip;&hellip;</p>
 <p>没什么是加缓存解决不了的。</p>
 <h3 id="记忆化递归">记忆化递归<a href="#记忆化递归" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h3>
+<p>它也有个高大上的名字，叫记忆化递归。</p>
 <div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="cm">/**
 </span><span class="cm"> * Definition for a binary tree node.
 </span><span class="cm"> * type TreeNode struct {
@@ -206,33 +205,32 @@
 	<span class="p">}</span>
 	<span class="k">return</span> <span class="nx">item2</span>
 <span class="p">}</span>
-</code></pre></div><p>如何用动态规划的思想解这道题？
-动态规划最重要的两步:</p>
+</code></pre></div><p>那么，如何用动态规划的思想解这道题？</p>
+<p>动态规划最重要的两步:</p>
 <ul>
-<li>1.定义状态</li>
-<li>2.状态转移方程</li>
+<li>定义状态</li>
+<li>状态转移方程</li>
 </ul>
 <p>首先是状态。
 针对每一个节点，都只有两种状态，偷或者不偷。
-在这个基础上，我们可以进一步的保存每一个状态偷或者不偷情况下当前最大金额值。
-假设当前是q节点。
-我们用 q[0] 表示当选择偷 q 节点时当前最大金额值。用 q[1] 表示不选择 q 节点的情况下当前最大金额值。即:</p>
+在这个基础上，我们可以进一步的保存每一个状态偷或者不偷情况下当前最大金额值。</p>
+<p>假设当前是q节点。
+我们用 q[0] 表示选择偷 <code>q</code> 节点时当前最大金额值。用 <code>q[1]</code> 表示不选择 <code>q</code> 节点的情况下当前最大金额值。即:</p>
 <div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="c1">// 伪代码
 </span><span class="c1"></span><span class="nx">q</span><span class="p">[</span><span class="mi">0</span><span class="p">]=</span><span class="nx">xxx</span>
 <span class="nx">q</span><span class="p">[</span><span class="mi">1</span><span class="p">]=</span><span class="nx">xxx</span>
-</code></pre></div><p>那么最终我们必然只要:</p>
+</code></pre></div><p>那么最终我们只需要:</p>
 <div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="c1">// 伪代码
 </span><span class="c1"></span><span class="nf">max</span><span class="p">(</span><span class="nx">q</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span><span class="nx">q</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
-</code></pre></div><p>接着我们需要进行状态的转移方程。</p>
-<p>假设 l 和 r 代表 q 的左右子节点。
-那么，就会有以下公式:</p>
-<ul>
-<li>当偷 q 时，q 的左右子节点不能被偷，那么决定偷q的最大金额=不能被偷的 l 和 r 位置最大金额值的和。即，
-<code>q[0]=q.val+l[1]+r[1]</code>。</li>
-<li>当不偷 q 时，q 的左右子节点都能偷。但是不一定要去偷。这取决于要偷和不偷情况下哪个金额更多。即:
-<code>q[1]=max(l[0],l[1])+max(r[0],r[1])</code></li>
-</ul>
-<p>这样的话就可以翻译代码了。</p>
+</code></pre></div><p>接着就是状态转移方程。</p>
+<p>假设 <code>l</code> 和 <code>r</code> 分别代表 <code>q</code> 的左右子节点。 那么，就会有以下公式:</p>
+<p>当偷 <code>q</code> 时，<code>q</code> 的左右子节点不能被偷，那么偷 <code>q</code> 情况下最大总金额= <code>q</code> 自身的值 +不能被偷的 <code>l</code> 和 <code>r</code> 位置最大金额值的和。即，</p>
+<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="c1">// 伪代码
+</span><span class="c1"></span><span class="nx">q</span><span class="p">[</span><span class="mi">0</span><span class="p">]=</span><span class="nx">q</span><span class="p">.</span><span class="nx">val</span><span class="o">+</span><span class="nx">l</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">+</span><span class="nx">r</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+</code></pre></div><p>当不偷 <code>q</code> 时，<code>q</code> 的左右子节点都能偷。但是不一定要去偷。这取决于要偷和不偷情况下哪个金额更多。即:</p>
+<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="c1">// 伪代码
+</span><span class="c1"></span><span class="nx">q</span><span class="p">[</span><span class="mi">1</span><span class="p">]=</span><span class="nf">max</span><span class="p">(</span><span class="nx">l</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span><span class="nx">l</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span><span class="o">+</span><span class="nf">max</span><span class="p">(</span><span class="nx">r</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span><span class="nx">r</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+</code></pre></div><p>这样的话就可以翻译代码了。</p>
 <div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="cm">/**
 </span><span class="cm"> * Definition for a binary tree node.
 </span><span class="cm"> * type TreeNode struct {
@@ -254,7 +252,7 @@
 	<span class="p">}</span>
 
 	<span class="nx">l</span><span class="p">,</span> <span class="nx">r</span> <span class="o">:=</span> <span class="nf">df</span><span class="p">(</span><span class="nx">root</span><span class="p">.</span><span class="nx">Left</span><span class="p">),</span> <span class="nf">df</span><span class="p">(</span><span class="nx">root</span><span class="p">.</span><span class="nx">Right</span><span class="p">)</span>
-	<span class="c1">// 选中 当前节点情况下最大值
+	<span class="c1">// 选中当前节点情况下最大值
 </span><span class="c1"></span>	<span class="nx">res</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="p">=</span> <span class="nx">root</span><span class="p">.</span><span class="nx">Val</span> <span class="o">+</span> <span class="nx">l</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="nx">r</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
 	<span class="c1">// 不选择当前节点情况下最大值
 </span><span class="c1"></span>	<span class="nx">res</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="p">=</span> <span class="nf">max</span><span class="p">(</span><span class="nx">l</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="nx">l</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span> <span class="o">+</span> <span class="nf">max</span><span class="p">(</span><span class="nx">r</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="nx">r</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
