@@ -7,7 +7,20 @@
     <generator>Hugo -- gohugo.io</generator>
     <language>zh-hans</language>
     <copyright>This work is licensed under a Creative Commons Attribution-NonCommercial 4.0 International License.</copyright>
-    <lastBuildDate>Sun, 16 May 2021 00:17:52 +0800</lastBuildDate><atom:link href="https://www.syst.top/leetcode/index.xml" rel="self" type="application/rss+xml" />
+    <lastBuildDate>Mon, 31 May 2021 00:36:26 +0800</lastBuildDate><atom:link href="https://www.syst.top/leetcode/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>leetcode 337 House Robber III</title>
+      <link>https://www.syst.top/leetcode/337-house-robbe-riil/</link>
+      <pubDate>Mon, 31 May 2021 00:36:26 +0800</pubDate>
+      
+      <guid>https://www.syst.top/leetcode/337-house-robbe-riil/</guid>
+      <description>介绍 这是 House Robber III。
+这道题和之前的两个版本最大不同在于引入了二叉树。 树的每个节点(场景带入:具体的房子)都有对应的值(金额)。每个节点有两种状态，偷或者不偷。 规则是不能同时偷父子节点， 比如上图，如果选择偷A节点，那么 B和C 就不能偷，既然 B和C不能偷，那么 D、E、F、G 就可以偷的。 因为 B、C 和 A 是子孙关系，而不是父子关系。
+这样的背景下，求小偷能偷的最大金额。
+暴力递归 我们还是用上图的那个例子。在上图的这种情况下，我们可以直接求出最大金额,伪代码如下
+/** * Definition for a binary tree node. * type TreeNode struct { * Val int * Left *TreeNode * Right *TreeNode * } */ // 求当前A节点能偷的最大金额res // 伪代码 func rob(node *TreeNode) int { item1 := node.Val + node.Left.Left.Val + node.Left.Right.Val + node.Right.Left.Val + node.Right.Right.Val res := max(item1, node.</description>
+    </item>
+    
     <item>
       <title>leetcode 213 House Robber II</title>
       <link>https://www.syst.top/leetcode/213-house-robbe-rii/</link>

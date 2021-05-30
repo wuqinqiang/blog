@@ -7,7 +7,20 @@
     <generator>Hugo -- gohugo.io</generator>
     <language>zh-hans</language>
     <copyright>This work is licensed under a Creative Commons Attribution-NonCommercial 4.0 International License.</copyright>
-    <lastBuildDate>Sun, 16 May 2021 00:17:52 +0800</lastBuildDate><atom:link href="https://www.syst.top/index.xml" rel="self" type="application/rss+xml" />
+    <lastBuildDate>Mon, 31 May 2021 00:36:26 +0800</lastBuildDate><atom:link href="https://www.syst.top/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>leetcode 337 House Robber III</title>
+      <link>https://www.syst.top/leetcode/337-house-robbe-riil/</link>
+      <pubDate>Mon, 31 May 2021 00:36:26 +0800</pubDate>
+      
+      <guid>https://www.syst.top/leetcode/337-house-robbe-riil/</guid>
+      <description>介绍 这是 House Robber III。
+这道题和之前的两个版本最大不同在于引入了二叉树。 树的每个节点(场景带入:具体的房子)都有对应的值(金额)。每个节点有两种状态，偷或者不偷。 规则是不能同时偷父子节点， 比如上图，如果选择偷A节点，那么 B和C 就不能偷，既然 B和C不能偷，那么 D、E、F、G 就可以偷的。 因为 B、C 和 A 是子孙关系，而不是父子关系。
+这样的背景下，求小偷能偷的最大金额。
+暴力递归 我们还是用上图的那个例子。在上图的这种情况下，我们可以直接求出最大金额,伪代码如下
+/** * Definition for a binary tree node. * type TreeNode struct { * Val int * Left *TreeNode * Right *TreeNode * } */ // 求当前A节点能偷的最大金额res // 伪代码 func rob(node *TreeNode) int { item1 := node.Val + node.Left.Left.Val + node.Left.Right.Val + node.Right.Left.Val + node.Right.Right.Val res := max(item1, node.</description>
+    </item>
+    
     <item>
       <title>leetcode 213 House Robber II</title>
       <link>https://www.syst.top/leetcode/213-house-robbe-rii/</link>
@@ -186,18 +199,6 @@ package main import ( &amp;#34;fmt&amp;#34; &amp;#34;sync&amp;#34; &amp;#34;time
       
       <guid>https://www.syst.top/translations/go-concurrency-2021-04-20/</guid>
       <description></description>
-    </item>
-    
-    <item>
-      <title>etcd 实战基础篇(一) </title>
-      <link>https://www.syst.top/posts/go/etcd-2021-04-10/</link>
-      <pubDate>Sat, 10 Apr 2021 09:54:52 +0800</pubDate>
-      
-      <guid>https://www.syst.top/posts/go/etcd-2021-04-10/</guid>
-      <description>最近一直在看 etcd 相关的东西，为了不&amp;quot;白看&amp;quot;，加深理解，随即开启此系列的输出。
-Etcd是什么 Etcd 是由 Go 编写的。它是一个强一致性的分布式键值存储，提供一种可靠的方式来存储需要由分布式系统或者机器集群访问的数据。 同时 Etcd 各节点中的通信是通过 Raft 一致性算法来处理的。 有很多大型开源项目的底层都基于 Etcd，举几个比较有名的工业级项目:kubernetes、 CoreDNS、ROOK&amp;hellip;&amp;hellip;
-Etcd 的场景  服务发现。(可以把服务存储到某个 prefix 开头的 key中，然后消费端或者服务信息以调用， 同时消费者也可以通过 watch 获得 key 的变化) 消息分布和订阅 分布式锁 Leader 选举 分布式队列 负载均衡 &amp;hellip;&amp;hellip;  和 redis 的区别 面试的时候可能有面试官喜欢问，
- redis 的数据类型更丰富(string, hash, set ,zset, list)，etcd 仅仅就是 key-val。 etcd 的底层是 Raft 算法，可以保证数据的强一致性。而 redis 数据复制上是主备异步复制，只能最终一致性。 读写性能上，因为 etcd 保证强一致性，所以会比 redis 差。 存储方面，etcd 使用的是持久化存储boltdb，而 redis 的方案是可持久化的 aof/rdb -&amp;hellip;&amp;hellip;  环境与说明 直接下载编译好的二进制文件也好，还是自己下载源码编译运行，先开启一个单节点服务就行。我本地使用 goreman 搭建了三个实例。 这里稍微说明一下:PEER ADDRS 指的是向其他 etcd server 暴露的通信地址,比如上图 name=infra1 要调用 infra2， 调用的就是 http://127.</description>
     </item>
     
   </channel>
