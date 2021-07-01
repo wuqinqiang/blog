@@ -14,7 +14,7 @@
       <pubDate>Mon, 31 May 2021 00:36:26 +0800</pubDate>
       
       <guid>https://www.syst.top/leetcode/337-house-robbe-riil/</guid>
-      <description>介绍 这是 House Robber III。
+      <description>题目介绍 这是 House Robber III。
 这道题和之前两个版本最大不同在于引入了二叉树。 树的每个节点(具体的房子)都有对应的值(金额)。每个节点有两种状态，偷或者不偷。 规则是不能同时偷父子节点， 比如上图，如果选择偷 A 节点，那么 B 和 C 就不能偷，既然 B 和 C 不能偷，那么 DEFG 就可以偷的。 因为 DEFG 和 A 是子孙关系，而不是父子关系。
 这样的背景下，求小偷能偷的最大金额?
 暴力递归 我们还是用上图的那个例子。我们可以直接求出最大金额,伪代码如下

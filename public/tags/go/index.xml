@@ -7,14 +7,49 @@
     <generator>Hugo -- gohugo.io</generator>
     <language>zh-hans</language>
     <copyright>This work is licensed under a Creative Commons Attribution-NonCommercial 4.0 International License.</copyright>
-    <lastBuildDate>Mon, 31 May 2021 00:36:26 +0800</lastBuildDate><atom:link href="https://www.syst.top/tags/go/index.xml" rel="self" type="application/rss+xml" />
+    <lastBuildDate>Thu, 01 Jul 2021 23:37:45 +0800</lastBuildDate><atom:link href="https://www.syst.top/tags/go/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>go并发-工作池模式</title>
+      <link>https://www.syst.top/posts/go/worker-pool/</link>
+      <pubDate>Thu, 01 Jul 2021 23:37:45 +0800</pubDate>
+      
+      <guid>https://www.syst.top/posts/go/worker-pool/</guid>
+      <description>开篇 之前写过一篇文章，它有个响亮的名字: Handling 1 Million Requests per Minute with Go。 这是国外的一个作者写的，我做了一篇说明。起的也是这个标题， 阅读量是我最好的一篇，果然文章都是靠标题出彩的&amp;hellip;..
+今天偶然看到另一篇文章(原文在文末)。两篇文章原理相似:有一批工作任务(job)，通过工作池(worker-pool)的方式，达到多 worker 并发处理 job 的效果。
+他们还是有很多不同的点，实现上差别也是蛮大的。
+首先上一篇文章我放了一张图片，大概就是上篇整体的工作流。  每个 worker 处理完任务就好，不关心结果,不对结果做进一步处理。 只要请求不停止，程序就不会停止，没有控制机制，除非宕机。  这篇文章不同点在于:
+首先数据会从 generate (生产数据)-&amp;gt;并发处理数据-&amp;gt;处理结果聚合。 图大概是这样的, 然后它可以通过 context.context 达到控制工作池停止工作的效果。
+最后通过代码，你会发现它不是传统意义上的 worker-pool，后面会说明。
+下图能清晰表达整体流程了。 顺便说一句，这篇文章实现的代码比 Handling 1 Million Requests per Minute with Go 的代码简单多了。
+首先看 job。
+package wpool import ( &amp;#34;context&amp;#34; ) type JobID string type jobType string type jobMetadata map[string]interface{} type ExecutionFn func(ctx context.Context, args interface{}) (interface{}, error) type JobDescriptor struct { ID JobID JType jobType Metadata map[string]interface{} } type Result struct { Value interface{} Err error Descriptor JobDescriptor } type Job struct { Descriptor JobDescriptor ExecFn ExecutionFn Args interface{} } // 处理 job 逻辑,处理结果包装成 Result 结果 func (j Job) execute(ctx context.</description>
+    </item>
+    
+    <item>
+      <title>如何优雅地实现并发编排任务</title>
+      <link>https://www.syst.top/posts/go/test-tip/</link>
+      <pubDate>Tue, 29 Jun 2021 07:44:45 +0800</pubDate>
+      
+      <guid>https://www.syst.top/posts/go/test-tip/</guid>
+      <description>开篇 在
+场景1：调用第三方接口的时候， 一个需求你需要调用不同的接口，做数据组装。 场景2:一个应用首页可能依托于很多服务。那就涉及到在加载页面时需要同时请求多个服务的接口。这一步往往是由后端统一调用组装数据再返回给前端，也就是所谓的 BFF(Backend For Frontend) 层。
+针对以上两种场景，假设在没有强依赖关系下，选择串行调用，那么总耗时即:
+time=s1+s2+....sn 按照当代秒入百万的有为青年，这么长时间早就把你祖宗十八代问候了一遍。
+为了伟大的KPI，我们往往会选择并发地调用这些依赖接口。那么总耗时就是:
+time=max(s1,s2,s3.....,sn) 当然开始堆业务的时候可以先串行化，等到上面的人着急的时候，亮出绝招。
+这样，年底 PPT 就可以加上浓重的一笔流水账:为业务某个接口提高百分之XXX性能，间接产生XXX价值。
+当然这一切的前提是，做老板不懂技术，做技术”懂”你。
+言归正传,如果修改成并发调用，你可能会这么写，
+package main import ( &amp;#34;fmt&amp;#34; &amp;#34;sync&amp;#34; &amp;#34;time&amp;#34; ) func main() { var wg sync.WaitGroup wg.Add(2) var userInfo *User var productList []Product go func() { defer wg.Done() userInfo, _ = getUser() }() go func() { defer wg.Done() productList, _ = getProductList() }() wg.Wait() fmt.Printf(&amp;#34;用户信息:%+v\n&amp;#34;, userInfo) fmt.Printf(&amp;#34;商品信息:%+v\n&amp;#34;, productList) } /********用户服务**********/ type User struct { Name string Age uint8 } func getUser() (*User, error) { time.</description>
+    </item>
+    
     <item>
       <title>leetcode 337 House Robber III</title>
       <link>https://www.syst.top/leetcode/337-house-robbe-riil/</link>
       <pubDate>Mon, 31 May 2021 00:36:26 +0800</pubDate>
       
       <guid>https://www.syst.top/leetcode/337-house-robbe-riil/</guid>
-      <description>介绍 这是 House Robber III。
+      <description>题目介绍 这是 House Robber III。
 这道题和之前两个版本最大不同在于引入了二叉树。 树的每个节点(具体的房子)都有对应的值(金额)。每个节点有两种状态，偷或者不偷。 规则是不能同时偷父子节点， 比如上图，如果选择偷 A 节点，那么 B 和 C 就不能偷，既然 B 和 C 不能偷，那么 DEFG 就可以偷的。 因为 DEFG 和 A 是子孙关系，而不是父子关系。
 这样的背景下，求小偷能偷的最大金额?
 暴力递归 我们还是用上图的那个例子。我们可以直接求出最大金额,伪代码如下

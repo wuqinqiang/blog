@@ -7,7 +7,19 @@
     <generator>Hugo -- gohugo.io</generator>
     <language>zh-hans</language>
     <copyright>This work is licensed under a Creative Commons Attribution-NonCommercial 4.0 International License.</copyright>
-    <lastBuildDate>Sun, 09 May 2021 12:25:52 +0800</lastBuildDate><atom:link href="https://www.syst.top/lives/index.xml" rel="self" type="application/rss+xml" />
+    <lastBuildDate>Sun, 06 Jun 2021 23:49:52 +0800</lastBuildDate><atom:link href="https://www.syst.top/lives/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>傻瓜式的我们</title>
+      <link>https://www.syst.top/lives/about-everything/</link>
+      <pubDate>Sun, 06 Jun 2021 23:49:52 +0800</pubDate>
+      
+      <guid>https://www.syst.top/lives/about-everything/</guid>
+      <description>为什么写这篇文章。
+现代的信息流在消磨着我。还有我自己也在自我内耗中。
+ 一天要看多少次手机？ 认真工作的时候被手机打断或者自己工作两分钟时不时拿出手机？ 每天被多少垃圾信息推送？看到消息都忍不住点一下？ 完全没有自己的思考，只剩下无情的消息接受者。宛如行尸走肉 焦虑、沉不住气，每一个都想学，也每一种都没精。列出计划。  针对以上问题,
+ 杜绝工作时看手机，或者给每日处理手机的时间段，消息的处理也一样。 拒绝强迫症，不要点开消息。 对待问题，除了解决，海西要思考背后原理。 淡定淡定。一步一个脚印，多看别人源码。  </description>
+    </item>
+    
     <item>
       <title>如何成为一个更好的开发者</title>
       <link>https://www.syst.top/lives/to-better/</link>

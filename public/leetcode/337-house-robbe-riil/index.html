@@ -8,20 +8,20 @@
 	<meta name="theme-color" content="#494f5c">
 	<meta name="msapplication-TileColor" content="#494f5c">
 <meta itemprop="name" content="leetcode 337 House Robber III">
-<meta itemprop="description" content="介绍 这是 House Robber III。
+<meta itemprop="description" content="题目介绍 这是 House Robber III。
 这道题和之前两个版本最大不同在于引入了二叉树。 树的每个节点(具体的房子)都有对应的值(金额)。每个节点有两种状态，偷或者不偷。 规则是不能同时偷父子节点， 比如上图，如果选择偷 A 节点，那么 B 和 C 就不能偷，既然 B 和 C 不能偷，那么 DEFG 就可以偷的。 因为 DEFG 和 A 是子孙关系，而不是父子关系。
 这样的背景下，求小偷能偷的最大金额?
 暴力递归 我们还是用上图的那个例子。我们可以直接求出最大金额,伪代码如下
 /** * Definition for a binary tree node. * type TreeNode struct { * Val int * Left *TreeNode * Right *TreeNode * } */ // 求当前A节点能偷的最大金额res // 伪代码 item := node.Val &#43; node.Left.Left.Val &#43; node.Left.Right.Val &#43; node.Right.Left.Val &#43; node.Right.Right.Val res := max(item, node.">
 <meta itemprop="datePublished" content="2021-05-31T00:36:26+08:00" />
 <meta itemprop="dateModified" content="2021-05-31T00:36:26+08:00" />
-<meta itemprop="wordCount" content="471">
+<meta itemprop="wordCount" content="479">
 
 
 
 <meta itemprop="keywords" content="go,leetcode," />
 <meta property="og:title" content="leetcode 337 House Robber III" />
-<meta property="og:description" content="介绍 这是 House Robber III。
+<meta property="og:description" content="题目介绍 这是 House Robber III。
 这道题和之前两个版本最大不同在于引入了二叉树。 树的每个节点(具体的房子)都有对应的值(金额)。每个节点有两种状态，偷或者不偷。 规则是不能同时偷父子节点， 比如上图，如果选择偷 A 节点，那么 B 和 C 就不能偷，既然 B 和 C 不能偷，那么 DEFG 就可以偷的。 因为 DEFG 和 A 是子孙关系，而不是父子关系。
 这样的背景下，求小偷能偷的最大金额?
 暴力递归 我们还是用上图的那个例子。我们可以直接求出最大金额,伪代码如下
@@ -32,7 +32,7 @@
 <meta property="article:modified_time" content="2021-05-31T00:36:26+08:00" />
 <meta name="twitter:card" content="summary"/>
 <meta name="twitter:title" content="leetcode 337 House Robber III"/>
-<meta name="twitter:description" content="介绍 这是 House Robber III。
+<meta name="twitter:description" content="题目介绍 这是 House Robber III。
 这道题和之前两个版本最大不同在于引入了二叉树。 树的每个节点(具体的房子)都有对应的值(金额)。每个节点有两种状态，偷或者不偷。 规则是不能同时偷父子节点， 比如上图，如果选择偷 A 节点，那么 B 和 C 就不能偷，既然 B 和 C 不能偷，那么 DEFG 就可以偷的。 因为 DEFG 和 A 是子孙关系，而不是父子关系。
 这样的背景下，求小偷能偷的最大金额?
 暴力递归 我们还是用上图的那个例子。我们可以直接求出最大金额,伪代码如下
@@ -82,8 +82,8 @@
 	<main class="site-main section-inner thin animated fadeIn faster">
 		<h1>leetcode 337 House Robber III</h1>
 		<div class="content">
-			<h3 id="介绍">介绍<a href="#介绍" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h3>
-<p><img src="https://image.syst.top/image/leetcode/337.jpg" alt="image"></p>
+			<p><img src="https://image.syst.top/image/leetcode/337.jpg" alt="image"></p>
+<h3 id="题目介绍">题目介绍<a href="#题目介绍" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h3>
 <p>这是 House Robber III。</p>
 <p>这道题和之前两个版本最大不同在于引入了二叉树。
 树的每个节点(具体的房子)都有对应的值(金额)。每个节点有两种状态，偷或者不偷。
@@ -205,7 +205,8 @@
 	<span class="p">}</span>
 	<span class="k">return</span> <span class="nx">item2</span>
 <span class="p">}</span>
-</code></pre></div><p>那么，如何用动态规划的思想解这道题？</p>
+</code></pre></div><h3 id="动态规划">动态规划<a href="#动态规划" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h3>
+<p>那么，如何用动态规划的思想解这道题？</p>
 <p>动态规划最重要的两步:</p>
 <ul>
 <li>定义状态</li>
@@ -214,17 +215,20 @@
 <p>首先是状态。
 针对每一个节点，都只有两种状态，偷或者不偷。
 在这个基础上，我们可以进一步的保存每一个状态偷或者不偷情况下当前最大金额值。</p>
-<p>假设当前是q节点。
-我们用 q[0] 表示选择偷 <code>q</code> 节点时当前最大金额值。用 <code>q[1]</code> 表示不选择 <code>q</code> 节点的情况下当前最大金额值。即:</p>
+<p>假设当前是 <code>q</code> 节点。
+我们用 <code>q[0]</code> 表示选择偷 <code>q</code> 节点的情况下当前最大金额值。用 <code>q[1]</code> 表示不选择偷 <code>q</code> 节点的情况下当前最大金额值。即:</p>
 <div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="c1">// 伪代码
+</span><span class="c1"></span>
+<span class="c1">// 不偷q
 </span><span class="c1"></span><span class="nx">q</span><span class="p">[</span><span class="mi">0</span><span class="p">]=</span><span class="nx">xxx</span>
-<span class="nx">q</span><span class="p">[</span><span class="mi">1</span><span class="p">]=</span><span class="nx">xxx</span>
+<span class="c1">// 要偷q
+</span><span class="c1"></span><span class="nx">q</span><span class="p">[</span><span class="mi">1</span><span class="p">]=</span><span class="nx">xxx</span>
 </code></pre></div><p>那么最终我们只需要:</p>
-<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="c1">// 伪代码
+<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="c1">// 最大值伪代码
 </span><span class="c1"></span><span class="nf">max</span><span class="p">(</span><span class="nx">q</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span><span class="nx">q</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
 </code></pre></div><p>接着就是状态转移方程。</p>
 <p>假设 <code>l</code> 和 <code>r</code> 分别代表 <code>q</code> 的左右子节点。 那么，就会有以下公式:</p>
-<p>当偷 <code>q</code> 时，<code>q</code> 的左右子节点不能被偷，那么偷 <code>q</code> 情况下最大总金额= <code>q</code> 自身的值 +不能被偷的 <code>l</code> 和 <code>r</code> 位置最大金额值的和。即，</p>
+<p>当偷 <code>q</code> 时，<code>q</code> 的左右子节点不能被偷，那么偷 <code>q</code> 情况下最大总金额 = <code>q</code> 自身的值 +不能被偷的 <code>l</code> 和 <code>r</code> 位置最大金额值的和。即，</p>
 <div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="c1">// 伪代码
 </span><span class="c1"></span><span class="nx">q</span><span class="p">[</span><span class="mi">0</span><span class="p">]=</span><span class="nx">q</span><span class="p">.</span><span class="nx">val</span><span class="o">+</span><span class="nx">l</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">+</span><span class="nx">r</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
 </code></pre></div><p>当不偷 <code>q</code> 时，<code>q</code> 的左右子节点都能偷。但是不一定要去偷。这取决于要偷和不偷情况下哪个金额更多。即:</p>
