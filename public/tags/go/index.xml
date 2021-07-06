@@ -123,13 +123,13 @@ func NewUnboundedChan(initCapacity int) UnboundedChan { return NewUnboundedChanS
       <pubDate>Wed, 21 Apr 2021 23:54:52 +0800</pubDate>
       
       <guid>https://www.syst.top/posts/go/why-dig-to-wire/</guid>
-      <description>开篇 dig 和 wire 都是Go 中的依赖注入框架，那么，本质上功能相似的框架，为什么我们要从 dig 切换成 wire？
-关于这两个 Di 框架的使用姿势，网上有大量的文章，可以自行参考，本文也不是教你如何使用的。
-假设现在的项目分层是:router-&amp;gt;controller-&amp;gt;service-&amp;gt;dao。
-那么我们的项目分层就是这样的。
-然后我们来写一个订单接口的服务。
+      <description>开篇 dig 和 wire 都是 Go 依赖注入的工具，那么，本质上功能相似的框架，为什么要从 dig 切换成 wire？
+场景 我们从场景出发。
+假设我们的项目分层是:router-&amp;gt;controller-&amp;gt;service-&amp;gt;dao。
+大概就长这样:
+现在我们需要对外暴露一个订单服务的接口。
 首页看 main.go 文件。
-package main import ( &amp;#34;fmt&amp;#34; &amp;#34;github.com/gin-gonic/gin&amp;#34; &amp;#34;github.com/wuqinqiang/digvswire/dig&amp;#34; &amp;#34;github.com/wuqinqiang/digvswire/router&amp;#34; ) func main() { serverStart() } func serverStart() { defer func() { if err := recover(); err != nil { fmt.Printf(&amp;#34;init app err:%v\n&amp;#34;, err) } }() e := gin.Default() d := dig.ContainerByDig() err := router.RegisterRouter(e, d) if err != nil { fmt.Printf(&amp;#34;register router err:%v&amp;#34;, err) } _ = e.</description>
+package main import ( &amp;#34;fmt&amp;#34; &amp;#34;github.com/gin-gonic/gin&amp;#34; &amp;#34;github.com/wuqinqiang/digvswire/dig&amp;#34; &amp;#34;github.com/wuqinqiang/digvswire/router&amp;#34; ) func main() { serverStart() } func serverStart() { defer func() { if err := recover(); err != nil { fmt.Printf(&amp;#34;init app err:%v\n&amp;#34;, err) } }() e := gin.Default() di := dig.ContainerByDig() err := router.RegisterRouter(e, di) if err != nil { fmt.Printf(&amp;#34;register router err:%v&amp;#34;, err) } _ = e.</description>
     </item>
     
     <item>

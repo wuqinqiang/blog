@@ -8,41 +8,41 @@
 	<meta name="theme-color" content="#494f5c">
 	<meta name="msapplication-TileColor" content="#494f5c">
 <meta itemprop="name" content="为什么把 dig 迁移到 wire">
-<meta itemprop="description" content="开篇 dig 和 wire 都是Go 中的依赖注入框架，那么，本质上功能相似的框架，为什么我们要从 dig 切换成 wire？
-关于这两个 Di 框架的使用姿势，网上有大量的文章，可以自行参考，本文也不是教你如何使用的。
-假设现在的项目分层是:router-&gt;controller-&gt;service-&gt;dao。
-那么我们的项目分层就是这样的。
-然后我们来写一个订单接口的服务。
+<meta itemprop="description" content="开篇 dig 和 wire 都是 Go 依赖注入的工具，那么，本质上功能相似的框架，为什么要从 dig 切换成 wire？
+场景 我们从场景出发。
+假设我们的项目分层是:router-&gt;controller-&gt;service-&gt;dao。
+大概就长这样:
+现在我们需要对外暴露一个订单服务的接口。
 首页看 main.go 文件。
-package main import ( &#34;fmt&#34; &#34;github.com/gin-gonic/gin&#34; &#34;github.com/wuqinqiang/digvswire/dig&#34; &#34;github.com/wuqinqiang/digvswire/router&#34; ) func main() { serverStart() } func serverStart() { defer func() { if err := recover(); err != nil { fmt.Printf(&#34;init app err:%v\n&#34;, err) } }() e := gin.Default() d := dig.ContainerByDig() err := router.RegisterRouter(e, d) if err != nil { fmt.Printf(&#34;register router err:%v&#34;, err) } _ = e.">
+package main import ( &#34;fmt&#34; &#34;github.com/gin-gonic/gin&#34; &#34;github.com/wuqinqiang/digvswire/dig&#34; &#34;github.com/wuqinqiang/digvswire/router&#34; ) func main() { serverStart() } func serverStart() { defer func() { if err := recover(); err != nil { fmt.Printf(&#34;init app err:%v\n&#34;, err) } }() e := gin.Default() di := dig.ContainerByDig() err := router.RegisterRouter(e, di) if err != nil { fmt.Printf(&#34;register router err:%v&#34;, err) } _ = e.">
 <meta itemprop="datePublished" content="2021-04-21T23:54:52+08:00" />
 <meta itemprop="dateModified" content="2021-04-21T23:54:52+08:00" />
-<meta itemprop="wordCount" content="641">
+<meta itemprop="wordCount" content="604">
 
 
 
 <meta itemprop="keywords" content="go,mistake," />
 <meta property="og:title" content="为什么把 dig 迁移到 wire" />
-<meta property="og:description" content="开篇 dig 和 wire 都是Go 中的依赖注入框架，那么，本质上功能相似的框架，为什么我们要从 dig 切换成 wire？
-关于这两个 Di 框架的使用姿势，网上有大量的文章，可以自行参考，本文也不是教你如何使用的。
-假设现在的项目分层是:router-&gt;controller-&gt;service-&gt;dao。
-那么我们的项目分层就是这样的。
-然后我们来写一个订单接口的服务。
+<meta property="og:description" content="开篇 dig 和 wire 都是 Go 依赖注入的工具，那么，本质上功能相似的框架，为什么要从 dig 切换成 wire？
+场景 我们从场景出发。
+假设我们的项目分层是:router-&gt;controller-&gt;service-&gt;dao。
+大概就长这样:
+现在我们需要对外暴露一个订单服务的接口。
 首页看 main.go 文件。
-package main import ( &#34;fmt&#34; &#34;github.com/gin-gonic/gin&#34; &#34;github.com/wuqinqiang/digvswire/dig&#34; &#34;github.com/wuqinqiang/digvswire/router&#34; ) func main() { serverStart() } func serverStart() { defer func() { if err := recover(); err != nil { fmt.Printf(&#34;init app err:%v\n&#34;, err) } }() e := gin.Default() d := dig.ContainerByDig() err := router.RegisterRouter(e, d) if err != nil { fmt.Printf(&#34;register router err:%v&#34;, err) } _ = e." />
+package main import ( &#34;fmt&#34; &#34;github.com/gin-gonic/gin&#34; &#34;github.com/wuqinqiang/digvswire/dig&#34; &#34;github.com/wuqinqiang/digvswire/router&#34; ) func main() { serverStart() } func serverStart() { defer func() { if err := recover(); err != nil { fmt.Printf(&#34;init app err:%v\n&#34;, err) } }() e := gin.Default() di := dig.ContainerByDig() err := router.RegisterRouter(e, di) if err != nil { fmt.Printf(&#34;register router err:%v&#34;, err) } _ = e." />
 <meta property="og:type" content="article" />
 <meta property="og:url" content="https://www.syst.top/posts/go/why-dig-to-wire/" />
 <meta property="article:published_time" content="2021-04-21T23:54:52+08:00" />
 <meta property="article:modified_time" content="2021-04-21T23:54:52+08:00" />
 <meta name="twitter:card" content="summary"/>
 <meta name="twitter:title" content="为什么把 dig 迁移到 wire"/>
-<meta name="twitter:description" content="开篇 dig 和 wire 都是Go 中的依赖注入框架，那么，本质上功能相似的框架，为什么我们要从 dig 切换成 wire？
-关于这两个 Di 框架的使用姿势，网上有大量的文章，可以自行参考，本文也不是教你如何使用的。
-假设现在的项目分层是:router-&gt;controller-&gt;service-&gt;dao。
-那么我们的项目分层就是这样的。
-然后我们来写一个订单接口的服务。
+<meta name="twitter:description" content="开篇 dig 和 wire 都是 Go 依赖注入的工具，那么，本质上功能相似的框架，为什么要从 dig 切换成 wire？
+场景 我们从场景出发。
+假设我们的项目分层是:router-&gt;controller-&gt;service-&gt;dao。
+大概就长这样:
+现在我们需要对外暴露一个订单服务的接口。
 首页看 main.go 文件。
-package main import ( &#34;fmt&#34; &#34;github.com/gin-gonic/gin&#34; &#34;github.com/wuqinqiang/digvswire/dig&#34; &#34;github.com/wuqinqiang/digvswire/router&#34; ) func main() { serverStart() } func serverStart() { defer func() { if err := recover(); err != nil { fmt.Printf(&#34;init app err:%v\n&#34;, err) } }() e := gin.Default() d := dig.ContainerByDig() err := router.RegisterRouter(e, d) if err != nil { fmt.Printf(&#34;register router err:%v&#34;, err) } _ = e."/>
+package main import ( &#34;fmt&#34; &#34;github.com/gin-gonic/gin&#34; &#34;github.com/wuqinqiang/digvswire/dig&#34; &#34;github.com/wuqinqiang/digvswire/router&#34; ) func main() { serverStart() } func serverStart() { defer func() { if err := recover(); err != nil { fmt.Printf(&#34;init app err:%v\n&#34;, err) } }() e := gin.Default() di := dig.ContainerByDig() err := router.RegisterRouter(e, di) if err != nil { fmt.Printf(&#34;register router err:%v&#34;, err) } _ = e."/>
 
 	<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
 	<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
@@ -93,12 +93,13 @@ package main import ( &#34;fmt&#34; &#34;github.com/gin-gonic/gin&#34; &#34;gith
 			</header>
 			<div class="content">
 				<h3 id="开篇">开篇<a href="#开篇" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h3>
-<p>dig 和 wire 都是Go 中的依赖注入框架，那么，本质上功能相似的框架，为什么我们要从 dig 切换成 wire？</p>
-<p>关于这两个 Di 框架的使用姿势，网上有大量的文章，可以自行参考，本文也不是教你如何使用的。</p>
-<p>假设现在的项目分层是:router-&gt;controller-&gt;service-&gt;dao。</p>
-<p>那么我们的项目分层就是这样的。</p>
+<p><code>dig</code> 和 <code>wire</code> 都是 <code>Go</code> 依赖注入的工具，那么，本质上功能相似的框架，为什么要从 <code>dig</code> 切换成 <code>wire</code>？</p>
+<h3 id="场景">场景<a href="#场景" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h3>
+<p>我们从场景出发。</p>
+<p>假设我们的项目分层是:<code>router-&gt;controller-&gt;service-&gt;dao</code>。</p>
+<p>大概就长这样:</p>
 <p><img src="https://image.syst.top/image/dig-to-wire/1.png" alt="image"></p>
-<p>然后我们来写一个订单接口的服务。</p>
+<p>现在我们需要对外暴露一个订单服务的接口。</p>
 <p>首页看 <code>main.go</code> 文件。</p>
 <div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kn">package</span> <span class="nx">main</span>
 
@@ -120,43 +121,15 @@ package main import ( &#34;fmt&#34; &#34;github.com/gin-gonic/gin&#34; &#34;gith
 		<span class="p">}</span>
 	<span class="p">}()</span>
 	<span class="nx">e</span> <span class="o">:=</span> <span class="nx">gin</span><span class="p">.</span><span class="nf">Default</span><span class="p">()</span>
-	<span class="nx">d</span> <span class="o">:=</span> <span class="nx">dig</span><span class="p">.</span><span class="nf">ContainerByDig</span><span class="p">()</span>
-	<span class="nx">err</span> <span class="o">:=</span> <span class="nx">router</span><span class="p">.</span><span class="nf">RegisterRouter</span><span class="p">(</span><span class="nx">e</span><span class="p">,</span> <span class="nx">d</span><span class="p">)</span>
+	<span class="nx">di</span> <span class="o">:=</span> <span class="nx">dig</span><span class="p">.</span><span class="nf">ContainerByDig</span><span class="p">()</span>
+	<span class="nx">err</span> <span class="o">:=</span> <span class="nx">router</span><span class="p">.</span><span class="nf">RegisterRouter</span><span class="p">(</span><span class="nx">e</span><span class="p">,</span> <span class="nx">di</span><span class="p">)</span>
 	<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
 		<span class="nx">fmt</span><span class="p">.</span><span class="nf">Printf</span><span class="p">(</span><span class="s">&#34;register router err:%v&#34;</span><span class="p">,</span> <span class="nx">err</span><span class="p">)</span>
 	<span class="p">}</span>
 	<span class="nx">_</span> <span class="p">=</span> <span class="nx">e</span><span class="p">.</span><span class="nf">Run</span><span class="p">(</span><span class="s">&#34;:8090&#34;</span><span class="p">)</span>
 <span class="p">}</span>
 
-</code></pre></div><div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kn">package</span> <span class="nx">main</span>
-
-<span class="kn">import</span> <span class="p">(</span>
-	<span class="s">&#34;fmt&#34;</span>
-	<span class="s">&#34;github.com/gin-gonic/gin&#34;</span>
-	<span class="s">&#34;github.com/wuqinqiang/digvswire/dig&#34;</span>
-	<span class="s">&#34;github.com/wuqinqiang/digvswire/router&#34;</span>
-<span class="p">)</span>
-
-<span class="kd">func</span> <span class="nf">main</span><span class="p">()</span> <span class="p">{</span>
-	<span class="nf">serverStart</span><span class="p">()</span>
-<span class="p">}</span>
-
-<span class="kd">func</span> <span class="nf">serverStart</span><span class="p">()</span> <span class="p">{</span>
-	<span class="k">defer</span> <span class="kd">func</span><span class="p">()</span> <span class="p">{</span>
-		<span class="k">if</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nb">recover</span><span class="p">();</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
-			<span class="nx">fmt</span><span class="p">.</span><span class="nf">Printf</span><span class="p">(</span><span class="s">&#34;init app err:%v\n&#34;</span><span class="p">,</span> <span class="nx">err</span><span class="p">)</span>
-		<span class="p">}</span>
-	<span class="p">}()</span>
-	<span class="nx">e</span> <span class="o">:=</span> <span class="nx">gin</span><span class="p">.</span><span class="nf">Default</span><span class="p">()</span>
-	<span class="nx">d</span> <span class="o">:=</span> <span class="nx">dig</span><span class="p">.</span><span class="nf">ContainerByDig</span><span class="p">()</span>
-	<span class="nx">err</span> <span class="o">:=</span> <span class="nx">router</span><span class="p">.</span><span class="nf">RegisterRouter</span><span class="p">(</span><span class="nx">e</span><span class="p">,</span> <span class="nx">d</span><span class="p">)</span>
-	<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
-		<span class="nx">fmt</span><span class="p">.</span><span class="nf">Printf</span><span class="p">(</span><span class="s">&#34;register router err:%v&#34;</span><span class="p">,</span> <span class="nx">err</span><span class="p">)</span>
-	<span class="p">}</span>
-	<span class="nx">_</span> <span class="p">=</span> <span class="nx">e</span><span class="p">.</span><span class="nf">Run</span><span class="p">(</span><span class="s">&#34;:8090&#34;</span><span class="p">)</span>
-<span class="p">}</span>
-
-</code></pre></div><p>这里使用了 <code>gin</code> 用来启动项目。 查看 <code>dig.ContainerByDig</code>，</p>
+</code></pre></div><p>这里使用了 <code>gin</code> 启动项目。 然后我们查看 <code>dig.ContainerByDig()</code>，</p>
 <h3 id="dig">dig<a href="#dig" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h3>
 <div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kn">package</span> <span class="nx">dig</span>
 
@@ -174,8 +147,8 @@ package main import ( &#34;fmt&#34; &#34;github.com/gin-gonic/gin&#34; &#34;gith
 	<span class="nx">_</span> <span class="p">=</span> <span class="nx">d</span><span class="p">.</span><span class="nf">Provide</span><span class="p">(</span><span class="nx">controller</span><span class="p">.</span><span class="nx">NewOrderHandler</span><span class="p">)</span>
 	<span class="k">return</span> <span class="nx">d</span>
 <span class="p">}</span>
-</code></pre></div><p>这段代码就好理解了。首先通过 <code>dig.New()</code> 创建一个 di 容器。
-<code>Provide</code> 函数用于添加服务提供者，  <code>Provide</code> 函数第一个参数本质上是一个函数，一个告诉容器 &ldquo;我能提供什么，为了提供它，我需要什么&rdquo;。</p>
+</code></pre></div><p>首先通过 <code>dig.New()</code> 创建一个 <code>di</code> 容器。
+<code>Provide</code> 函数用于添加服务提供者，  <code>Provide</code> 函数第一个参数本质上是一个函数。一个告诉容器 &ldquo;我能提供什么，为了提供它，我需要什么？&rdquo; 的函数。</p>
 <p>比如我们看第二个 <code>server.NewOrderServer</code>,</p>
 <div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kn">package</span> <span class="nx">server</span>
 
@@ -200,13 +173,14 @@ package main import ( &#34;fmt&#34; &#34;github.com/gin-gonic/gin&#34; &#34;gith
 <span class="kd">func</span> <span class="p">(</span><span class="nx">o</span> <span class="o">*</span><span class="nx">OrderServer</span><span class="p">)</span> <span class="nf">GetUserOrderList</span><span class="p">(</span><span class="nx">userId</span> <span class="kt">string</span><span class="p">)</span> <span class="p">(</span><span class="nx">orderList</span> <span class="p">[]</span><span class="nx">dao</span><span class="p">.</span><span class="nx">Order</span><span class="p">,</span> <span class="nx">err</span> <span class="kt">error</span><span class="p">)</span> <span class="p">{</span>
 	<span class="k">return</span> <span class="nx">o</span><span class="p">.</span><span class="nx">orderDao</span><span class="p">.</span><span class="nf">GetOrderListById</span><span class="p">(</span><span class="nx">userId</span><span class="p">)</span>
 <span class="p">}</span>
-</code></pre></div><p>那么这里的 <code>NewOrderServer</code> 在 <code>Provide</code> 中的语意就是,&ldquo;我能提供一个 <code>OrderServerInterface</code> 服务，但是我需要依赖一个 <code>dao.OrderDao</code>&quot;。</p>
-<p>当然上面的代码，</p>
+</code></pre></div><p>这里的 <code>NewOrderServer(xxx)</code> 在 <code>Provide</code> 中的语意就是 &ldquo;我能提供一个 <code>OrderServerInterface</code> 服务，但是我需要依赖一个 <code>dao.OrderDao</code>&quot;。</p>
+<p>刚才的代码中，</p>
 <div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="nx">_</span> <span class="p">=</span> <span class="nx">d</span><span class="p">.</span><span class="nf">Provide</span><span class="p">(</span><span class="nx">dao</span><span class="p">.</span><span class="nx">NewOrderDao</span><span class="p">)</span>
-	<span class="nx">_</span> <span class="p">=</span> <span class="nx">d</span><span class="p">.</span><span class="nf">Provide</span><span class="p">(</span><span class="nx">server</span><span class="p">.</span><span class="nx">NewOrderServer</span><span class="p">)</span>
-	<span class="nx">_</span> <span class="p">=</span> <span class="nx">d</span><span class="p">.</span><span class="nf">Provide</span><span class="p">(</span><span class="nx">controller</span><span class="p">.</span><span class="nx">NewOrderHandler</span><span class="p">)</span>
-</code></pre></div><p>因为我们的调用链是 controller-&gt;server-&gt;dao，那么本质上他们的依赖是 controller&lt;-server&lt;-dao，只是依赖的不是具体的实现，而是抽象的接口。</p>
-<p>所以你看到在 <code>Provide</code> 的时候顺序是按照依赖关系写的。其实完全没有必要，因为这一步 <code>dig</code> 只会对这些函数进行分析，提取函数的形参以及返回值。根据返回的参数来组织容器结构。
+<span class="nx">_</span> <span class="p">=</span> <span class="nx">d</span><span class="p">.</span><span class="nf">Provide</span><span class="p">(</span><span class="nx">server</span><span class="p">.</span><span class="nx">NewOrderServer</span><span class="p">)</span>
+<span class="nx">_</span> <span class="p">=</span> <span class="nx">d</span><span class="p">.</span><span class="nf">Provide</span><span class="p">(</span><span class="nx">controller</span><span class="p">.</span><span class="nx">NewOrderHandler</span><span class="p">)</span>
+</code></pre></div><p>因为我们的调用链是 <code>controller-&gt;server-&gt;dao</code>，那么本质上他们的依赖是 <code>controller&lt;-server&lt;-dao</code>，只是依赖的不是具体的实现，而是抽象的接口。</p>
+<p>所以你看到 <code>Provide</code> 是按照依赖关系顺序写的。</p>
+<p>其实完全没有必要，因为这一步 <code>dig</code> 只会对这些函数进行分析，提取函数的形参以及返回值。然后根据返回的参数来组织容器结构。
 并不会在这一步执行传入的函数，所以在 <code>Provide</code> 阶段前后顺序并不重要，只要确保不遗漏依赖项即可。</p>
 <p>万事俱备，我们开始注册一个能获取订单的路由，</p>
 <div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="nx">err</span> <span class="o">:=</span> <span class="nx">router</span><span class="p">.</span><span class="nf">RegisterRouter</span><span class="p">(</span><span class="nx">e</span><span class="p">,</span> <span class="nx">d</span><span class="p">)</span>
@@ -217,8 +191,9 @@ package main import ( &#34;fmt&#34; &#34;github.com/gin-gonic/gin&#34; &#34;gith
 		<span class="nx">e</span><span class="p">.</span><span class="nf">GET</span><span class="p">(</span><span class="s">&#34;/user/orders&#34;</span><span class="p">,</span> <span class="nx">handle</span><span class="p">.</span><span class="nx">GetUserOrderList</span><span class="p">)</span>
 	<span class="p">})</span>
 <span class="p">}</span>
-</code></pre></div><p>此时，真正执行 <code>invoke</code> 获取 <code>*controller.OrderHandler</code> 控制器对象。调用 <code>invoke</code> 方法，会对传入的参数做分析，参数中存在 <code>handle *controller.OrderHandler</code>,
-就去容器中寻找哪个函数的返回类型是 <code>handle *controller.OrderHandler</code>,就找到,</p>
+</code></pre></div><p>此时，调用 <code>invoke</code>， 才是真正需要获取 <code>*controller.OrderHandler</code> 对象。</p>
+<p>调用 <code>invoke</code> 方法，会对传入的参数做分析，参数中存在 <code>handle *controller.OrderHandler</code>, 就会去容器中寻找哪个 <code>Provide</code> 进来的函数返回类型是 <code>handle *controller.OrderHandler</code>,</p>
+<p>就能对应找到,</p>
 <div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="nx">_</span> <span class="p">=</span> <span class="nx">d</span><span class="p">.</span><span class="nf">Provide</span><span class="p">(</span><span class="nx">controller</span><span class="p">.</span><span class="nx">NewOrderHandler</span><span class="p">)</span>
 <span class="c1">// 对应
 </span><span class="c1"></span><span class="kd">func</span> <span class="nf">NewOrderHandler</span><span class="p">(</span><span class="nx">server</span> <span class="nx">server</span><span class="p">.</span><span class="nx">OrderServerInterface</span><span class="p">)</span> <span class="o">*</span><span class="nx">OrderHandler</span> <span class="p">{</span>
@@ -232,17 +207,17 @@ package main import ( &#34;fmt&#34; &#34;github.com/gin-gonic/gin&#34; &#34;gith
 </span><span class="c1"></span><span class="kd">func</span> <span class="nf">NewOrderServer</span><span class="p">(</span><span class="nx">order</span> <span class="nx">dao</span><span class="p">.</span><span class="nx">OrderDao</span><span class="p">)</span> <span class="nx">OrderServerInterface</span> <span class="p">{</span>
 	<span class="k">return</span> <span class="o">&amp;</span><span class="nx">OrderServer</span><span class="p">{</span><span class="nx">orderDao</span><span class="p">:</span> <span class="nx">order</span><span class="p">}</span>
 <span class="p">}</span>
-</code></pre></div><p>又发现形参 <code>dao.OrderDao</code>,</p>
+</code></pre></div><p>又发现形参 <code>（order dao.OrderDao)</code>,</p>
 <div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="nx">_</span> <span class="p">=</span> <span class="nx">d</span><span class="p">.</span><span class="nf">Provide</span><span class="p">(</span><span class="nx">dao</span><span class="p">.</span><span class="nx">NewOrderDao</span><span class="p">)</span>
 <span class="c1">//对应
 </span><span class="c1"></span><span class="kd">func</span> <span class="nf">NewOrderDao</span><span class="p">()</span> <span class="nx">OrderDao</span> <span class="p">{</span>
 	<span class="k">return</span> <span class="nb">new</span><span class="p">(</span><span class="nx">OrderDaoImpl</span><span class="p">)</span>
 <span class="p">}</span>
-</code></pre></div><p>发现 <code>NewOrderDao</code> 没有依赖，不需要再进行查询依赖，开始执行函数的调用，把返回的 <code>OrderDao</code> 传入到上层的 <code>NewOrderServer(order dao.OrderDao)</code>进行函数调用，
-返回 <code>OrderServerInterface</code> 继续返回到上层 <code>NewOrderHandler(server server.OrderServerInterface)</code> 执行调用，最后再把函数调用返回的 <code>*OrderHandler</code> 传递给 <code>dig.Invoke(func(handle *controller.OrderHandler) {}</code>,</p>
+</code></pre></div><p>最后发现 <code>NewOrderDao</code> 没有依赖，不需要再查询依赖。开始执行函数的调用 <code>NewOrderDao()</code>，把返回的 <code>OrderDao</code> 传入到上层的 <code>NewOrderServer(order dao.OrderDao)</code> 进行函数调用，
+<code>NewOrderServer(order dao.OrderDao)</code> 返回的 <code>OrderServerInterface</code> 继续返回到上层 <code>NewOrderHandler(server server.OrderServerInterface)</code> 执行调用，最后再把函数调用返回的 <code>*OrderHandler</code> 传递给 <code>dig.Invoke(func(handle *controller.OrderHandler) {}</code>,</p>
 <p>整个链路就通了。用一个简陋的图来描述这个过程
 <img src="https://image.syst.top/image/dig-to-wire/2.png" alt="image"></p>
-<p><code>dig</code> 的整个流程采用的是反射，在运行时计算依赖关系，构造依赖对象。</p>
+<p><code>dig</code> 的整个流程采用的是反射机制，在运行时计算依赖关系，构造依赖对象。</p>
 <p>这样会存在什么问题？</p>
 <p>假设我现在注释掉 <code>Provide</code> 的一行代码，比如,</p>
 <div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kd">func</span> <span class="nf">ContainerByDig</span><span class="p">()</span> <span class="o">*</span><span class="nx">dig</span><span class="p">.</span><span class="nx">Container</span> <span class="p">{</span>
@@ -252,12 +227,12 @@ package main import ( &#34;fmt&#34; &#34;github.com/gin-gonic/gin&#34; &#34;gith
 	<span class="nx">_</span> <span class="p">=</span> <span class="nx">d</span><span class="p">.</span><span class="nf">Provide</span><span class="p">(</span><span class="nx">controller</span><span class="p">.</span><span class="nx">NewOrderHandler</span><span class="p">)</span>
 	<span class="k">return</span> <span class="nx">d</span>
 <span class="p">}</span>
-</code></pre></div><p>我们在编译项目的时候并不会报任何错误，只有真正运行的时候才会发现缺少了依赖项。
+</code></pre></div><p>我们在编译项目的时候并不会报任何错误，只会在运行时才发现缺少了依赖项。
 <img src="https://image.syst.top/image/dig-to-wire/3.png" alt="image"></p>
 <h3 id="wire">wire<a href="#wire" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h3>
 <p>还是上面的代码，我们使用 <code>wire</code> 作为我们的 <code>DI</code> 容器。</p>
 <p><code>wire</code> 也有两个核心概念: <code>Provider</code> 和 <code>Injector</code>。</p>
-<p>其中 <code>Provider</code> 的概念和 <code>dig</code> 的概念是一样的。&ldquo;我能提供什么？我需要什么依赖&rdquo;。</p>
+<p>其中 <code>Provider</code> 的概念和 <code>dig</code> 的概念是一样的:&ldquo;我能提供什么？我需要什么依赖&rdquo;。</p>
 <p>比如下面 <code>wire.go</code> 中的代码,</p>
 <div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="c1">//+build wireinject
 </span><span class="c1"></span>
@@ -280,20 +255,20 @@ package main import ( &#34;fmt&#34; &#34;github.com/gin-gonic/gin&#34; &#34;gith
 	<span class="k">return</span> <span class="o">&amp;</span><span class="nx">controller</span><span class="p">.</span><span class="nx">OrderHandler</span><span class="p">{}</span>
 <span class="p">}</span>
 </code></pre></div><p>其中，<code>dao.NewOrderDao</code> 、<code>server.NewOrderServer</code> 以及 <code>controller.NewOrderHandler</code> 就是 <code>Provider</code>。</p>
-<p>那你会发现上面使用 <code>wire.NewSet</code> 把他们整合在一起，赋值给了一个变量 <code>orderSet</code>。</p>
-<p>其实是用到 <code>ProviderSet</code> 概念。把一组相关的 <code>Provider</code> 打包。
-这样的好处是:</p>
+<p>你会发现这里还调用 <code>wire.NewSet</code> 把他们整合在一起，赋值给了一个变量 <code>orderSet</code>。</p>
+<p>其实是用到 <code>ProviderSet</code> 的概念。原理就是把一组相关的 <code>Provider</code> 进行打包。</p>
+<p>这样的好处是:</p>
 <ul>
 <li>结构依赖清晰，便于阅读。</li>
-<li>减少 <code>injector</code> 里的 <code>Build</code>。</li>
+<li>以组的形式，减少 <code>injector</code> 里的 <code>Build</code>。</li>
 </ul>
-<p>至于 <code>injector</code>，本质上就是按照依赖关系调用 <code>Provider</code> 的函数，然后最终生成我们想要的对象(服务)。
-比如上面的 <code>ContainerByWire()</code> 就是一个 <code>injector</code>。</p>
-<p>那么 <code>wire.go</code> 文件整体的思路就是，定义好 <code>injector</code>，然后实现所需的 <code>Provider</code>。</p>
+<p>至于 <code>injector</code>，本质上就是按照依赖关系调用 <code>Provider</code> 的函数，然后最终生成我们想要的对象(服务)。</p>
+<p>比如上面的 <code>ContainerByWire()</code> 就是一个 <code>injector</code>。</p>
+<p>那么 <code>wire.go</code> 文件整体的思路就是:定义好 <code>injector</code>，然后实现所需的 <code>Provider</code>。</p>
 <p>最后在当前 <code>wire.go</code> 文件夹下执行 <code>wire</code> 命令后，</p>
-<p>此时如果你的依赖项存在问题，那么就会报错提示，比如我现在隐藏上面的 <code>dao.NewOrderDao</code>,那么会出现
+<p>此时如果你的依赖项存在问题，那么就会报错提示。比如我现在隐藏上面的 <code>dao.NewOrderDao</code>,那么会出现
 <img src="https://image.syst.top/image/dig-to-wire/4.png" alt="image"></p>
-<p>如果依赖项不存在问题，最终会生成一个 <code>wire_gen.go</code> 文件。</p>
+<p>如果依赖不存在问题，最终会生成一个 <code>wire_gen.go</code> 文件。</p>
 <div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="c1">// Code generated by Wire. DO NOT EDIT.
 </span><span class="c1"></span>
 <span class="c1">//go:generate go run github.com/google/wire/cmd/wire
@@ -342,8 +317,8 @@ package main import ( &#34;fmt&#34; &#34;github.com/gin-gonic/gin&#34; &#34;gith
 	<span class="nx">e</span><span class="p">.</span><span class="nf">GET</span><span class="p">(</span><span class="s">&#34;/v2/user/orders&#34;</span><span class="p">,</span> <span class="nx">handler</span><span class="p">.</span><span class="nx">GetUserOrderList</span><span class="p">)</span>
 	<span class="k">return</span> <span class="kc">nil</span>
 <span class="p">}</span>
-</code></pre></div><p>一切正常。
-当然 <code>wire</code> 有一个点需要注意，在 <code>wire.go</code> 文件中开头几行:</p>
+</code></pre></div><p>一切正常。</p>
+<p>当然 <code>wire</code> 有一个点需要注意，在 <code>wire.go</code> 文件中开头几行:</p>
 <div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="c1">//+build wireinject
 </span><span class="c1"></span>
 <span class="kn">package</span> <span class="nx">wire</span>
@@ -352,13 +327,22 @@ package main import ( &#34;fmt&#34; &#34;github.com/gin-gonic/gin&#34; &#34;gith
 <p>还有很多高级的操作可以自行了解。</p>
 <h3 id="总结">总结<a href="#总结" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h3>
 <p>以上大体介绍了 go 中 <code>dig</code> 和 <code>wire</code> 两个 <code>DI</code> 工具。其中 <code>dig</code> 是通过运行时反射实现的依赖注入。
-而 <code>wire</code> 根据自定义的代码，通过命令，生成相应的依赖注入代码，在编译期完成依赖注入，不需要反射机制。
-带来的好处是：</p>
+而 <code>wire</code> 是根据自定义的代码，通过命令，生成相应的依赖注入代码，在编译期就完成依赖注入，无需反射机制。
+这样的好处是：</p>
 <ul>
-<li>方便排查，如果存在依赖错误编译时就报错。而 <code>dig</code> 只能在运行时才能发现依赖错误。</li>
+<li>方便排查，如果存在依赖错误，编译时就能发现。而 <code>dig</code> 只能在运行时才能发现依赖错误。</li>
 <li>避免依赖膨胀，<code>wire</code> 生成的代码只包含被依赖的，而 <code>dig</code> 可能会存在好多无用依赖。</li>
 <li>依赖关系静态存在源码，便于工具分析。</li>
 </ul>
+<h3 id="reference">Reference<a href="#reference" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h3>
+<p>[1]
+<a href="https://github.com/google/wire">https://github.com/google/wire</a></p>
+<p>[2]
+<a href="https://github.com/uber-go/dig">https://github.com/uber-go/dig</a></p>
+<p>[3]
+<a href="https://medium.com/@dche423/master-wire-cn-d57de86caa1b">https://medium.com/@dche423/master-wire-cn-d57de86caa1b</a></p>
+<p>[4]
+<a href="https://www.cnblogs.com/li-peng/p/14708132.html">https://www.cnblogs.com/li-peng/p/14708132.html</a></p>
 
 			</div>
 			<div class="content"><br><img src="https://image.syst.top/image/wechat-qr.png"></div>
@@ -367,7 +351,7 @@ package main import ( &#34;fmt&#34; &#34;github.com/gin-gonic/gin&#34; &#34;gith
 				<p>
 					<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-tag meta-icon"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"></path><line x1="7" y1="7" x2="7" y2="7"></line></svg><span class="tag"><a href="https://www.syst.top/tags/go">go</a></span><span class="tag"><a href="https://www.syst.top/tags/mistake">mistake</a></span>
 				</p>
-				<p><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-file-text"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>641 Words</p>
+				<p><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-file-text"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>604 Words</p>
 				<p><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-calendar"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>2021-04-21 23:54 &#43;0800</p>
 			</footer>
 		</article>
@@ -378,9 +362,11 @@ package main import ( &#34;fmt&#34; &#34;github.com/gin-gonic/gin&#34; &#34;gith
     <li>
       <ul>
         <li><a href="#开篇">开篇</a></li>
+        <li><a href="#场景">场景</a></li>
         <li><a href="#dig">dig</a></li>
         <li><a href="#wire">wire</a></li>
         <li><a href="#总结">总结</a></li>
+        <li><a href="#reference">Reference</a></li>
       </ul>
     </li>
   </ul>
