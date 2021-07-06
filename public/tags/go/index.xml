@@ -118,6 +118,21 @@ func NewUnboundedChan(initCapacity int) UnboundedChan { return NewUnboundedChanS
     </item>
     
     <item>
+      <title>为什么把 dig 迁移到 wire</title>
+      <link>https://www.syst.top/posts/go/why-dig-to-wire/</link>
+      <pubDate>Wed, 21 Apr 2021 23:54:52 +0800</pubDate>
+      
+      <guid>https://www.syst.top/posts/go/why-dig-to-wire/</guid>
+      <description>开篇 dig 和 wire 都是Go 中的依赖注入框架，那么，本质上功能相似的框架，为什么我们要从 dig 切换成 wire？
+关于这两个 Di 框架的使用姿势，网上有大量的文章，可以自行参考，本文也不是教你如何使用的。
+假设现在的项目分层是:router-&amp;gt;controller-&amp;gt;service-&amp;gt;dao。
+那么我们的项目分层就是这样的。
+然后我们来写一个订单接口的服务。
+首页看 main.go 文件。
+package main import ( &amp;#34;fmt&amp;#34; &amp;#34;github.com/gin-gonic/gin&amp;#34; &amp;#34;github.com/wuqinqiang/digvswire/dig&amp;#34; &amp;#34;github.com/wuqinqiang/digvswire/router&amp;#34; ) func main() { serverStart() } func serverStart() { defer func() { if err := recover(); err != nil { fmt.Printf(&amp;#34;init app err:%v\n&amp;#34;, err) } }() e := gin.Default() d := dig.ContainerByDig() err := router.RegisterRouter(e, d) if err != nil { fmt.Printf(&amp;#34;register router err:%v&amp;#34;, err) } _ = e.</description>
+    </item>
+    
+    <item>
       <title>在Go中你犯过的错</title>
       <link>https://www.syst.top/posts/go/mistake/</link>
       <pubDate>Wed, 21 Apr 2021 23:54:52 +0800</pubDate>
@@ -147,17 +162,6 @@ time=max(s1,s2,s3.....,sn) 当然开始堆业务的时候可以先串行化，�
 当然这一切的前提是，做老板不懂技术，做技术”懂”你。
 言归正传,如果修改成并发调用，你可能会这么写，
 package main import ( &amp;#34;fmt&amp;#34; &amp;#34;sync&amp;#34; &amp;#34;time&amp;#34; ) func main() { var wg sync.WaitGroup wg.Add(2) var userInfo *User var productList []Product go func() { defer wg.Done() userInfo, _ = getUser() }() go func() { defer wg.Done() productList, _ = getProductList() }() wg.Wait() fmt.Printf(&amp;#34;用户信息:%+v\n&amp;#34;, userInfo) fmt.Printf(&amp;#34;商品信息:%+v\n&amp;#34;, productList) } /********用户服务**********/ type User struct { Name string Age uint8 } func getUser() (*User, error) { time.</description>
-    </item>
-    
-    <item>
-      <title>使用 Go 每分钟处理百万请求 </title>
-      <link>https://www.syst.top/posts/go/handle-million-requests/</link>
-      <pubDate>Mon, 05 Apr 2021 22:25:52 +0800</pubDate>
-      
-      <guid>https://www.syst.top/posts/go/handle-million-requests/</guid>
-      <description>介绍 偶然间看到一篇写于15年的文章，说实话，标题确实吸引了我，不过看了几遍之后，确实精彩。 关于这篇文章，我就不直接翻译了。 项目的需求就是 客户端发送请求，服务端接收请求处理数据(原文是把资源上传至 Amazon S3 资源中)。本质上就是这样, 我稍微改动了原文的业务代码，但是并不影响核心模块。在第一版中，每收到一个 Request,开启一个 G 进行处理，快速响应，很常规的操作。
-代码如下
-初版 package main import ( &amp;#34;fmt&amp;#34; &amp;#34;log&amp;#34; &amp;#34;net/http&amp;#34; &amp;#34;time&amp;#34; ) type Payload struct { // 传啥不重要 } func (p *Payload) UpdateToS3() error { //存储逻辑,模拟操作耗时 	time.Sleep(500 * time.Millisecond) fmt.Println(&amp;#34;上传成功&amp;#34;) return nil } func payloadHandler(w http.ResponseWriter, r *http.Request) { // 业务过滤 	// 请求body解析...... 	var p Payload go p.UpdateToS3() w.Write([]byte(&amp;#34;操作成功&amp;#34;)) } func main() { http.HandleFunc(&amp;#34;/payload&amp;#34;, payloadHandler) log.Fatal(http.ListenAndServe(&amp;#34;:8099&amp;#34;, nil)) } 这样操作存在什么问题呢？一般情况下，没什么问题。但是如果是高并发的场景下，不对G数进行控制，你的 CPU 使用率暴涨，内存占用暴涨，直至程序奔溃。</description>
     </item>
     
   </channel>
