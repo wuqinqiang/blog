@@ -6,8 +6,65 @@
 		<generator>Hugo -- gohugo.io</generator>
 		<language>zh-hans</language>
 		<copyright>This work is licensed under a Creative Commons Attribution-NonCommercial 4.0 International License.</copyright>
-		<lastBuildDate>Thu, 01 Jul 2021 23:37:45 +0800</lastBuildDate>
+		<lastBuildDate>Tue, 27 Jul 2021 10:01:52 +0800</lastBuildDate>
 		<atom:link href="https://www.syst.top/posts/index.xml" rel="self" type="application/rss+xml" />
+		
+		<item>
+			<title>超实用的 gRPC 客户端调试工具</title>
+			<link>https://www.syst.top/posts/go/grpc/</link>
+			<pubDate>Tue, 27 Jul 2021 10:01:52 +0800</pubDate>
+			
+			<guid>https://www.syst.top/posts/go/grpc/</guid>
+			<description>介绍 正好看到董泽润老哥写了一篇关于使用 WireShark 分析 gRPC 流量的文章，学到了。
+那我就介绍两个日常开发使用过的两款 gRPC 客户端调试工具吧。
+Evans Evans 有两种模式：REPL 和 CLI。比起其他 gRPC 客户端,更具有表现力。并且它还支持自动补全功能。
+它的安装非常方便，在 Mac 上我们只需要执行以下两行命令即可。
+$ brew tap ktr0731/evans $ brew install evans 我们来操作一下 REPL 模式。
+首先我们需要有一个 pb 文件，假设你的文件在 api/api.proto，我们只需要这样： 默认地址为 127.0.0.1:50051，当然你可以通过 --host 和 --port 来指定服务器。 上图的命令:
+ show package 读取 pb 包名， show service 显示对应服务列表。 call xxx 调用 grpc 服务&amp;hellip;&amp;hellip; &amp;hellip;..  更多命令可自行查阅官网。
+除了上述这种直接引入 pb 文件外，我们还可以通过 gRPC 反射包(reflection)， 将 grpc.Server 注册到反射服务中, 这样的话，就可以通过 reflection 提供的反射服务查询到对应的 gRPC 服务或者调用 gRPC 服务。</description>
+			<content type="html"><![CDATA[<h3 id="介绍">介绍</h3>
+<p>正好看到董泽润老哥写了一篇关于使用 <code>WireShark</code> 分析 <code>gRPC</code> 流量的文章，学到了。</p>
+<p>那我就介绍两个日常开发使用过的两款 <code>gRPC</code> 客户端调试工具吧。</p>
+<h2 id="evans">Evans</h2>
+<p><code>Evans</code> 有两种模式：<code>REPL</code> 和 <code>CLI</code>。比起其他 <code>gRPC</code> 客户端,更具有表现力。并且它还支持自动补全功能。</p>
+<p>它的安装非常方便，在 <code>Mac</code> 上我们只需要执行以下两行命令即可。</p>
+<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="err">$</span> <span class="nx">brew</span> <span class="nx">tap</span> <span class="nx">ktr0731</span><span class="o">/</span><span class="nx">evans</span>
+<span class="err">$</span> <span class="nx">brew</span> <span class="nx">install</span> <span class="nx">evans</span>
+</code></pre></div><p>我们来操作一下 <code>REPL</code> 模式。</p>
+<p>首先我们需要有一个 <code>pb</code> 文件，假设你的文件在 <code>api/api.proto</code>，我们只需要这样：
+<img src="https://image.syst.top/image/grpc/1.gif" alt="image"></p>
+<p>默认地址为 <code>127.0.0.1:50051</code>，当然你可以通过 <code>--host</code> 和 <code>--port</code> 来指定服务器。
+<img src="https://image.syst.top/image/grpc/2.png" alt="image"></p>
+<p>上图的命令:</p>
+<ul>
+<li><code>show package</code> 读取 <code>pb</code> 包名，</li>
+<li><code>show service</code> 显示对应服务列表。</li>
+<li><code>call xxx</code> 调用 <code>grpc</code> 服务&hellip;&hellip;</li>
+<li>&hellip;..</li>
+</ul>
+<p>更多命令可自行查阅官网。</p>
+<p>除了上述这种直接引入 <code>pb</code> 文件外，我们还可以通过 <code>gRPC</code> 反射包(<code>reflection</code>)， 将 <code>grpc.Server</code> 注册到反射服务中,
+这样的话，就可以通过 <code>reflection</code> 提供的反射服务查询到对应的 <code>gRPC</code> 服务或者调用 <code>gRPC</code> 服务。</p>
+<p>操作起来很简单，</p>
+<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kn">import</span> <span class="p">(</span>
+<span class="s">&#34;google.golang.org/grpc&#34;</span>
+<span class="s">&#34;google.golang.org/grpc/reflection&#34;</span>
+<span class="p">)</span>
+	<span class="nx">grpcServer</span> <span class="o">:=</span> <span class="nx">grpc</span><span class="p">.</span><span class="nf">NewServer</span><span class="p">()</span>
+	<span class="nx">reflection</span><span class="p">.</span><span class="nf">Register</span><span class="p">(</span><span class="nx">grpcServer</span><span class="p">)</span>
+</code></pre></div><p>回到 <code>Evans</code> 工具， 如果一个 <code>gRPC</code> 服务启动了反射，我们就可以使用 <code>-r (--reflection)</code> 选项来启动 <code>Evans</code>。</p>
+<p>比如像下面这样：
+<img src="https://image.syst.top/image/grpc/3.gif" alt="image"></p>
+<h3 id="bloomrpc">BloomRPC</h3>
+<p><code>BloomRPC</code> 是一个简单的<code>GUI</code> 客户端工具，使用这个那就更简单了。</p>
+<p>只需要导入 <code>pb</code> 文件，然后点两下即可。
+<img src="https://image.syst.top/image/grpc/4.gif" alt="image"></p>
+<p>当然有个不好点在于，每次修改了 <code>pb</code>，都不得不重新导入。</p>
+<h3 id="总结">总结</h3>
+<p>以上介绍了两款 <code>gRPC</code> 客户端工具。不知道你们平常都使用 <code>gRPC</code> 哪些周边工具，欢迎一起讨论。当然调试工具再好，改写的 <code>test</code> 还是逃不了。</p>
+]]></content>
+		</item>
 		
 		<item>
 			<title>go并发-工作池模式</title>
