@@ -18,7 +18,7 @@ tags:
 
 为什么推荐工具？是为了让评论区的大佬介绍其他更好用的工具，解放我的双手。
 
-顺便问问，有没有关说话就能自动打完代码的工具？
+顺便问问，有没有只说话就能自动打完代码的工具？
 
 
 
@@ -26,13 +26,13 @@ tags:
 
 
 
-这个工具可以把 `json` 格式的数据转换成 `go` 的 `struct`。这样的话比如你在对接第三方的时候，就不需要根据对方的接口一个个定义 `struct` 字段，就像下面示例一样,直接复制微信小商店订单 `json` 数据到网站的左框即可,当然自己还是需要做一些局部的调整。
+这个工具可以把 `json` 格式的数据转换成 `go` 的 `struct`。比如你在对接第三方的时候，就不需要根据对方的接口一个个定义 `struct` 字段。下面示例复制的微信小商店商品 `json` 数据到网站的左框即可，当然自己还是需要做一些局部的调整。
 
 ![image](https://image.syst.top/image/go-tool/1.png)
 
 
 
-其实这个功能21年新版的 `goland` 也支持了。在 `goland` 中你只需要这样,
+其实这个功能 21 版的 `goland` 也支持了。在 `goland` 中你只需要这样,
 
 ![image](https://image.syst.top/image/go-tool/2.gif)
 
@@ -40,9 +40,9 @@ tags:
 
 ### Table-To-Stuct
 
-被业务缠身的同学每天免不了 `CURD`。`CURD` 之前总得建表吧。建表之后总得在代码中定义模型吧。总不能又一个个字段定义过去吧，那么下面这个工具可能管用。
+被业务缠身的同学每天免不了 `CURD`。`CURD` 之前总得建表吧。建表之后总得在代码中定义模型吧。总不能又一个个字段定义，那么下面这个工具可能管用。
 
-假设你有一个库 `dream`，有一个表 `category`，结构如下，
+假设你有一个库 `dream`，库里有一个表 `category`，结构如下，
 
 ```sql
 CREATE TABLE `category` (
@@ -55,8 +55,6 @@ CREATE TABLE `category` (
   UNIQUE KEY `name` (`name`)
 ) ENGINE=InnoDB AUTO_INCREMENT=23 DEFAULT CHARSET=utf8mb4;
 ```
-
-
 
 你只需引入包 `github.com/gohouse/converter` ,然后写这样的代码，就可以实现 `table-to-go` 功能。
 
@@ -133,7 +131,7 @@ func (*Category) TableName() string {
 
 
 
-今天主要分享的是 `json-to-stuct`、`table-to-stuct` 这两款日常可能会用上的工具。
+今天主要分享的是 `json-to-stuct`、`table-to-stuct` 这两款日常会用上的工具。
 
 好了，现在开始你们给我介绍趁手的工具了。
 
