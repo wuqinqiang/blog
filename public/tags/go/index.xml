@@ -103,6 +103,20 @@ You should always use enums when a variable (especially a method parameter) can 
     </item>
     
     <item>
+      <title>推荐两款go开发中提高效率工具</title>
+      <link>https://www.syst.top/posts/go/go-tool/</link>
+      <pubDate>Sun, 25 Apr 2021 22:25:52 +0800</pubDate>
+      
+      <guid>https://www.syst.top/posts/go/go-tool/</guid>
+      <description>介绍 再推荐两款使用go开发中用的还行的工具。为什么推荐工具？是为了让评论区的大佬引出更好的工具，让我见见世面。
+JSON-To-Stuct 这个工具可以把 json 格式的数据转换成 go 的 struct。这样的话比如你在对接第三方的时候，就不需要根据对方的接口一个个定义 struct 字段，就像下面示例一样,直接复制微信小商店订单 json 数据到网站的左框即可,当然自己还是需要做一些局部的调整。
+其实这个功能今天新版的 goland 也支持了。在 goland 中你只需要这样,
+Table-To-Stuct 被业务缠身的同学每天免不了 CURD。CURD 之前总得建表吧。建表之后总得在代码中定义模型吧。总不能又一个个字段定义过去吧，那么下面这个工具可能管用。
+假设你有一个库 dream，有一个表 category，结构如下，
+CREATE TABLE `category` ( `id` int(11) unsigned NOT NULL AUTO_INCREMENT, `name` varchar(20) NOT NULL DEFAULT &amp;#39;&amp;#39;, `parent_id` int(11) unsigned NOT NULL DEFAULT &amp;#39;0&amp;#39;, `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP, `updated_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP, PRIMARY KEY (`id`), UNIQUE KEY `name` (`name`) ) ENGINE=InnoDB AUTO_INCREMENT=23 DEFAULT CHARSET=utf8mb4; 你只需引入包 github.</description>
+    </item>
+    
+    <item>
       <title>无限缓冲的channel(1)</title>
       <link>https://www.syst.top/posts/go/unlimited/</link>
       <pubDate>Sun, 25 Apr 2021 22:25:52 +0800</pubDate>
@@ -146,20 +160,6 @@ func NewUnboundedChan(initCapacity int) UnboundedChan { return NewUnboundedChanS
 现在我们需要对外暴露一个订单服务的接口。
 首页看 main.go 文件。
 package main import ( &amp;#34;fmt&amp;#34; &amp;#34;github.com/gin-gonic/gin&amp;#34; &amp;#34;github.com/wuqinqiang/digvswire/dig&amp;#34; &amp;#34;github.com/wuqinqiang/digvswire/router&amp;#34; ) func main() { serverStart() } func serverStart() { defer func() { if err := recover(); err != nil { fmt.Printf(&amp;#34;init app err:%v\n&amp;#34;, err) } }() e := gin.Default() di := dig.ContainerByDig() err := router.RegisterRouter(e, di) if err != nil { fmt.Printf(&amp;#34;register router err:%v&amp;#34;, err) } _ = e.</description>
-    </item>
-    
-    <item>
-      <title>在Go中你犯过的错</title>
-      <link>https://www.syst.top/posts/go/mistake/</link>
-      <pubDate>Wed, 21 Apr 2021 23:54:52 +0800</pubDate>
-      
-      <guid>https://www.syst.top/posts/go/mistake/</guid>
-      <description>在迭代器变量上使用 goroutine 这算高频吧。
-package main import ( &amp;#34;fmt&amp;#34; &amp;#34;sync&amp;#34; ) func main() { var wg sync.WaitGroup items := []int{1, 2, 3, 4, 5} for index, _ := range items { wg.Add(1) go func() { defer wg.Done() fmt.Printf(&amp;#34;item:%v\n&amp;#34;, items[index]) }() } wg.Wait() } 一个很简单的利用 sync.waitGroup 做任务编排的场景，看一下好像没啥问题，运行看看结果。
-为啥不是1-5(当然不是顺序的)。
-原因很简单，循环器中的 i 实际上是一个单变量，go func 里的闭包只绑定在一个变量上， 每个 goroutine 可能要等到循环结束才真正的运行，这时候运行的 i 值大概率就是5了, 没人能保证这个过程，有的只是手段。
-正确的做法
-func main() { var wg sync.WaitGroup items := []int{1, 2, 3, 4, 5} for index, _ := range items { wg.</description>
     </item>
     
   </channel>

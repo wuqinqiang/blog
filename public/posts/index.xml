@@ -908,6 +908,102 @@ BTW, overuse of enums might mean that your methods do too much (it's often bette
 		</item>
 		
 		<item>
+			<title>推荐两款go开发中提高效率工具</title>
+			<link>https://www.syst.top/posts/go/go-tool/</link>
+			<pubDate>Sun, 25 Apr 2021 22:25:52 +0800</pubDate>
+			
+			<guid>https://www.syst.top/posts/go/go-tool/</guid>
+			<description>介绍 再推荐两款使用go开发中用的还行的工具。为什么推荐工具？是为了让评论区的大佬引出更好的工具，让我见见世面。
+JSON-To-Stuct 这个工具可以把 json 格式的数据转换成 go 的 struct。这样的话比如你在对接第三方的时候，就不需要根据对方的接口一个个定义 struct 字段，就像下面示例一样,直接复制微信小商店订单 json 数据到网站的左框即可,当然自己还是需要做一些局部的调整。
+其实这个功能今天新版的 goland 也支持了。在 goland 中你只需要这样,
+Table-To-Stuct 被业务缠身的同学每天免不了 CURD。CURD 之前总得建表吧。建表之后总得在代码中定义模型吧。总不能又一个个字段定义过去吧，那么下面这个工具可能管用。
+假设你有一个库 dream，有一个表 category，结构如下，
+CREATE TABLE `category` ( `id` int(11) unsigned NOT NULL AUTO_INCREMENT, `name` varchar(20) NOT NULL DEFAULT &amp;#39;&amp;#39;, `parent_id` int(11) unsigned NOT NULL DEFAULT &amp;#39;0&amp;#39;, `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP, `updated_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP, PRIMARY KEY (`id`), UNIQUE KEY `name` (`name`) ) ENGINE=InnoDB AUTO_INCREMENT=23 DEFAULT CHARSET=utf8mb4; 你只需引入包 github.</description>
+			<content type="html"><![CDATA[<h3 id="介绍">介绍</h3>
+<p>再推荐两款使用go开发中用的还行的工具。为什么推荐工具？是为了让评论区的大佬引出更好的工具，让我见见世面。</p>
+<h3 id="json-to-stuct">JSON-To-Stuct</h3>
+<p>这个工具可以把 <code>json</code> 格式的数据转换成 <code>go</code> 的 <code>struct</code>。这样的话比如你在对接第三方的时候，就不需要根据对方的接口一个个定义 <code>struct</code> 字段，就像下面示例一样,直接复制微信小商店订单 <code>json</code> 数据到网站的左框即可,当然自己还是需要做一些局部的调整。</p>
+<p><img src="https://image.syst.top/image/go-tool/1.png" alt="image"></p>
+<p>其实这个功能今天新版的 <code>goland</code> 也支持了。在 <code>goland</code> 中你只需要这样,</p>
+<p><img src="https://image.syst.top/image/go-tool/2.gif" alt="image"></p>
+<h3 id="table-to-stuct">Table-To-Stuct</h3>
+<p>被业务缠身的同学每天免不了 <code>CURD</code>。<code>CURD</code> 之前总得建表吧。建表之后总得在代码中定义模型吧。总不能又一个个字段定义过去吧，那么下面这个工具可能管用。</p>
+<p>假设你有一个库 <code>dream</code>，有一个表 <code>category</code>，结构如下，</p>
+<div class="highlight"><pre class="chroma"><code class="language-sql" data-lang="sql"><span class="k">CREATE</span> <span class="k">TABLE</span> <span class="o">`</span><span class="n">category</span><span class="o">`</span> <span class="p">(</span>
+  <span class="o">`</span><span class="n">id</span><span class="o">`</span> <span class="nb">int</span><span class="p">(</span><span class="mi">11</span><span class="p">)</span> <span class="n">unsigned</span> <span class="k">NOT</span> <span class="k">NULL</span> <span class="n">AUTO_INCREMENT</span><span class="p">,</span>
+  <span class="o">`</span><span class="n">name</span><span class="o">`</span> <span class="nb">varchar</span><span class="p">(</span><span class="mi">20</span><span class="p">)</span> <span class="k">NOT</span> <span class="k">NULL</span> <span class="k">DEFAULT</span> <span class="s1">&#39;&#39;</span><span class="p">,</span>
+  <span class="o">`</span><span class="n">parent_id</span><span class="o">`</span> <span class="nb">int</span><span class="p">(</span><span class="mi">11</span><span class="p">)</span> <span class="n">unsigned</span> <span class="k">NOT</span> <span class="k">NULL</span> <span class="k">DEFAULT</span> <span class="s1">&#39;0&#39;</span><span class="p">,</span>
+  <span class="o">`</span><span class="n">created_at</span><span class="o">`</span> <span class="k">timestamp</span> <span class="k">NOT</span> <span class="k">NULL</span> <span class="k">DEFAULT</span> <span class="k">CURRENT_TIMESTAMP</span><span class="p">,</span>
+  <span class="o">`</span><span class="n">updated_at</span><span class="o">`</span> <span class="k">timestamp</span> <span class="k">NOT</span> <span class="k">NULL</span> <span class="k">DEFAULT</span> <span class="k">CURRENT_TIMESTAMP</span><span class="p">,</span>
+  <span class="k">PRIMARY</span> <span class="k">KEY</span> <span class="p">(</span><span class="o">`</span><span class="n">id</span><span class="o">`</span><span class="p">),</span>
+  <span class="k">UNIQUE</span> <span class="k">KEY</span> <span class="o">`</span><span class="n">name</span><span class="o">`</span> <span class="p">(</span><span class="o">`</span><span class="n">name</span><span class="o">`</span><span class="p">)</span>
+<span class="p">)</span> <span class="n">ENGINE</span><span class="o">=</span><span class="n">InnoDB</span> <span class="n">AUTO_INCREMENT</span><span class="o">=</span><span class="mi">23</span> <span class="k">DEFAULT</span> <span class="n">CHARSET</span><span class="o">=</span><span class="n">utf8mb4</span><span class="p">;</span>
+</code></pre></div><p>你只需引入包 <code>github.com/gohouse/converter</code> ,然后写这样的代码，就可以实现 <code>table-to-go</code> 功能。</p>
+<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kn">package</span> <span class="nx">main</span>
+
+<span class="kn">import</span> <span class="p">(</span>
+	<span class="s">&#34;fmt&#34;</span>
+	<span class="s">&#34;github.com/gohouse/converter&#34;</span>
+<span class="p">)</span>
+
+<span class="kd">func</span> <span class="nf">main</span><span class="p">()</span> <span class="p">{</span>
+	<span class="c1">// 初始化
+</span><span class="c1"></span>	<span class="nx">t2t</span> <span class="o">:=</span> <span class="nx">converter</span><span class="p">.</span><span class="nf">NewTable2Struct</span><span class="p">()</span>
+	<span class="c1">// 个性化配置
+</span><span class="c1"></span>	<span class="nx">t2t</span><span class="p">.</span><span class="nf">Config</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">converter</span><span class="p">.</span><span class="nx">T2tConfig</span><span class="p">{</span>
+		<span class="c1">// 如果字段首字母本来就是大写, 就不添加tag, 默认false添加, true不添加
+</span><span class="c1"></span>		<span class="nx">RmTagIfUcFirsted</span><span class="p">:</span> <span class="kc">false</span><span class="p">,</span>
+		<span class="c1">// tag的字段名字是否转换为小写, 如果本身有大写字母的话, 默认false不转
+</span><span class="c1"></span>		<span class="nx">TagToLower</span><span class="p">:</span> <span class="kc">false</span><span class="p">,</span>
+		<span class="c1">// 字段首字母大写的同时, 是否要把其他字母转换为小写,默认false不转换
+</span><span class="c1"></span>		<span class="nx">UcFirstOnly</span><span class="p">:</span> <span class="kc">false</span><span class="p">,</span>
+		<span class="c1">//// 每个struct放入单独的文件,默认false,放入同一个文件(暂未提供)
+</span><span class="c1"></span>		<span class="c1">//SeperatFile: false,
+</span><span class="c1"></span>	<span class="p">})</span>
+	<span class="c1">// 开始迁移转换
+</span><span class="c1"></span>	<span class="nx">err</span> <span class="o">:=</span> <span class="nx">t2t</span><span class="p">.</span>
+		<span class="c1">// 指定某个表,如果不指定,则默认全部表都迁移
+</span><span class="c1"></span>		<span class="nf">Table</span><span class="p">(</span><span class="s">&#34;category&#34;</span><span class="p">).</span>
+		<span class="c1">//// 表前缀
+</span><span class="c1"></span>		<span class="c1">//Prefix(&#34;prefix_&#34;).
+</span><span class="c1"></span>		<span class="c1">// 是否添加json tag
+</span><span class="c1"></span>		<span class="nf">EnableJsonTag</span><span class="p">(</span><span class="kc">true</span><span class="p">).</span>
+		<span class="c1">// 生成struct的包名(默认为空的话, 则取名为: package model)
+</span><span class="c1"></span>		<span class="nf">PackageName</span><span class="p">(</span><span class="s">&#34;model&#34;</span><span class="p">).</span>
+		<span class="c1">// tag字段的key值,默认是orm
+</span><span class="c1"></span>		<span class="nf">TagKey</span><span class="p">(</span><span class="s">&#34;orm&#34;</span><span class="p">).</span>
+		<span class="c1">// 是否添加结构体方法获取表名
+</span><span class="c1"></span>		<span class="nf">RealNameMethod</span><span class="p">(</span><span class="s">&#34;TableName&#34;</span><span class="p">).</span>
+		<span class="c1">// 生成的结构体保存路径
+</span><span class="c1"></span>		<span class="nf">SavePath</span><span class="p">(</span><span class="s">&#34;model/category.go&#34;</span><span class="p">).</span>
+		<span class="c1">// 数据库dsn,这里可以使用 t2t.DB() 代替,参数为 *sql.DB 对象
+</span><span class="c1"></span>		<span class="nf">Dsn</span><span class="p">(</span><span class="s">&#34;root:Passw0rd@tcp(localhost:3306)/dream?charset=utf8&#34;</span><span class="p">).</span>
+		<span class="c1">// 执行
+</span><span class="c1"></span>		<span class="nf">Run</span><span class="p">()</span>
+
+	<span class="nx">fmt</span><span class="p">.</span><span class="nf">Println</span><span class="p">(</span><span class="nx">err</span><span class="p">)</span>
+<span class="p">}</span>
+</code></pre></div><p>运行这段代码，最后会根据设置的 <code>SavePath</code> 里的地址(尚未存在的目录需要先自行创建)，生成 <code>category.go</code> 文件，内容如下，</p>
+<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kn">package</span> <span class="nx">model</span>
+
+<span class="kd">type</span> <span class="nx">Category</span> <span class="kd">struct</span> <span class="p">{</span>
+	<span class="nx">Id</span>        <span class="kt">int</span>    <span class="s">`orm:&#34;id&#34; json:&#34;id&#34;`</span>
+	<span class="nx">Name</span>      <span class="kt">string</span> <span class="s">`orm:&#34;name&#34; json:&#34;name&#34;`</span>
+	<span class="nx">ParentId</span>  <span class="kt">int</span>    <span class="s">`orm:&#34;parent_id&#34; json:&#34;parent_id&#34;`</span>
+	<span class="nx">CreatedAt</span> <span class="kt">string</span> <span class="s">`orm:&#34;created_at&#34; json:&#34;created_at&#34;`</span>
+	<span class="nx">UpdatedAt</span> <span class="kt">string</span> <span class="s">`orm:&#34;updated_at&#34; json:&#34;updated_at&#34;`</span>
+<span class="p">}</span>
+
+<span class="kd">func</span> <span class="p">(</span><span class="o">*</span><span class="nx">Category</span><span class="p">)</span> <span class="nf">TableName</span><span class="p">()</span> <span class="kt">string</span> <span class="p">{</span>
+	<span class="k">return</span> <span class="s">&#34;category&#34;</span>
+<span class="p">}</span>
+</code></pre></div><p>相应的再进行调整即可。</p>
+<h3 id="总结">总结</h3>
+<p>今天主要分享的是 <code>json-to-stuct</code>、<code>table-to-stuct</code> 这两款日常可能会用上的工具。好了，现在开始你们给我介绍趁手的工具了。</p>
+]]></content>
+		</item>
+		
+		<item>
 			<title>无限缓冲的channel(1)</title>
 			<link>https://www.syst.top/posts/go/unlimited/</link>
 			<pubDate>Sun, 25 Apr 2021 22:25:52 +0800</pubDate>

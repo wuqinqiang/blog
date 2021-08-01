@@ -193,20 +193,17 @@ You should always use enums when a variable (especially a method parameter) can 
     </item>
     
     <item>
-      <title>无限缓冲的channel(1)</title>
-      <link>https://www.syst.top/posts/go/unlimited/</link>
+      <title>推荐两款go开发中提高效率工具</title>
+      <link>https://www.syst.top/posts/go/go-tool/</link>
       <pubDate>Sun, 25 Apr 2021 22:25:52 +0800</pubDate>
       
-      <guid>https://www.syst.top/posts/go/unlimited/</guid>
-      <description>介绍 事情的起因是前几周看到鸟窝写了一篇关于实现无限缓冲 channel 的文章，当时忙着和小姐姐聊天没看，今天想起来了。
-不过这篇文章不会涉及到鸟窝自己实现的 chanx，我们会在下一篇提到。
-我们都知道，channel 有两种类型:无缓冲和有缓冲的。
-当我们创建一个有缓冲的通道并指定了容量，那么在这个通道的生命周期内，我们将再也无法改变它的容量。
-有时候，我们并不知道也无法预估写入通道的数量规模。如果此时通道的写入速度远远超过读取速度，那么必然会在某个时间点塞满通道，导致写入阻塞。 比如之前我翻译的一篇文章 使用 Go 每分钟处理百万请求 中，作者就出现处理速度太慢，导致通道塞满，其他请求被阻塞，响应时间慢慢增加。
-此时有人就会提到，能不能提供一个无限缓冲(Unbounded or Unlimited)的通道。
-这个问题早在 2017 年就有人提过 issues，最终 go 官方没有实现这个提案。
-不过，这个 issues 下面总共产生了 67 个 comments，评论很精彩。 比如有人提到:
-cznic:Unlimited capacity channels ask for a machine with unlimited memory. rsc:The limited capacity of channels is an important source of backpressure in a set of communicating goroutines. It is typically a mistake to use an unbounded channel, because you lose that backpressure.</description>
+      <guid>https://www.syst.top/posts/go/go-tool/</guid>
+      <description>介绍 再推荐两款使用go开发中用的还行的工具。为什么推荐工具？是为了让评论区的大佬引出更好的工具，让我见见世面。
+JSON-To-Stuct 这个工具可以把 json 格式的数据转换成 go 的 struct。这样的话比如你在对接第三方的时候，就不需要根据对方的接口一个个定义 struct 字段，就像下面示例一样,直接复制微信小商店订单 json 数据到网站的左框即可,当然自己还是需要做一些局部的调整。
+其实这个功能今天新版的 goland 也支持了。在 goland 中你只需要这样,
+Table-To-Stuct 被业务缠身的同学每天免不了 CURD。CURD 之前总得建表吧。建表之后总得在代码中定义模型吧。总不能又一个个字段定义过去吧，那么下面这个工具可能管用。
+假设你有一个库 dream，有一个表 category，结构如下，
+CREATE TABLE `category` ( `id` int(11) unsigned NOT NULL AUTO_INCREMENT, `name` varchar(20) NOT NULL DEFAULT &amp;#39;&amp;#39;, `parent_id` int(11) unsigned NOT NULL DEFAULT &amp;#39;0&amp;#39;, `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP, `updated_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP, PRIMARY KEY (`id`), UNIQUE KEY `name` (`name`) ) ENGINE=InnoDB AUTO_INCREMENT=23 DEFAULT CHARSET=utf8mb4; 你只需引入包 github.</description>
     </item>
     
   </channel>

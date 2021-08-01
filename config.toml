@@ -102,6 +102,11 @@ googleAnalytics = "UA-166045776-1"
     url = "lives/"
     weight = 10
 
+  [[menu.nav]]
+    name = "friends"
+    url = "friends/"
+    weight = 11
+
 
 #    [[menu.nav]]
 #     name = "Go面试题集锦"
