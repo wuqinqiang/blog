@@ -10,15 +10,15 @@
 <meta itemprop="name" content="推荐两款go开发中提高效率工具">
 <meta itemprop="description" content="介绍 推荐两款 go 开发中用的还行的工具。
 为什么推荐工具？是为了让评论区的大佬介绍其他更好用的工具，解放我的双手。
-顺便问问，有没有关说话就能自动打完代码的工具？
-JSON-To-Stuct 这个工具可以把 json 格式的数据转换成 go 的 struct。这样的话比如你在对接第三方的时候，就不需要根据对方的接口一个个定义 struct 字段，就像下面示例一样,直接复制微信小商店订单 json 数据到网站的左框即可,当然自己还是需要做一些局部的调整。
-其实这个功能21年新版的 goland 也支持了。在 goland 中你只需要这样,
-Table-To-Stuct 被业务缠身的同学每天免不了 CURD。CURD 之前总得建表吧。建表之后总得在代码中定义模型吧。总不能又一个个字段定义过去吧，那么下面这个工具可能管用。
-假设你有一个库 dream，有一个表 category，结构如下，
+顺便问问，有没有只说话就能自动打完代码的工具？
+JSON-To-Stuct 这个工具可以把 json 格式的数据转换成 go 的 struct。比如你在对接第三方的时候，就不需要根据对方的接口一个个定义 struct 字段。下面示例复制的微信小商店商品 json 数据到网站的左框即可，当然自己还是需要做一些局部的调整。
+其实这个功能 21 版的 goland 也支持了。在 goland 中你只需要这样,
+Table-To-Stuct 被业务缠身的同学每天免不了 CURD。CURD 之前总得建表吧。建表之后总得在代码中定义模型吧。总不能又一个个字段定义，那么下面这个工具可能管用。
+假设你有一个库 dream，库里有一个表 category，结构如下，
 CREATE TABLE `category` ( `id` int(11) unsigned NOT NULL AUTO_INCREMENT, `name` varchar(20) NOT NULL DEFAULT &#39;&#39;, `parent_id` int(11) unsigned NOT NULL DEFAULT &#39;0&#39;, `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP, `updated_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP, PRIMARY KEY (`id`), UNIQUE KEY `name` (`name`) ) ENGINE=InnoDB AUTO_INCREMENT=23 DEFAULT CHARSET=utf8mb4; 你只需引入包 github.">
 <meta itemprop="datePublished" content="2021-04-25T22:25:52+08:00" />
 <meta itemprop="dateModified" content="2021-04-25T22:25:52+08:00" />
-<meta itemprop="wordCount" content="210">
+<meta itemprop="wordCount" content="212">
 
 
 
@@ -26,11 +26,11 @@ CREATE TABLE `category` ( `id` int(11) unsigned NOT NULL AUTO_INCREMENT, `name` 
 <meta property="og:title" content="推荐两款go开发中提高效率工具" />
 <meta property="og:description" content="介绍 推荐两款 go 开发中用的还行的工具。
 为什么推荐工具？是为了让评论区的大佬介绍其他更好用的工具，解放我的双手。
-顺便问问，有没有关说话就能自动打完代码的工具？
-JSON-To-Stuct 这个工具可以把 json 格式的数据转换成 go 的 struct。这样的话比如你在对接第三方的时候，就不需要根据对方的接口一个个定义 struct 字段，就像下面示例一样,直接复制微信小商店订单 json 数据到网站的左框即可,当然自己还是需要做一些局部的调整。
-其实这个功能21年新版的 goland 也支持了。在 goland 中你只需要这样,
-Table-To-Stuct 被业务缠身的同学每天免不了 CURD。CURD 之前总得建表吧。建表之后总得在代码中定义模型吧。总不能又一个个字段定义过去吧，那么下面这个工具可能管用。
-假设你有一个库 dream，有一个表 category，结构如下，
+顺便问问，有没有只说话就能自动打完代码的工具？
+JSON-To-Stuct 这个工具可以把 json 格式的数据转换成 go 的 struct。比如你在对接第三方的时候，就不需要根据对方的接口一个个定义 struct 字段。下面示例复制的微信小商店商品 json 数据到网站的左框即可，当然自己还是需要做一些局部的调整。
+其实这个功能 21 版的 goland 也支持了。在 goland 中你只需要这样,
+Table-To-Stuct 被业务缠身的同学每天免不了 CURD。CURD 之前总得建表吧。建表之后总得在代码中定义模型吧。总不能又一个个字段定义，那么下面这个工具可能管用。
+假设你有一个库 dream，库里有一个表 category，结构如下，
 CREATE TABLE `category` ( `id` int(11) unsigned NOT NULL AUTO_INCREMENT, `name` varchar(20) NOT NULL DEFAULT &#39;&#39;, `parent_id` int(11) unsigned NOT NULL DEFAULT &#39;0&#39;, `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP, `updated_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP, PRIMARY KEY (`id`), UNIQUE KEY `name` (`name`) ) ENGINE=InnoDB AUTO_INCREMENT=23 DEFAULT CHARSET=utf8mb4; 你只需引入包 github." />
 <meta property="og:type" content="article" />
 <meta property="og:url" content="https://www.syst.top/posts/go/go-tool/" />
@@ -40,11 +40,11 @@ CREATE TABLE `category` ( `id` int(11) unsigned NOT NULL AUTO_INCREMENT, `name` 
 <meta name="twitter:title" content="推荐两款go开发中提高效率工具"/>
 <meta name="twitter:description" content="介绍 推荐两款 go 开发中用的还行的工具。
 为什么推荐工具？是为了让评论区的大佬介绍其他更好用的工具，解放我的双手。
-顺便问问，有没有关说话就能自动打完代码的工具？
-JSON-To-Stuct 这个工具可以把 json 格式的数据转换成 go 的 struct。这样的话比如你在对接第三方的时候，就不需要根据对方的接口一个个定义 struct 字段，就像下面示例一样,直接复制微信小商店订单 json 数据到网站的左框即可,当然自己还是需要做一些局部的调整。
-其实这个功能21年新版的 goland 也支持了。在 goland 中你只需要这样,
-Table-To-Stuct 被业务缠身的同学每天免不了 CURD。CURD 之前总得建表吧。建表之后总得在代码中定义模型吧。总不能又一个个字段定义过去吧，那么下面这个工具可能管用。
-假设你有一个库 dream，有一个表 category，结构如下，
+顺便问问，有没有只说话就能自动打完代码的工具？
+JSON-To-Stuct 这个工具可以把 json 格式的数据转换成 go 的 struct。比如你在对接第三方的时候，就不需要根据对方的接口一个个定义 struct 字段。下面示例复制的微信小商店商品 json 数据到网站的左框即可，当然自己还是需要做一些局部的调整。
+其实这个功能 21 版的 goland 也支持了。在 goland 中你只需要这样,
+Table-To-Stuct 被业务缠身的同学每天免不了 CURD。CURD 之前总得建表吧。建表之后总得在代码中定义模型吧。总不能又一个个字段定义，那么下面这个工具可能管用。
+假设你有一个库 dream，库里有一个表 category，结构如下，
 CREATE TABLE `category` ( `id` int(11) unsigned NOT NULL AUTO_INCREMENT, `name` varchar(20) NOT NULL DEFAULT &#39;&#39;, `parent_id` int(11) unsigned NOT NULL DEFAULT &#39;0&#39;, `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP, `updated_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP, PRIMARY KEY (`id`), UNIQUE KEY `name` (`name`) ) ENGINE=InnoDB AUTO_INCREMENT=23 DEFAULT CHARSET=utf8mb4; 你只需引入包 github."/>
 
 	<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
@@ -68,11 +68,12 @@ CREATE TABLE `category` ( `id` int(11) unsigned NOT NULL AUTO_INCREMENT, `name` 
 					<a href="https://www.syst.top">记得</a>
 				</div>
 				<nav class="site-nav hide-in-mobile">
-					<a href="https://www.syst.top/leetcode/">leetcode</a>
-					<a href="https://www.syst.top/translations/">外文翻译</a>
 					<a href="https://www.syst.top/posts/">文章</a>
+					<a href="https://www.syst.top/leetcode/">刷题</a>
 					<a href="https://www.syst.top/lives/">生活</a>
-					<a href="https://www.syst.top/friends/">friends</a>
+					<a href="https://www.syst.top/translations/">翻译</a>
+					<a href="https://www.syst.top/friends/">朋友</a>
+					<a href="https://go.aabbccm.com">grpc-shop</a>
 				</nav>
 			</div>
 			<div class="hdr-right hdr-icons">
@@ -99,15 +100,15 @@ CREATE TABLE `category` ( `id` int(11) unsigned NOT NULL AUTO_INCREMENT, `name` 
 				<h3 id="介绍">介绍<a href="#介绍" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h3>
 <p>推荐两款 <code>go</code> 开发中用的还行的工具。</p>
 <p>为什么推荐工具？是为了让评论区的大佬介绍其他更好用的工具，解放我的双手。</p>
-<p>顺便问问，有没有关说话就能自动打完代码的工具？</p>
+<p>顺便问问，有没有只说话就能自动打完代码的工具？</p>
 <h3 id="json-to-stuct">JSON-To-Stuct<a href="#json-to-stuct" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h3>
-<p>这个工具可以把 <code>json</code> 格式的数据转换成 <code>go</code> 的 <code>struct</code>。这样的话比如你在对接第三方的时候，就不需要根据对方的接口一个个定义 <code>struct</code> 字段，就像下面示例一样,直接复制微信小商店订单 <code>json</code> 数据到网站的左框即可,当然自己还是需要做一些局部的调整。</p>
+<p>这个工具可以把 <code>json</code> 格式的数据转换成 <code>go</code> 的 <code>struct</code>。比如你在对接第三方的时候，就不需要根据对方的接口一个个定义 <code>struct</code> 字段。下面示例复制的微信小商店商品 <code>json</code> 数据到网站的左框即可，当然自己还是需要做一些局部的调整。</p>
 <p><img src="https://image.syst.top/image/go-tool/1.png" alt="image"></p>
-<p>其实这个功能21年新版的 <code>goland</code> 也支持了。在 <code>goland</code> 中你只需要这样,</p>
+<p>其实这个功能 21 版的 <code>goland</code> 也支持了。在 <code>goland</code> 中你只需要这样,</p>
 <p><img src="https://image.syst.top/image/go-tool/2.gif" alt="image"></p>
 <h3 id="table-to-stuct">Table-To-Stuct<a href="#table-to-stuct" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h3>
-<p>被业务缠身的同学每天免不了 <code>CURD</code>。<code>CURD</code> 之前总得建表吧。建表之后总得在代码中定义模型吧。总不能又一个个字段定义过去吧，那么下面这个工具可能管用。</p>
-<p>假设你有一个库 <code>dream</code>，有一个表 <code>category</code>，结构如下，</p>
+<p>被业务缠身的同学每天免不了 <code>CURD</code>。<code>CURD</code> 之前总得建表吧。建表之后总得在代码中定义模型吧。总不能又一个个字段定义，那么下面这个工具可能管用。</p>
+<p>假设你有一个库 <code>dream</code>，库里有一个表 <code>category</code>，结构如下，</p>
 <div class="highlight"><pre class="chroma"><code class="language-sql" data-lang="sql"><span class="k">CREATE</span> <span class="k">TABLE</span> <span class="o">`</span><span class="n">category</span><span class="o">`</span> <span class="p">(</span>
   <span class="o">`</span><span class="n">id</span><span class="o">`</span> <span class="nb">int</span><span class="p">(</span><span class="mi">11</span><span class="p">)</span> <span class="n">unsigned</span> <span class="k">NOT</span> <span class="k">NULL</span> <span class="n">AUTO_INCREMENT</span><span class="p">,</span>
   <span class="o">`</span><span class="n">name</span><span class="o">`</span> <span class="nb">varchar</span><span class="p">(</span><span class="mi">20</span><span class="p">)</span> <span class="k">NOT</span> <span class="k">NULL</span> <span class="k">DEFAULT</span> <span class="s1">&#39;&#39;</span><span class="p">,</span>
@@ -178,7 +179,7 @@ CREATE TABLE `category` ( `id` int(11) unsigned NOT NULL AUTO_INCREMENT, `name` 
 <span class="p">}</span>
 </code></pre></div><p>相应的再进行调整即可。</p>
 <h3 id="总结">总结<a href="#总结" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h3>
-<p>今天主要分享的是 <code>json-to-stuct</code>、<code>table-to-stuct</code> 这两款日常可能会用上的工具。</p>
+<p>今天主要分享的是 <code>json-to-stuct</code>、<code>table-to-stuct</code> 这两款日常会用上的工具。</p>
 <p>好了，现在开始你们给我介绍趁手的工具了。</p>
 
 			</div>
@@ -188,7 +189,7 @@ CREATE TABLE `category` ( `id` int(11) unsigned NOT NULL AUTO_INCREMENT, `name` 
 				<p>
 					<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-tag meta-icon"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"></path><line x1="7" y1="7" x2="7" y2="7"></line></svg><span class="tag"><a href="https://www.syst.top/tags/go">go</a></span><span class="tag"><a href="https://www.syst.top/tags/enum">enum</a></span>
 				</p>
-				<p><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-file-text"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>210 Words</p>
+				<p><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-file-text"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>212 Words</p>
 				<p><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-calendar"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>2021-04-25 22:25 &#43;0800</p>
 			</footer>
 		</article>
