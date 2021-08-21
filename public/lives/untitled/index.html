@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="zh-hans">
+
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<meta http-equiv="X-UA-Compatible" content="ie=edge">
+	<meta name="theme-color" content="#494f5c">
+	<meta name="msapplication-TileColor" content="#494f5c">
+<meta itemprop="name" content="">
+<meta itemprop="description" content="技术公众号会有末日吗 之前心里老想着写一篇文章，题目叫:程序员的末路。不过现在还不到时候，毕竟，我还想象不出程序员都末路了那会是什么样子。
+35 岁普通程序员还是可以想想的。
+不过，比起程序员的末路，我觉得公众号的末路会来的相对早一些。
+我记得自己是在 18 年陆续开始关注一些技术公众号。那时候公众号还没有点赞和在看功能。但是技术号应该已经有软文广告了，不过相对会少一点。毕竟那时候还没有大量资本入场，极客时间也才成立不到一年。
+那时候的文章相对来说会更纯粹一点，标题起的也相对&quot;人性化&quot;。
+那时候的作者有时会苦苦哀求让你帮忙点击一下广告，说有几毛钱的收入。哪像现在，谁还在乎你点不点广告，直接关闭广告让你没有一丝点击的机会。
+这算是破圈了吗？
+19 年和 20 年可能是软文广告最猛的一年了。
+为什么？
+因为这一年我看到了好多年薪百万的文章。夹杂在总结中、离职路上、财富自由以及知乎的每一个角落，并持有特定的标签：90后、95后、 96年&hellip;&hellip;，
+每每读到这，我的后背不觉地渗出致密的汗水，双手止不住地发抖。匆忙打开手机，一篇篇地翻看着银行卡的余额，试图寻找能凑齐百万的十张卡，哪怕是算分也行。可眼看天就要亮了，我依旧一无所获。我失落的躺在床上，满脑子 [6-grpc 负载均衡.md](../../../../Downloads/grpc-read-master/6-grpc 负载均衡.md) 都是如何年入百万，横竖睡不着。不得已打开知乎，搜下 “如何年入百万？”的话题，随着屏幕的滚动，答案如雨水般向我涌来，而我却一一闪躲而过。
+过去技术号大多都是各自为战。去年到现在，隐约感觉到大家城门大开。城门互推的速度愈加频繁。之前待过两个互推群，每天各个领域的人自报家门，开口第一句便是: xx 阅读，明天有互转的吗？只记阅读，不看领域。
+人真的只能赚到自己认知内的钱吗？
+靠运气赚到的钱，最后一定会凭实力亏掉吗？
+我想，未必吧。
+现在的应届生，也是一种挺惨的职业。不仅面试八股文要相互卷，关注公众号还要疯狂被焦虑。">
+
+<meta itemprop="wordCount" content="31">
+
+
+
+<meta itemprop="keywords" content="" />
+<meta property="og:title" content="" />
+<meta property="og:description" content="技术公众号会有末日吗 之前心里老想着写一篇文章，题目叫:程序员的末路。不过现在还不到时候，毕竟，我还想象不出程序员都末路了那会是什么样子。
+35 岁普通程序员还是可以想想的。
+不过，比起程序员的末路，我觉得公众号的末路会来的相对早一些。
+我记得自己是在 18 年陆续开始关注一些技术公众号。那时候公众号还没有点赞和在看功能。但是技术号应该已经有软文广告了，不过相对会少一点。毕竟那时候还没有大量资本入场，极客时间也才成立不到一年。
+那时候的文章相对来说会更纯粹一点，标题起的也相对&quot;人性化&quot;。
+那时候的作者有时会苦苦哀求让你帮忙点击一下广告，说有几毛钱的收入。哪像现在，谁还在乎你点不点广告，直接关闭广告让你没有一丝点击的机会。
+这算是破圈了吗？
+19 年和 20 年可能是软文广告最猛的一年了。
+为什么？
+因为这一年我看到了好多年薪百万的文章。夹杂在总结中、离职路上、财富自由以及知乎的每一个角落，并持有特定的标签：90后、95后、 96年&hellip;&hellip;，
+每每读到这，我的后背不觉地渗出致密的汗水，双手止不住地发抖。匆忙打开手机，一篇篇地翻看着银行卡的余额，试图寻找能凑齐百万的十张卡，哪怕是算分也行。可眼看天就要亮了，我依旧一无所获。我失落的躺在床上，满脑子 [6-grpc 负载均衡.md](../../../../Downloads/grpc-read-master/6-grpc 负载均衡.md) 都是如何年入百万，横竖睡不着。不得已打开知乎，搜下 “如何年入百万？”的话题，随着屏幕的滚动，答案如雨水般向我涌来，而我却一一闪躲而过。
+过去技术号大多都是各自为战。去年到现在，隐约感觉到大家城门大开。城门互推的速度愈加频繁。之前待过两个互推群，每天各个领域的人自报家门，开口第一句便是: xx 阅读，明天有互转的吗？只记阅读，不看领域。
+人真的只能赚到自己认知内的钱吗？
+靠运气赚到的钱，最后一定会凭实力亏掉吗？
+我想，未必吧。
+现在的应届生，也是一种挺惨的职业。不仅面试八股文要相互卷，关注公众号还要疯狂被焦虑。" />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="https://www.syst.top/lives/untitled/" />
+
+<meta name="twitter:card" content="summary"/>
+<meta name="twitter:title" content=""/>
+<meta name="twitter:description" content="技术公众号会有末日吗 之前心里老想着写一篇文章，题目叫:程序员的末路。不过现在还不到时候，毕竟，我还想象不出程序员都末路了那会是什么样子。
+35 岁普通程序员还是可以想想的。
+不过，比起程序员的末路，我觉得公众号的末路会来的相对早一些。
+我记得自己是在 18 年陆续开始关注一些技术公众号。那时候公众号还没有点赞和在看功能。但是技术号应该已经有软文广告了，不过相对会少一点。毕竟那时候还没有大量资本入场，极客时间也才成立不到一年。
+那时候的文章相对来说会更纯粹一点，标题起的也相对&quot;人性化&quot;。
+那时候的作者有时会苦苦哀求让你帮忙点击一下广告，说有几毛钱的收入。哪像现在，谁还在乎你点不点广告，直接关闭广告让你没有一丝点击的机会。
+这算是破圈了吗？
+19 年和 20 年可能是软文广告最猛的一年了。
+为什么？
+因为这一年我看到了好多年薪百万的文章。夹杂在总结中、离职路上、财富自由以及知乎的每一个角落，并持有特定的标签：90后、95后、 96年&hellip;&hellip;，
+每每读到这，我的后背不觉地渗出致密的汗水，双手止不住地发抖。匆忙打开手机，一篇篇地翻看着银行卡的余额，试图寻找能凑齐百万的十张卡，哪怕是算分也行。可眼看天就要亮了，我依旧一无所获。我失落的躺在床上，满脑子 [6-grpc 负载均衡.md](../../../../Downloads/grpc-read-master/6-grpc 负载均衡.md) 都是如何年入百万，横竖睡不着。不得已打开知乎，搜下 “如何年入百万？”的话题，随着屏幕的滚动，答案如雨水般向我涌来，而我却一一闪躲而过。
+过去技术号大多都是各自为战。去年到现在，隐约感觉到大家城门大开。城门互推的速度愈加频繁。之前待过两个互推群，每天各个领域的人自报家门，开口第一句便是: xx 阅读，明天有互转的吗？只记阅读，不看领域。
+人真的只能赚到自己认知内的钱吗？
+靠运气赚到的钱，最后一定会凭实力亏掉吗？
+我想，未必吧。
+现在的应届生，也是一种挺惨的职业。不仅面试八股文要相互卷，关注公众号还要疯狂被焦虑。"/>
+
+	<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+	<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+	<link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+	<link rel="manifest" href="/site.webmanifest">
+	<link rel="mask-icon" href="/safari-pinned-tab.svg" color="">
+	<link rel="shortcut icon" href="/favicon.ico">
+
+	<title></title>
+	<link rel="stylesheet" href="https://www.syst.top/css/style.min.d3141168199607bf3a517216ce3c263814eecdbc8fca72a9a88700799a838219.css">
+	
+</head>
+
+<body id="page">
+	
+	<header id="site-header" class="animated slideInUp faster">
+		<div class="hdr-wrapper section-inner">
+			<div class="hdr-left">
+				<div class="site-branding">
+					<a href="https://www.syst.top">记得</a>
+				</div>
+				<nav class="site-nav hide-in-mobile">
+					<a href="https://www.syst.top/posts/">文章</a>
+					<a href="https://www.syst.top/leetcode/">刷题</a>
+					<a href="https://www.syst.top/lives/">生活</a>
+					<a href="https://www.syst.top/translations/">翻译</a>
+					<a href="https://www.syst.top/friends/">朋友</a>
+					<a href="https://go.aabbccm.com">grpc-shop</a>
+				</nav>
+			</div>
+			<div class="hdr-right hdr-icons">
+				<span class="hdr-social hide-in-mobile"><a href="https://github.com/wuqinqiang" target="_blank" rel="noopener me" title="Github"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-github"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"></path></svg></a></span><button id="menu-btn" class="hdr-btn" title="Menu"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-menu"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg></button>
+			</div>
+		</div>
+	</header>
+	<div id="mobile-menu" class="animated fast">
+		<ul>
+			<li><a href="https://www.syst.top/posts/">文章</a></li>
+			<li><a href="https://www.syst.top/tags/">标签</a></li>
+			<li><a href="https://www.syst.top/about/">关于</a></li>
+		</ul>
+	</div>
+
+
+	<main class="site-main section-inner thin animated fadeIn faster">
+		<h1></h1>
+		<div class="content">
+			<h3 id="技术公众号会有末日吗">技术公众号会有末日吗<a href="#技术公众号会有末日吗" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h3>
+<p>之前心里老想着写一篇文章，题目叫:程序员的末路。不过现在还不到时候，毕竟，我还想象不出程序员都末路了那会是什么样子。</p>
+<p>35 岁普通程序员还是可以想想的。</p>
+<p>不过，比起程序员的末路，我觉得公众号的末路会来的相对早一些。</p>
+<p>我记得自己是在 18 年陆续开始关注一些技术公众号。那时候公众号还没有点赞和在看功能。但是技术号应该已经有软文广告了，不过相对会少一点。毕竟那时候还没有大量资本入场，极客时间也才成立不到一年。</p>
+<p>那时候的文章相对来说会更纯粹一点，标题起的也相对&quot;人性化&quot;。</p>
+<p>那时候的作者有时会苦苦哀求让你帮忙点击一下广告，说有几毛钱的收入。哪像现在，谁还在乎你点不点广告，直接关闭广告让你没有一丝点击的机会。</p>
+<p>这算是破圈了吗？</p>
+<p>19 年和 20 年可能是软文广告最猛的一年了。</p>
+<p>为什么？</p>
+<p>因为这一年我看到了好多年薪百万的文章。夹杂在总结中、离职路上、财富自由以及知乎的每一个角落，并持有特定的标签：90后、95后、 96年&hellip;&hellip;，</p>
+<p>每每读到这，我的后背不觉地渗出致密的汗水，双手止不住地发抖。匆忙打开手机，一篇篇地翻看着银行卡的余额，试图寻找能凑齐百万的十张卡，哪怕是算分也行。可眼看天就要亮了，我依旧一无所获。我失落的躺在床上，满脑子 [6-grpc 负载均衡.md](../../../../Downloads/grpc-read-master/6-grpc 负载均衡.md) 都是如何年入百万，横竖睡不着。不得已打开知乎，搜下 “如何年入百万？”的话题，随着屏幕的滚动，答案如雨水般向我涌来，而我却一一闪躲而过。</p>
+<p>过去技术号大多都是各自为战。去年到现在，隐约感觉到大家城门大开。城门互推的速度愈加频繁。之前待过两个互推群，每天各个领域的人自报家门，开口第一句便是: xx 阅读，明天有互转的吗？只记阅读，不看领域。</p>
+<p>人真的只能赚到自己认知内的钱吗？</p>
+<p>靠运气赚到的钱，最后一定会凭实力亏掉吗？</p>
+<p>我想，未必吧。</p>
+<p>现在的应届生，也是一种挺惨的职业。不仅面试八股文要相互卷，关注公众号还要疯狂被焦虑。</p>
+
+		</div>
+		<div id="comments" class="thin">
+			<script src="https://utteranc.es/client.js"
+        repo="wuqinqiang/blog"
+        issue-term="pathname"
+        theme="github-light"
+        crossorigin="anonymous"
+        async>
+</script>
+		</div>
+	</main>
+
+	<footer id="site-footer" class="section-inner thin animated fadeIn faster">
+		<p>&copy; 2018 - 2021 <a href="https://www.syst.top">Remember</a> &#183; <a href="http://beian.miit.gov.cn/">浙ICP备18028603号-2</a></p>
+		<p>
+			Made with <a href="https://gohugo.io/" target="_blank" rel="noopener">Hugo</a> &#183; Theme <a href="https://github.com/Track3/hermit" target="_blank" rel="noopener">Hermit</a> &#183; <a href="https://www.syst.top/post/index.xml" target="_blank" title="rss"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-rss"><path d="M4 11a9 9 0 0 1 9 9"></path><path d="M4 4a16 16 0 0 1 16 16"></path><circle cx="5" cy="19" r="1"></circle></svg></a>
+		</p>
+	</footer>
+
+
+	<script src="https://www.syst.top/js/main.min.784417f5847151f848c339cf0acb13a06cbb648b1483435a28ed4556c4ead69b.js"></script>
+<script type="application/javascript">
+var doNotTrack = false;
+if (!doNotTrack) {
+	window.ga=window.ga||function(){(ga.q=ga.q||[]).push(arguments)};ga.l=+new Date;
+	ga('create', 'UA-166045776-1', 'auto');
+	
+	ga('send', 'pageview');
+}
+</script>
+<script async src='https://www.google-analytics.com/analytics.js'></script>
+
+
+</body>
+
+</html>

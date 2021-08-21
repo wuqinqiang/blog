@@ -84,16 +84,16 @@ googleAnalytics = "UA-166045776-1"
   [[menu.nav]]
     name = "文章"
     url = "posts/"
-    weight = 10
+    weight = 8
 
   [[menu.nav]]
-    name = "外文翻译"
+    name = "翻译"
     url = "translations/"
     weight = 10
 
 
   [[menu.nav]]
-    name = "leetcode"
+    name = "刷题"
     url = "leetcode/"
     weight = 9
 
@@ -103,15 +103,14 @@ googleAnalytics = "UA-166045776-1"
     weight = 10
 
   [[menu.nav]]
-    name = "friends"
+    name = "朋友"
     url = "friends/"
     weight = 11
 
-
-#    [[menu.nav]]
-#     name = "Go面试题集锦"
-#     url = "https://go.aabbccm.com"
-#     weight = 12
+   [[menu.nav]]
+    name = "grpc-shop"
+    url = "https://go.aabbccm.com"
+    weight = 12
 
 
 

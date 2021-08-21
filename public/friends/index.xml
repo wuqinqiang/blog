@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Friends on 记得</title>
+    <link>https://www.syst.top/friends/</link>
+    <description>Recent content in Friends on 记得</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>zh-hans</language>
+    <copyright>This work is licensed under a Creative Commons Attribution-NonCommercial 4.0 International License.</copyright>
+    <lastBuildDate>Wed, 11 Aug 2021 00:00:00 +0000</lastBuildDate><atom:link href="https://www.syst.top/friends/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>Myfriends</title>
+      <link>https://www.syst.top/friends/friends/</link>
+      <pubDate>Wed, 11 Aug 2021 00:00:00 +0000</pubDate>
+      
+      <guid>https://www.syst.top/friends/friends/</guid>
+      <description></description>
+    </item>
+    
+  </channel>
+</rss>

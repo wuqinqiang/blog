@@ -7,7 +7,16 @@
     <generator>Hugo -- gohugo.io</generator>
     <language>zh-hans</language>
     <copyright>This work is licensed under a Creative Commons Attribution-NonCommercial 4.0 International License.</copyright>
-    <lastBuildDate>Tue, 27 Jul 2021 10:01:52 +0800</lastBuildDate><atom:link href="https://www.syst.top/index.xml" rel="self" type="application/rss+xml" />
+    <lastBuildDate>Wed, 11 Aug 2021 00:00:00 +0000</lastBuildDate><atom:link href="https://www.syst.top/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>Myfriends</title>
+      <link>https://www.syst.top/friends/friends/</link>
+      <pubDate>Wed, 11 Aug 2021 00:00:00 +0000</pubDate>
+      
+      <guid>https://www.syst.top/friends/friends/</guid>
+      <description></description>
+    </item>
+    
     <item>
       <title>超实用的 gRPC 客户端调试工具</title>
       <link>https://www.syst.top/posts/go/grpc/</link>
@@ -190,22 +199,6 @@ func rob(nums []int) int { n := len(nums) if n == 0 { return 0 } if n == 1 { ret
       <description>介绍 Go 语言实际上没有直接支持枚举的关键字。一般我们都是通过 const + iota 实现枚举的能力。
 有人要问了，为什么一定要使用枚举呢？stackoverflow 上有一个高赞的回答，如下:
 You should always use enums when a variable (especially a method parameter) can only take one out of a small set of possible values. Examples would be things like type constants (contract status: &amp;quot;permanent&amp;quot;, &amp;quot;temp&amp;quot;, &amp;quot;apprentice&amp;quot;), or flags (&amp;quot;execute now&amp;quot;, &amp;quot;defer execution&amp;quot;). If you use enums instead of integers (or String codes), you increase compile-time checking and avoid errors from passing in invalid constants, and you document which values are legal to use.</description>
-    </item>
-    
-    <item>
-      <title>推荐两款go开发中提高效率工具</title>
-      <link>https://www.syst.top/posts/go/go-tool/</link>
-      <pubDate>Sun, 25 Apr 2021 22:25:52 +0800</pubDate>
-      
-      <guid>https://www.syst.top/posts/go/go-tool/</guid>
-      <description>介绍 推荐两款 go 开发中用的还行的工具。
-为什么推荐工具？是为了让评论区的大佬介绍其他更好用的工具，解放我的双手。
-顺便问问，有没有关说话就能自动打完代码的工具？
-JSON-To-Stuct 这个工具可以把 json 格式的数据转换成 go 的 struct。这样的话比如你在对接第三方的时候，就不需要根据对方的接口一个个定义 struct 字段，就像下面示例一样,直接复制微信小商店订单 json 数据到网站的左框即可,当然自己还是需要做一些局部的调整。
-其实这个功能21年新版的 goland 也支持了。在 goland 中你只需要这样,
-Table-To-Stuct 被业务缠身的同学每天免不了 CURD。CURD 之前总得建表吧。建表之后总得在代码中定义模型吧。总不能又一个个字段定义过去吧，那么下面这个工具可能管用。
-假设你有一个库 dream，有一个表 category，结构如下，
-CREATE TABLE `category` ( `id` int(11) unsigned NOT NULL AUTO_INCREMENT, `name` varchar(20) NOT NULL DEFAULT &amp;#39;&amp;#39;, `parent_id` int(11) unsigned NOT NULL DEFAULT &amp;#39;0&amp;#39;, `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP, `updated_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP, PRIMARY KEY (`id`), UNIQUE KEY `name` (`name`) ) ENGINE=InnoDB AUTO_INCREMENT=23 DEFAULT CHARSET=utf8mb4; 你只需引入包 github.</description>
     </item>
     
   </channel>
