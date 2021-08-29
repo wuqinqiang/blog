@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="zh-hans">
+
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<meta http-equiv="X-UA-Compatible" content="ie=edge">
+	<meta name="theme-color" content="#494f5c">
+	<meta name="msapplication-TileColor" content="#494f5c">
+<meta itemprop="name" content="可以躺平一时，不能一直躺平">
+<meta itemprop="description" content="人可以躺平一时，不能一直躺平。
+上周调整了生物钟，晚上十一点前入睡，早上六点起床。
+真是一个明智的调整。
+以前下班回家没有精力干其他的事。现在早上到上班的这段时间可以自我充电。写文章、敲代码，或者看看书&hellip;&hellip;，突然爱上了这种节奏。
+言归正传，
+年初开这个号的时候有规划做一些实战项目，可后面也一直没写。
+转眼半年过去了，这段计划也应该被提上日程了。
+接下来的时间我计划先写三个项目实战。
+ grpc-shop 分布式爬虫 Raft 算法实现  为什么要写项目实战？
+除了把知识点串起来之外，还有一个最重要的原因，我把它称之为 文档的艺术。
+你平常一定会碰到以下困惑。
+场景一：对接文档或者使用工具的时候，一定吐槽过别人写的是什么。
+站在对接人的角度，我的关注点是 what、how，你却一个劲介绍 much niubi。
+虽然我们会吐槽别人的文档，
+但是这并不妨碍自己也写出一塌糊涂的文档，也照样一塌糊涂。别人照样对你口吐芬芳，这种场面太过真实了。
+记忆中，文档和一次性口罩似乎是同性质的物品。前者用过就丢，后者草草写完封版。
+场景二：在和别人讲解自己某个项目、模块、功能的时候，滔滔不绝。可对方依然云里雾里。就像这样：
+归根结底，我觉得有五个原因:
+ 自身对做的东西没有深入去了解。遵循代码和我，有一个能跑的原则。 对细节了如指掌，但是表达能力出现问题。 没有站在读者的角度，你所谓的前置知识、技能、专业名词&hellip;&hellip;，对方完全不知，本质上还是信息(技术认知)差。 内心深处不想让别人了解这个系统，毕竟你想当唯一的消防员👩‍🚒。 读|听者是傻逼。(这个概率有多大?)  能把自己写过的东西、看过的项目&hellip;&hellip;，通过文字、嘴对嘴、视频等方式完整清晰的表达出来是一件非常重要且值得开干的事。
+如果连文档都写不清楚，还指望自己能写好 ppt？
+因为工作中接触过 grpc，然后也去看了部分源码。看源码的时候，恰巧又发现一处非致命的 bug ，顺手给提了个 pr，后面被合并了。
+所以，第一个项目就规划写 grpc-shop。
+大体已经规划完了，后面边开发边写文档，类似极客兔兔的七天系列。
+grpc-shop 计划 15 篇左右完结撒花。
+完毕。">
+<meta itemprop="datePublished" content="2021-08-22T08:01:52+08:00" />
+<meta itemprop="dateModified" content="2021-08-22T08:01:52+08:00" />
+<meta itemprop="wordCount" content="47">
+
+
+
+<meta itemprop="keywords" content="grpc,grpc-shop," />
+<meta property="og:title" content="可以躺平一时，不能一直躺平" />
+<meta property="og:description" content="人可以躺平一时，不能一直躺平。
+上周调整了生物钟，晚上十一点前入睡，早上六点起床。
+真是一个明智的调整。
+以前下班回家没有精力干其他的事。现在早上到上班的这段时间可以自我充电。写文章、敲代码，或者看看书&hellip;&hellip;，突然爱上了这种节奏。
+言归正传，
+年初开这个号的时候有规划做一些实战项目，可后面也一直没写。
+转眼半年过去了，这段计划也应该被提上日程了。
+接下来的时间我计划先写三个项目实战。
+ grpc-shop 分布式爬虫 Raft 算法实现  为什么要写项目实战？
+除了把知识点串起来之外，还有一个最重要的原因，我把它称之为 文档的艺术。
+你平常一定会碰到以下困惑。
+场景一：对接文档或者使用工具的时候，一定吐槽过别人写的是什么。
+站在对接人的角度，我的关注点是 what、how，你却一个劲介绍 much niubi。
+虽然我们会吐槽别人的文档，
+但是这并不妨碍自己也写出一塌糊涂的文档，也照样一塌糊涂。别人照样对你口吐芬芳，这种场面太过真实了。
+记忆中，文档和一次性口罩似乎是同性质的物品。前者用过就丢，后者草草写完封版。
+场景二：在和别人讲解自己某个项目、模块、功能的时候，滔滔不绝。可对方依然云里雾里。就像这样：
+归根结底，我觉得有五个原因:
+ 自身对做的东西没有深入去了解。遵循代码和我，有一个能跑的原则。 对细节了如指掌，但是表达能力出现问题。 没有站在读者的角度，你所谓的前置知识、技能、专业名词&hellip;&hellip;，对方完全不知，本质上还是信息(技术认知)差。 内心深处不想让别人了解这个系统，毕竟你想当唯一的消防员👩‍🚒。 读|听者是傻逼。(这个概率有多大?)  能把自己写过的东西、看过的项目&hellip;&hellip;，通过文字、嘴对嘴、视频等方式完整清晰的表达出来是一件非常重要且值得开干的事。
+如果连文档都写不清楚，还指望自己能写好 ppt？
+因为工作中接触过 grpc，然后也去看了部分源码。看源码的时候，恰巧又发现一处非致命的 bug ，顺手给提了个 pr，后面被合并了。
+所以，第一个项目就规划写 grpc-shop。
+大体已经规划完了，后面边开发边写文档，类似极客兔兔的七天系列。
+grpc-shop 计划 15 篇左右完结撒花。
+完毕。" />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="https://www.syst.top/lives/tp/" />
+<meta property="article:published_time" content="2021-08-22T08:01:52+08:00" />
+<meta property="article:modified_time" content="2021-08-22T08:01:52+08:00" />
+<meta name="twitter:card" content="summary"/>
+<meta name="twitter:title" content="可以躺平一时，不能一直躺平"/>
+<meta name="twitter:description" content="人可以躺平一时，不能一直躺平。
+上周调整了生物钟，晚上十一点前入睡，早上六点起床。
+真是一个明智的调整。
+以前下班回家没有精力干其他的事。现在早上到上班的这段时间可以自我充电。写文章、敲代码，或者看看书&hellip;&hellip;，突然爱上了这种节奏。
+言归正传，
+年初开这个号的时候有规划做一些实战项目，可后面也一直没写。
+转眼半年过去了，这段计划也应该被提上日程了。
+接下来的时间我计划先写三个项目实战。
+ grpc-shop 分布式爬虫 Raft 算法实现  为什么要写项目实战？
+除了把知识点串起来之外，还有一个最重要的原因，我把它称之为 文档的艺术。
+你平常一定会碰到以下困惑。
+场景一：对接文档或者使用工具的时候，一定吐槽过别人写的是什么。
+站在对接人的角度，我的关注点是 what、how，你却一个劲介绍 much niubi。
+虽然我们会吐槽别人的文档，
+但是这并不妨碍自己也写出一塌糊涂的文档，也照样一塌糊涂。别人照样对你口吐芬芳，这种场面太过真实了。
+记忆中，文档和一次性口罩似乎是同性质的物品。前者用过就丢，后者草草写完封版。
+场景二：在和别人讲解自己某个项目、模块、功能的时候，滔滔不绝。可对方依然云里雾里。就像这样：
+归根结底，我觉得有五个原因:
+ 自身对做的东西没有深入去了解。遵循代码和我，有一个能跑的原则。 对细节了如指掌，但是表达能力出现问题。 没有站在读者的角度，你所谓的前置知识、技能、专业名词&hellip;&hellip;，对方完全不知，本质上还是信息(技术认知)差。 内心深处不想让别人了解这个系统，毕竟你想当唯一的消防员👩‍🚒。 读|听者是傻逼。(这个概率有多大?)  能把自己写过的东西、看过的项目&hellip;&hellip;，通过文字、嘴对嘴、视频等方式完整清晰的表达出来是一件非常重要且值得开干的事。
+如果连文档都写不清楚，还指望自己能写好 ppt？
+因为工作中接触过 grpc，然后也去看了部分源码。看源码的时候，恰巧又发现一处非致命的 bug ，顺手给提了个 pr，后面被合并了。
+所以，第一个项目就规划写 grpc-shop。
+大体已经规划完了，后面边开发边写文档，类似极客兔兔的七天系列。
+grpc-shop 计划 15 篇左右完结撒花。
+完毕。"/>
+
+	<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+	<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+	<link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+	<link rel="manifest" href="/site.webmanifest">
+	<link rel="mask-icon" href="/safari-pinned-tab.svg" color="">
+	<link rel="shortcut icon" href="/favicon.ico">
+
+	<title>可以躺平一时，不能一直躺平</title>
+	<link rel="stylesheet" href="https://www.syst.top/css/style.min.d3141168199607bf3a517216ce3c263814eecdbc8fca72a9a88700799a838219.css">
+	
+</head>
+
+<body id="page">
+	
+	<header id="site-header" class="animated slideInUp faster">
+		<div class="hdr-wrapper section-inner">
+			<div class="hdr-left">
+				<div class="site-branding">
+					<a href="https://www.syst.top">记得</a>
+				</div>
+				<nav class="site-nav hide-in-mobile">
+					<a href="https://www.syst.top/posts/">文章</a>
+					<a href="https://www.syst.top/leetcode/">刷题</a>
+					<a href="https://www.syst.top/lives/">生活</a>
+					<a href="https://www.syst.top/translations/">翻译</a>
+					<a href="https://www.syst.top/friends/">朋友</a>
+					<a href="https://go.aabbccm.com">grpc-shop</a>
+				</nav>
+			</div>
+			<div class="hdr-right hdr-icons">
+				<button id="toc-btn" class="hdr-btn desktop-only-ib" title="Table of Contents"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-list"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3" y2="6"></line><line x1="3" y1="12" x2="3" y2="12"></line><line x1="3" y1="18" x2="3" y2="18"></line></svg></button><span class="hdr-social hide-in-mobile"><a href="https://github.com/wuqinqiang" target="_blank" rel="noopener me" title="Github"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-github"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"></path></svg></a></span><button id="menu-btn" class="hdr-btn" title="Menu"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-menu"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg></button>
+			</div>
+		</div>
+	</header>
+	<div id="mobile-menu" class="animated fast">
+		<ul>
+			<li><a href="https://www.syst.top/posts/">文章</a></li>
+			<li><a href="https://www.syst.top/tags/">标签</a></li>
+			<li><a href="https://www.syst.top/about/">关于</a></li>
+		</ul>
+	</div>
+
+
+	<main class="site-main section-inner thin animated fadeIn faster">
+		<h1>可以躺平一时，不能一直躺平</h1>
+		<div class="content">
+			<p>人可以躺平一时，不能一直躺平。</p>
+<p>上周调整了生物钟，晚上十一点前入睡，早上六点起床。</p>
+<p>真是一个明智的调整。</p>
+<p>以前下班回家没有精力干其他的事。现在早上到上班的这段时间可以自我充电。写文章、敲代码，或者看看书&hellip;&hellip;，突然爱上了这种节奏。</p>
+<p>言归正传，</p>
+<p>年初开这个号的时候有规划做一些实战项目，可后面也一直没写。</p>
+<p><img src="https://cdn.syst.top/project.png" alt=""></p>
+<p>转眼半年过去了，这段计划也应该被提上日程了。</p>
+<p>接下来的时间我计划先写三个项目实战。</p>
+<ul>
+<li>grpc-shop</li>
+<li>分布式爬虫</li>
+<li>Raft 算法实现</li>
+</ul>
+<p>为什么要写项目实战？</p>
+<p>除了把知识点串起来之外，还有一个最重要的原因，我把它称之为 <code>文档的艺术</code>。</p>
+<p>你平常一定会碰到以下困惑。</p>
+<p>场景一：对接文档或者使用工具的时候，一定吐槽过别人写的是什么。</p>
+<p><img src="https://cdn.syst.top/what.jpeg" alt=""></p>
+<p>站在对接人的角度，我的关注点是 <code>what</code>、<code>how</code>，你却一个劲介绍 <code>much niubi</code>。</p>
+<p>虽然我们会吐槽别人的文档，</p>
+<p>但是这并不妨碍自己也写出一塌糊涂的文档，也照样一塌糊涂。别人照样对你口吐芬芳，这种场面太过真实了。</p>
+<p>记忆中，文档和一次性口罩似乎是同性质的物品。前者用过就丢，后者草草写完封版。</p>
+<p>场景二：在和别人讲解自己某个项目、模块、功能的时候，滔滔不绝。可对方依然云里雾里。就像这样：</p>
+<p><img src="https://cdn.syst.top/quesion.jpeg" alt=""></p>
+<p>归根结底，我觉得有五个原因:</p>
+<ul>
+<li>自身对做的东西没有深入去了解。遵循代码和我，有一个能跑的原则。</li>
+<li>对细节了如指掌，但是表达能力出现问题。</li>
+<li>没有站在读者的角度，你所谓的前置知识、技能、专业名词&hellip;&hellip;，对方完全不知，本质上还是信息(技术认知)差。</li>
+<li>内心深处不想让别人了解这个系统，毕竟你想当唯一的消防员👩‍🚒。</li>
+<li>读|听者是傻逼。(这个概率有多大?)</li>
+</ul>
+<p>能把自己写过的东西、看过的项目&hellip;&hellip;，通过文字、嘴对嘴、视频等方式完整清晰的表达出来是一件非常重要且值得开干的事。</p>
+<p>如果连文档都写不清楚，还指望自己能写好 <code>ppt</code>？</p>
+<p>因为工作中接触过 <code>grpc</code>，然后也去看了部分源码。看源码的时候，恰巧又发现一处非致命的 <code>bug</code> ，顺手给提了个 <code>pr</code>，后面被合并了。</p>
+<p><img src="https://cdn.syst.top/pr.png" alt=""></p>
+<p>所以，第一个项目就规划写 <code>grpc-shop</code>。</p>
+<p>大体已经规划完了，后面边开发边写文档，类似极客兔兔的七天系列。</p>
+<p><img src="https://cdn.syst.top/grpc-shop.png" alt=""></p>
+<p><code>grpc-shop</code> 计划 15 篇左右完结撒花。</p>
+<p>完毕。</p>
+
+		</div>
+		<div id="comments" class="thin">
+			<script src="https://utteranc.es/client.js"
+        repo="wuqinqiang/blog"
+        issue-term="pathname"
+        theme="github-light"
+        crossorigin="anonymous"
+        async>
+</script>
+		</div>
+	</main>
+
+	<footer id="site-footer" class="section-inner thin animated fadeIn faster">
+		<p>&copy; 2018 - 2021 <a href="https://www.syst.top">Remember</a> &#183; <a href="http://beian.miit.gov.cn/">浙ICP备18028603号-2</a></p>
+		<p>
+			Made with <a href="https://gohugo.io/" target="_blank" rel="noopener">Hugo</a> &#183; Theme <a href="https://github.com/Track3/hermit" target="_blank" rel="noopener">Hermit</a> &#183; <a href="https://www.syst.top/post/index.xml" target="_blank" title="rss"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-rss"><path d="M4 11a9 9 0 0 1 9 9"></path><path d="M4 4a16 16 0 0 1 16 16"></path><circle cx="5" cy="19" r="1"></circle></svg></a>
+		</p>
+	</footer>
+
+
+	<script src="https://www.syst.top/js/main.min.784417f5847151f848c339cf0acb13a06cbb648b1483435a28ed4556c4ead69b.js"></script>
+<script type="application/javascript">
+var doNotTrack = false;
+if (!doNotTrack) {
+	window.ga=window.ga||function(){(ga.q=ga.q||[]).push(arguments)};ga.l=+new Date;
+	ga('create', 'UA-166045776-1', 'auto');
+	
+	ga('send', 'pageview');
+}
+</script>
+<script async src='https://www.google-analytics.com/analytics.js'></script>
+
+
+</body>
+
+</html>

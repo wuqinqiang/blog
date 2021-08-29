@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="zh-hans">
+
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<meta http-equiv="X-UA-Compatible" content="ie=edge">
+	<meta name="theme-color" content="#494f5c">
+	<meta name="msapplication-TileColor" content="#494f5c">
+<meta itemprop="name" content="原来sync.Once还能这么用">
+<meta itemprop="description" content="介绍 sync.Once估计大家都不陌生，官方介绍中，
+ Once is an object that will perform exactly one action
+ 正是因为这个特性，Once常常被用于单例对象的初始化场景。
+也正是因为这个特性，其实它还能做一些其他的事情。
+缓存击穿 日常背诵八股文，我相信你们对缓存击穿这个词特别熟悉。
+缓存击穿一般待指热点key缓存失效(到期|删了)，同一时刻大量对热点key的并发请求。缓存找不到数据，所有请求都打入到DB层。此时，身为开发的你，明天和意外就不知道哪个先到了。
+为了防止这种情况发生，针对相同key的请求，只需要一个请求(A)到达DB层取数据，其他请求等待A通知就行了。
+就像这样，
+​ 图片来源:caching
+singleflight Go里有很多防缓存击穿的工具，比如singleflight库。
+type call struct { wg sync.WaitGroup val interface{} err error forgotten bool //.....省略部分字段 } type Group struct { mu sync.Mutex m map[string]*call } 通过上面简单的代码大概能看出，其实就是对key做了缓存。
+把一个key对应call结构存储在map中。保证只有一个key真正执行fn()服务 ，其他请求则通过sync.waitGroup的wait等待结果。
+至于g.docall(c,key,fn)，
+当带着全村人希望的那个请求，获取到数据，给对应key的call赋值，最终执行done，通知等待这个key全村的村民获取数据。
+代码并不复杂。
+自定义singleflight 我们也可以实现一个简易版本的。
+package main import ( &#34;fmt&#34; &#34;sync&#34; &#34;time&#34; ) type CacheEntry struct { data []byte err error wait chan struct{} } type OrderSever struct { cache map[string]*CacheEntry mutex sync.">
+<meta itemprop="datePublished" content="2021-04-25T22:25:52+08:00" />
+<meta itemprop="dateModified" content="2021-04-25T22:25:52+08:00" />
+<meta itemprop="wordCount" content="262">
+
+
+
+<meta itemprop="keywords" content="go,enum," />
+<meta property="og:title" content="原来sync.Once还能这么用" />
+<meta property="og:description" content="介绍 sync.Once估计大家都不陌生，官方介绍中，
+ Once is an object that will perform exactly one action
+ 正是因为这个特性，Once常常被用于单例对象的初始化场景。
+也正是因为这个特性，其实它还能做一些其他的事情。
+缓存击穿 日常背诵八股文，我相信你们对缓存击穿这个词特别熟悉。
+缓存击穿一般待指热点key缓存失效(到期|删了)，同一时刻大量对热点key的并发请求。缓存找不到数据，所有请求都打入到DB层。此时，身为开发的你，明天和意外就不知道哪个先到了。
+为了防止这种情况发生，针对相同key的请求，只需要一个请求(A)到达DB层取数据，其他请求等待A通知就行了。
+就像这样，
+​ 图片来源:caching
+singleflight Go里有很多防缓存击穿的工具，比如singleflight库。
+type call struct { wg sync.WaitGroup val interface{} err error forgotten bool //.....省略部分字段 } type Group struct { mu sync.Mutex m map[string]*call } 通过上面简单的代码大概能看出，其实就是对key做了缓存。
+把一个key对应call结构存储在map中。保证只有一个key真正执行fn()服务 ，其他请求则通过sync.waitGroup的wait等待结果。
+至于g.docall(c,key,fn)，
+当带着全村人希望的那个请求，获取到数据，给对应key的call赋值，最终执行done，通知等待这个key全村的村民获取数据。
+代码并不复杂。
+自定义singleflight 我们也可以实现一个简易版本的。
+package main import ( &#34;fmt&#34; &#34;sync&#34; &#34;time&#34; ) type CacheEntry struct { data []byte err error wait chan struct{} } type OrderSever struct { cache map[string]*CacheEntry mutex sync." />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="https://www.syst.top/posts/go/synconce/" />
+<meta property="article:published_time" content="2021-04-25T22:25:52+08:00" />
+<meta property="article:modified_time" content="2021-04-25T22:25:52+08:00" />
+<meta name="twitter:card" content="summary"/>
+<meta name="twitter:title" content="原来sync.Once还能这么用"/>
+<meta name="twitter:description" content="介绍 sync.Once估计大家都不陌生，官方介绍中，
+ Once is an object that will perform exactly one action
+ 正是因为这个特性，Once常常被用于单例对象的初始化场景。
+也正是因为这个特性，其实它还能做一些其他的事情。
+缓存击穿 日常背诵八股文，我相信你们对缓存击穿这个词特别熟悉。
+缓存击穿一般待指热点key缓存失效(到期|删了)，同一时刻大量对热点key的并发请求。缓存找不到数据，所有请求都打入到DB层。此时，身为开发的你，明天和意外就不知道哪个先到了。
+为了防止这种情况发生，针对相同key的请求，只需要一个请求(A)到达DB层取数据，其他请求等待A通知就行了。
+就像这样，
+​ 图片来源:caching
+singleflight Go里有很多防缓存击穿的工具，比如singleflight库。
+type call struct { wg sync.WaitGroup val interface{} err error forgotten bool //.....省略部分字段 } type Group struct { mu sync.Mutex m map[string]*call } 通过上面简单的代码大概能看出，其实就是对key做了缓存。
+把一个key对应call结构存储在map中。保证只有一个key真正执行fn()服务 ，其他请求则通过sync.waitGroup的wait等待结果。
+至于g.docall(c,key,fn)，
+当带着全村人希望的那个请求，获取到数据，给对应key的call赋值，最终执行done，通知等待这个key全村的村民获取数据。
+代码并不复杂。
+自定义singleflight 我们也可以实现一个简易版本的。
+package main import ( &#34;fmt&#34; &#34;sync&#34; &#34;time&#34; ) type CacheEntry struct { data []byte err error wait chan struct{} } type OrderSever struct { cache map[string]*CacheEntry mutex sync."/>
+
+	<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+	<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+	<link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+	<link rel="manifest" href="/site.webmanifest">
+	<link rel="mask-icon" href="/safari-pinned-tab.svg" color="">
+	<link rel="shortcut icon" href="/favicon.ico">
+
+	<title>原来sync.Once还能这么用</title>
+	<link rel="stylesheet" href="https://www.syst.top/css/style.min.d3141168199607bf3a517216ce3c263814eecdbc8fca72a9a88700799a838219.css">
+	
+</head>
+
+<body id="page">
+	
+	<header id="site-header" class="animated slideInUp faster">
+		<div class="hdr-wrapper section-inner">
+			<div class="hdr-left">
+				<div class="site-branding">
+					<a href="https://www.syst.top">记得</a>
+				</div>
+				<nav class="site-nav hide-in-mobile">
+					<a href="https://www.syst.top/posts/">文章</a>
+					<a href="https://www.syst.top/leetcode/">刷题</a>
+					<a href="https://www.syst.top/lives/">生活</a>
+					<a href="https://www.syst.top/translations/">翻译</a>
+					<a href="https://www.syst.top/friends/">朋友</a>
+					<a href="https://go.aabbccm.com">grpc-shop</a>
+				</nav>
+			</div>
+			<div class="hdr-right hdr-icons">
+				<button id="toc-btn" class="hdr-btn desktop-only-ib" title="Table of Contents"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-list"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3" y2="6"></line><line x1="3" y1="12" x2="3" y2="12"></line><line x1="3" y1="18" x2="3" y2="18"></line></svg></button><span class="hdr-social hide-in-mobile"><a href="https://github.com/wuqinqiang" target="_blank" rel="noopener me" title="Github"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-github"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"></path></svg></a></span><button id="menu-btn" class="hdr-btn" title="Menu"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-menu"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg></button>
+			</div>
+		</div>
+	</header>
+	<div id="mobile-menu" class="animated fast">
+		<ul>
+			<li><a href="https://www.syst.top/posts/">文章</a></li>
+			<li><a href="https://www.syst.top/tags/">标签</a></li>
+			<li><a href="https://www.syst.top/about/">关于</a></li>
+		</ul>
+	</div>
+
+
+	<main class="site-main section-inner animated fadeIn faster">
+		<article class="thin">
+			<header class="post-header">
+				<div class="post-meta"><span>Apr 25, 2021</span></div>
+				<h1>原来sync.Once还能这么用</h1>
+			</header>
+			<div class="content">
+				<h3 id="介绍">介绍<a href="#介绍" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h3>
+<p><code>sync.Once</code>估计大家都不陌生，官方介绍中，</p>
+<blockquote>
+<p>Once is an object that will perform exactly one action</p>
+</blockquote>
+<p>正是因为这个特性，<code>Once</code>常常被用于单例对象的初始化场景。</p>
+<p>也正是因为这个特性，其实它还能做一些其他的事情。</p>
+<h3 id="缓存击穿">缓存击穿<a href="#缓存击穿" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h3>
+<p>日常背诵八股文，我相信你们对<strong>缓存击穿</strong>这个词特别熟悉。</p>
+<p><strong>缓存击穿</strong>一般待指热点<code>key</code>缓存失效(到期|删了)，同一时刻大量对热点<code>key</code>的并发请求。缓存找不到数据，所有请求都打入到<code>DB</code>层。此时，身为开发的你，明天和意外就不知道哪个先到了。</p>
+<p>为了防止这种情况发生，针对相同<code>key</code>的请求，只需要一个请求(A)到达<code>DB</code>层取数据，其他请求等待<code>A</code>通知就行了。</p>
+<p>就像这样，</p>
+<p><img src="https://cdn.syst.top/%E7%BC%93%E5%AD%98%E5%87%BB%E7%A9%BF.png" alt="缓存击穿"></p>
+<p>​                                 图片来源:<a href="https://medium.com/codex/caching-system-stability-766bf5fff69f">caching</a></p>
+<h3 id="singleflight">singleflight<a href="#singleflight" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h3>
+<p><code>Go</code>里有很多防缓存击穿的工具，比如<code>singleflight</code>库。</p>
+<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kd">type</span> <span class="nx">call</span> <span class="kd">struct</span> <span class="p">{</span>
+	<span class="nx">wg</span> <span class="nx">sync</span><span class="p">.</span><span class="nx">WaitGroup</span>
+	<span class="nx">val</span> <span class="kd">interface</span><span class="p">{}</span>
+	<span class="nx">err</span> <span class="kt">error</span>
+	<span class="nx">forgotten</span> <span class="kt">bool</span>
+	<span class="c1">//.....省略部分字段
+</span><span class="c1"></span><span class="p">}</span>
+
+<span class="kd">type</span> <span class="nx">Group</span> <span class="kd">struct</span> <span class="p">{</span>
+	<span class="nx">mu</span> <span class="nx">sync</span><span class="p">.</span><span class="nx">Mutex</span>       
+	<span class="nx">m</span>  <span class="kd">map</span><span class="p">[</span><span class="kt">string</span><span class="p">]</span><span class="o">*</span><span class="nx">call</span> 
+<span class="p">}</span>
+</code></pre></div><p><img src="https://cdn.syst.top/once-1.png" alt=""></p>
+<p>通过上面简单的代码大概能看出，其实就是对<code>key</code>做了缓存。</p>
+<p>把一个<code>key</code>对应<code>call</code>结构存储在<code>map</code>中。保证只有一个<code>key</code>真正执行<code>fn()</code>服务 ，其他请求则通过<code>sync.waitGroup</code>的<code>wait</code>等待结果。</p>
+<p>至于<code>g.docall(c,key,fn)</code>，</p>
+<p><img src="https://cdn.syst.top/once-2.png" alt=""></p>
+<p>当带着全村人希望的那个请求，获取到数据，给对应<code>key</code>的<code>call</code>赋值，最终执行<code>done</code>，通知等待这个<code>key</code>全村的村民获取数据。</p>
+<p>代码并不复杂。</p>
+<h3 id="自定义singleflight"><strong>自定义</strong>singleflight<a href="#自定义singleflight" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h3>
+<p>我们也可以实现一个简易版本的。</p>
+<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kn">package</span> <span class="nx">main</span>
+
+<span class="kn">import</span> <span class="p">(</span>
+	<span class="s">&#34;fmt&#34;</span>
+	<span class="s">&#34;sync&#34;</span>
+	<span class="s">&#34;time&#34;</span>
+<span class="p">)</span>
+
+<span class="kd">type</span> <span class="nx">CacheEntry</span> <span class="kd">struct</span> <span class="p">{</span>
+	<span class="nx">data</span> <span class="p">[]</span><span class="kt">byte</span>
+	<span class="nx">err</span>  <span class="kt">error</span>
+	<span class="nx">wait</span> <span class="kd">chan</span> <span class="kd">struct</span><span class="p">{}</span>
+<span class="p">}</span>
+
+<span class="kd">type</span> <span class="nx">OrderSever</span> <span class="kd">struct</span> <span class="p">{</span>
+	<span class="nx">cache</span> <span class="kd">map</span><span class="p">[</span><span class="kt">string</span><span class="p">]</span><span class="o">*</span><span class="nx">CacheEntry</span>
+	<span class="nx">mutex</span> <span class="nx">sync</span><span class="p">.</span><span class="nx">Mutex</span>
+<span class="p">}</span>
+
+<span class="kd">func</span> <span class="p">(</span><span class="nx">order</span> <span class="o">*</span><span class="nx">OrderSever</span><span class="p">)</span> <span class="nf">Query</span><span class="p">(</span><span class="nx">key</span> <span class="kt">string</span><span class="p">)</span> <span class="p">([]</span><span class="kt">byte</span><span class="p">,</span> <span class="kt">error</span><span class="p">)</span> <span class="p">{</span>
+	<span class="nx">order</span><span class="p">.</span><span class="nx">mutex</span><span class="p">.</span><span class="nf">Lock</span><span class="p">()</span>
+	<span class="k">if</span> <span class="nx">order</span><span class="p">.</span><span class="nx">cache</span> <span class="o">==</span> <span class="kc">nil</span> <span class="p">{</span>
+		<span class="nx">order</span><span class="p">.</span><span class="nx">cache</span> <span class="p">=</span> <span class="nb">make</span><span class="p">(</span><span class="kd">map</span><span class="p">[</span><span class="kt">string</span><span class="p">]</span><span class="o">*</span><span class="nx">CacheEntry</span><span class="p">)</span>
+	<span class="p">}</span>
+  
+  <span class="c1">//已经有其他兄弟请求了，你等等
+</span><span class="c1"></span>	<span class="k">if</span> <span class="nx">entry</span><span class="p">,</span> <span class="nx">ok</span> <span class="o">:=</span> <span class="nx">order</span><span class="p">.</span><span class="nx">cache</span><span class="p">[</span><span class="nx">key</span><span class="p">];</span> <span class="nx">ok</span> <span class="p">{</span>
+		<span class="nx">order</span><span class="p">.</span><span class="nx">mutex</span><span class="p">.</span><span class="nf">Unlock</span><span class="p">()</span>
+		<span class="o">&lt;-</span><span class="nx">entry</span><span class="p">.</span><span class="nx">wait</span>
+		<span class="k">return</span> <span class="nx">entry</span><span class="p">.</span><span class="nx">data</span><span class="p">,</span> <span class="nx">entry</span><span class="p">.</span><span class="nx">err</span>
+	<span class="p">}</span>
+	<span class="nx">entry</span> <span class="o">:=</span> <span class="o">&amp;</span><span class="nx">CacheEntry</span><span class="p">{</span>
+		<span class="nx">data</span><span class="p">:</span> <span class="nb">make</span><span class="p">([]</span><span class="kt">byte</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span>
+		<span class="nx">wait</span><span class="p">:</span> <span class="nb">make</span><span class="p">(</span><span class="kd">chan</span> <span class="kd">struct</span><span class="p">{}),</span>
+	<span class="p">}</span>
+	<span class="nx">order</span><span class="p">.</span><span class="nx">cache</span><span class="p">[</span><span class="nx">key</span><span class="p">]</span> <span class="p">=</span> <span class="nx">entry</span>
+	<span class="nx">order</span><span class="p">.</span><span class="nx">mutex</span><span class="p">.</span><span class="nf">Unlock</span><span class="p">()</span>
+  <span class="c1">// 请求数据
+</span><span class="c1"></span>	<span class="nx">entry</span><span class="p">.</span><span class="nx">data</span><span class="p">,</span> <span class="nx">entry</span><span class="p">.</span><span class="nx">err</span> <span class="p">=</span> <span class="nf">getOrder</span><span class="p">()</span>
+  <span class="c1">// 请求数据完毕，通知其他兄弟可以拿数据了。
+</span><span class="c1"></span>	<span class="nb">close</span><span class="p">(</span><span class="nx">entry</span><span class="p">.</span><span class="nx">wait</span><span class="p">)</span>
+	<span class="k">return</span> <span class="nx">entry</span><span class="p">.</span><span class="nx">data</span><span class="p">,</span> <span class="kc">nil</span>
+<span class="p">}</span>
+
+<span class="c1">//外部服务
+</span><span class="c1"></span><span class="kd">func</span> <span class="nf">getOrder</span><span class="p">()</span> <span class="p">([]</span><span class="kt">byte</span><span class="p">,</span> <span class="kt">error</span><span class="p">)</span> <span class="p">{</span>
+	<span class="nx">time</span><span class="p">.</span><span class="nf">Sleep</span><span class="p">(</span><span class="mi">50</span> <span class="o">*</span> <span class="nx">time</span><span class="p">.</span><span class="nx">Millisecond</span><span class="p">)</span>
+	<span class="k">return</span> <span class="p">[]</span><span class="nb">byte</span><span class="p">(</span><span class="s">&#34;hello world&#34;</span><span class="p">),</span> <span class="kc">nil</span>
+<span class="p">}</span>
+</code></pre></div><p>代码整体不难，主要的点在于我们是通过通道来实现通知自家兄弟取数据。</p>
+<p>最后，让我们使用<code>Once</code>来达到同样的效果，不然标题不白起了嘛。</p>
+<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kn">package</span> <span class="nx">main</span>
+
+<span class="kn">import</span> <span class="p">(</span>
+	<span class="s">&#34;fmt&#34;</span>
+	<span class="s">&#34;sync&#34;</span>
+	<span class="s">&#34;time&#34;</span>
+<span class="p">)</span>
+
+<span class="kd">type</span> <span class="nx">CacheEntry</span> <span class="kd">struct</span> <span class="p">{</span>
+	<span class="nx">data</span> <span class="p">[]</span><span class="kt">byte</span>
+	<span class="nx">err</span>  <span class="kt">error</span>
+	<span class="nx">once</span> <span class="o">*</span><span class="nx">sync</span><span class="p">.</span><span class="nx">Once</span>
+<span class="p">}</span>
+
+<span class="kd">type</span> <span class="nx">OrderSever</span> <span class="kd">struct</span> <span class="p">{</span>
+	<span class="nx">cache</span> <span class="kd">map</span><span class="p">[</span><span class="kt">string</span><span class="p">]</span><span class="o">*</span><span class="nx">CacheEntry</span>
+	<span class="nx">mutex</span> <span class="nx">sync</span><span class="p">.</span><span class="nx">Mutex</span>
+<span class="p">}</span>
+
+<span class="kd">func</span> <span class="p">(</span><span class="nx">order</span> <span class="o">*</span><span class="nx">OrderSever</span><span class="p">)</span> <span class="nf">Query</span><span class="p">(</span><span class="nx">key</span> <span class="kt">string</span><span class="p">)</span> <span class="p">([]</span><span class="kt">byte</span><span class="p">,</span> <span class="kt">error</span><span class="p">)</span> <span class="p">{</span>
+	<span class="nx">order</span><span class="p">.</span><span class="nx">mutex</span><span class="p">.</span><span class="nf">Lock</span><span class="p">()</span>
+	<span class="k">if</span> <span class="nx">order</span><span class="p">.</span><span class="nx">cache</span> <span class="o">==</span> <span class="kc">nil</span> <span class="p">{</span>
+		<span class="nx">order</span><span class="p">.</span><span class="nx">cache</span> <span class="p">=</span> <span class="nb">make</span><span class="p">(</span><span class="kd">map</span><span class="p">[</span><span class="kt">string</span><span class="p">]</span><span class="o">*</span><span class="nx">CacheEntry</span><span class="p">)</span>
+	<span class="p">}</span>
+	<span class="nx">entry</span><span class="p">,</span> <span class="nx">ok</span> <span class="o">:=</span> <span class="nx">order</span><span class="p">.</span><span class="nx">cache</span><span class="p">[</span><span class="nx">key</span><span class="p">]</span>
+  
+  <span class="c1">// 找不到就初始化一个
+</span><span class="c1"></span>	<span class="k">if</span> <span class="p">!</span><span class="nx">ok</span> <span class="p">{</span>
+		<span class="nx">entry</span> <span class="p">=</span> <span class="o">&amp;</span><span class="nx">CacheEntry</span><span class="p">{</span>
+			<span class="nx">data</span><span class="p">:</span> <span class="nb">make</span><span class="p">([]</span><span class="kt">byte</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span>
+			<span class="nx">err</span><span class="p">:</span>  <span class="kc">nil</span><span class="p">,</span>
+			<span class="nx">once</span><span class="p">:</span> <span class="nb">new</span><span class="p">(</span><span class="nx">sync</span><span class="p">.</span><span class="nx">Once</span><span class="p">),</span>
+		<span class="p">}</span>
+		<span class="nx">order</span><span class="p">.</span><span class="nx">cache</span><span class="p">[</span><span class="nx">key</span><span class="p">]</span> <span class="p">=</span> <span class="nx">entry</span>
+	<span class="p">}</span>
+	<span class="nx">order</span><span class="p">.</span><span class="nx">mutex</span><span class="p">.</span><span class="nf">Unlock</span><span class="p">()</span>
+  
+  <span class="c1">// 我只执行一次。
+</span><span class="c1"></span>	<span class="nx">entry</span><span class="p">.</span><span class="nx">once</span><span class="p">.</span><span class="nf">Do</span><span class="p">(</span><span class="kd">func</span><span class="p">()</span> <span class="p">{</span>
+		<span class="nx">entry</span><span class="p">.</span><span class="nx">data</span><span class="p">,</span> <span class="nx">entry</span><span class="p">.</span><span class="nx">err</span> <span class="p">=</span> <span class="nf">getOrder</span><span class="p">()</span>
+	<span class="p">})</span>
+  <span class="c1">//数据被赋值了，返回
+</span><span class="c1"></span>	<span class="k">return</span> <span class="nx">entry</span><span class="p">.</span><span class="nx">data</span><span class="p">,</span> <span class="nx">entry</span><span class="p">.</span><span class="nx">err</span>
+<span class="p">}</span>
+
+<span class="kd">func</span> <span class="nf">getOrder</span><span class="p">()</span> <span class="p">([]</span><span class="kt">byte</span><span class="p">,</span> <span class="kt">error</span><span class="p">)</span> <span class="p">{</span>
+	<span class="nx">time</span><span class="p">.</span><span class="nf">Sleep</span><span class="p">(</span><span class="mi">50</span> <span class="o">*</span> <span class="nx">time</span><span class="p">.</span><span class="nx">Millisecond</span><span class="p">)</span>
+	<span class="k">return</span> <span class="p">[]</span><span class="nb">byte</span><span class="p">(</span><span class="s">&#34;hello world&#34;</span><span class="p">),</span> <span class="kc">nil</span>
+<span class="p">}</span>
+</code></pre></div><p>上面核心代码都写出来了，实际开发中需要对请求资源做一些超时控制等操作。</p>
+<h3 id="总结">总结<a href="#总结" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h3>
+<p>平常对<code>Once</code>的使用只停留在初始化工作上，而弱化了它的使用场景。对于其他工具也是一个道理，这就需要去积累和挖掘了。</p>
+<h3 id="附录"><strong>附录</strong><a href="#附录" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h3>
+<p>[1]https://medium.com/codex/caching-system-stability-766bf5fff69f</p>
+<p><a href="https://blog.chuie.io/posts/synconce/">https://blog.chuie.io/posts/synconce/</a></p>
+
+			</div>
+			<div class="content"><br><img src="https://image.syst.top/image/wechat-qr.png"></div>
+			<hr class="post-end">
+			<footer class="post-info">
+				<p>
+					<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-tag meta-icon"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"></path><line x1="7" y1="7" x2="7" y2="7"></line></svg><span class="tag"><a href="https://www.syst.top/tags/go">go</a></span><span class="tag"><a href="https://www.syst.top/tags/enum">enum</a></span>
+				</p>
+				<p><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-file-text"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>262 Words</p>
+				<p><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-calendar"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>2021-04-25 22:25 &#43;0800</p>
+			</footer>
+		</article>
+		<aside id="toc" class="show-toc">
+			<div class="toc-title">Table of Contents</div>
+			<nav id="TableOfContents">
+  <ul>
+    <li>
+      <ul>
+        <li><a href="#介绍">介绍</a></li>
+        <li><a href="#缓存击穿">缓存击穿</a></li>
+        <li><a href="#singleflight">singleflight</a></li>
+        <li><a href="#自定义singleflight"><strong>自定义</strong>singleflight</a></li>
+        <li><a href="#总结">总结</a></li>
+        <li><a href="#附录"><strong>附录</strong></a></li>
+      </ul>
+    </li>
+  </ul>
+</nav>
+		</aside>
+		<div class="post-nav thin">
+			<a class="next-post" href="https://www.syst.top/posts/go/enum/">
+				<span class="post-nav-label"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-arrow-left"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>&nbsp;Newer</span><br><span>iota 在 Go 中的使用 </span>
+			</a>
+			<a class="prev-post" href="https://www.syst.top/posts/go/go-tool/">
+				<span class="post-nav-label">Older&nbsp;<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-arrow-right"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg></span><br><span>推荐两款go开发中提高效率工具</span>
+			</a>
+		</div>
+		<div id="comments" class="thin">
+			<script src="https://utteranc.es/client.js"
+        repo="wuqinqiang/blog"
+        issue-term="pathname"
+        theme="github-light"
+        crossorigin="anonymous"
+        async>
+</script>
+		</div>
+	</main>
+
+	<footer id="site-footer" class="section-inner thin animated fadeIn faster">
+		<p>&copy; 2018 - 2021 <a href="https://www.syst.top">Remember</a> &#183; <a href="http://beian.miit.gov.cn/">浙ICP备18028603号-2</a></p>
+		<p>
+			Made with <a href="https://gohugo.io/" target="_blank" rel="noopener">Hugo</a> &#183; Theme <a href="https://github.com/Track3/hermit" target="_blank" rel="noopener">Hermit</a> &#183; <a href="https://www.syst.top/post/index.xml" target="_blank" title="rss"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-rss"><path d="M4 11a9 9 0 0 1 9 9"></path><path d="M4 4a16 16 0 0 1 16 16"></path><circle cx="5" cy="19" r="1"></circle></svg></a>
+		</p>
+	</footer>
+
+
+	<script src="https://www.syst.top/js/main.min.784417f5847151f848c339cf0acb13a06cbb648b1483435a28ed4556c4ead69b.js"></script>
+<script type="application/javascript">
+var doNotTrack = false;
+if (!doNotTrack) {
+	window.ga=window.ga||function(){(ga.q=ga.q||[]).push(arguments)};ga.l=+new Date;
+	ga('create', 'UA-166045776-1', 'auto');
+	
+	ga('send', 'pageview');
+}
+</script>
+<script async src='https://www.google-analytics.com/analytics.js'></script>
+
+
+</body>
+
+</html>
