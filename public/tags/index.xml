@@ -7,22 +7,40 @@
     <generator>Hugo -- gohugo.io</generator>
     <language>zh-hans</language>
     <copyright>This work is licensed under a Creative Commons Attribution-NonCommercial 4.0 International License.</copyright>
-    <lastBuildDate>Tue, 27 Jul 2021 10:01:52 +0800</lastBuildDate><atom:link href="https://www.syst.top/tags/index.xml" rel="self" type="application/rss+xml" />
+    <lastBuildDate>Sun, 29 Aug 2021 15:25:52 +0800</lastBuildDate><atom:link href="https://www.syst.top/tags/index.xml" rel="self" type="application/rss+xml" />
     <item>
-      <title>go</title>
-      <link>https://www.syst.top/tags/go/</link>
-      <pubDate>Tue, 27 Jul 2021 10:01:52 +0800</pubDate>
+      <title>社交媒体</title>
+      <link>https://www.syst.top/tags/%E7%A4%BE%E4%BA%A4%E5%AA%92%E4%BD%93/</link>
+      <pubDate>Sun, 29 Aug 2021 15:25:52 +0800</pubDate>
       
-      <guid>https://www.syst.top/tags/go/</guid>
+      <guid>https://www.syst.top/tags/%E7%A4%BE%E4%BA%A4%E5%AA%92%E4%BD%93/</guid>
       <description></description>
     </item>
     
     <item>
       <title>grpc</title>
       <link>https://www.syst.top/tags/grpc/</link>
-      <pubDate>Tue, 27 Jul 2021 10:01:52 +0800</pubDate>
+      <pubDate>Sun, 22 Aug 2021 08:01:52 +0800</pubDate>
       
       <guid>https://www.syst.top/tags/grpc/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>grpc-shop</title>
+      <link>https://www.syst.top/tags/grpc-shop/</link>
+      <pubDate>Sun, 22 Aug 2021 08:01:52 +0800</pubDate>
+      
+      <guid>https://www.syst.top/tags/grpc-shop/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>go</title>
+      <link>https://www.syst.top/tags/go/</link>
+      <pubDate>Tue, 27 Jul 2021 10:01:52 +0800</pubDate>
+      
+      <guid>https://www.syst.top/tags/go/</guid>
       <description></description>
     </item>
     
@@ -77,24 +95,6 @@
       <pubDate>Tue, 20 Apr 2021 23:54:52 +0800</pubDate>
       
       <guid>https://www.syst.top/tags/%E5%B9%B6%E5%8F%91/</guid>
-      <description></description>
-    </item>
-    
-    <item>
-      <title>管道</title>
-      <link>https://www.syst.top/tags/%E7%AE%A1%E9%81%93/</link>
-      <pubDate>Tue, 20 Apr 2021 23:54:52 +0800</pubDate>
-      
-      <guid>https://www.syst.top/tags/%E7%AE%A1%E9%81%93/</guid>
-      <description></description>
-    </item>
-    
-    <item>
-      <title>etcd</title>
-      <link>https://www.syst.top/tags/etcd/</link>
-      <pubDate>Sat, 10 Apr 2021 09:54:52 +0800</pubDate>
-      
-      <guid>https://www.syst.top/tags/etcd/</guid>
       <description></description>
     </item>
     

@@ -42,24 +42,6 @@ package wpool import ( &amp;#34;context&amp;#34; ) type JobID string type jobTyp
     </item>
     
     <item>
-      <title>如何优雅地实现并发编排任务</title>
-      <link>https://www.syst.top/posts/go/test-tip/</link>
-      <pubDate>Tue, 29 Jun 2021 07:44:45 +0800</pubDate>
-      
-      <guid>https://www.syst.top/posts/go/test-tip/</guid>
-      <description>开篇 在
-场景1：调用第三方接口的时候， 一个需求你需要调用不同的接口，做数据组装。 场景2:一个应用首页可能依托于很多服务。那就涉及到在加载页面时需要同时请求多个服务的接口。这一步往往是由后端统一调用组装数据再返回给前端，也就是所谓的 BFF(Backend For Frontend) 层。
-针对以上两种场景，假设在没有强依赖关系下，选择串行调用，那么总耗时即:
-time=s1+s2+....sn 按照当代秒入百万的有为青年，这么长时间早就把你祖宗十八代问候了一遍。
-为了伟大的KPI，我们往往会选择并发地调用这些依赖接口。那么总耗时就是:
-time=max(s1,s2,s3.....,sn) 当然开始堆业务的时候可以先串行化，等到上面的人着急的时候，亮出绝招。
-这样，年底 PPT 就可以加上浓重的一笔流水账:为业务某个接口提高百分之XXX性能，间接产生XXX价值。
-当然这一切的前提是，做老板不懂技术，做技术”懂”你。
-言归正传,如果修改成并发调用，你可能会这么写，
-package main import ( &amp;#34;fmt&amp;#34; &amp;#34;sync&amp;#34; &amp;#34;time&amp;#34; ) func main() { var wg sync.WaitGroup wg.Add(2) var userInfo *User var productList []Product go func() { defer wg.Done() userInfo, _ = getUser() }() go func() { defer wg.Done() productList, _ = getProductList() }() wg.Wait() fmt.Printf(&amp;#34;用户信息:%+v\n&amp;#34;, userInfo) fmt.Printf(&amp;#34;商品信息:%+v\n&amp;#34;, productList) } /********用户服务**********/ type User struct { Name string Age uint8 } func getUser() (*User, error) { time.</description>
-    </item>
-    
-    <item>
       <title>leetcode 337 House Robber III</title>
       <link>https://www.syst.top/leetcode/337-house-robbe-riil/</link>
       <pubDate>Mon, 31 May 2021 00:36:26 +0800</pubDate>
@@ -100,6 +82,31 @@ func rob(nums []int) int { n := len(nums) if n == 0 { return 0 } if n == 1 { ret
       <description>介绍 Go 语言实际上没有直接支持枚举的关键字。一般我们都是通过 const + iota 实现枚举的能力。
 有人要问了，为什么一定要使用枚举呢？stackoverflow 上有一个高赞的回答，如下:
 You should always use enums when a variable (especially a method parameter) can only take one out of a small set of possible values. Examples would be things like type constants (contract status: &amp;quot;permanent&amp;quot;, &amp;quot;temp&amp;quot;, &amp;quot;apprentice&amp;quot;), or flags (&amp;quot;execute now&amp;quot;, &amp;quot;defer execution&amp;quot;). If you use enums instead of integers (or String codes), you increase compile-time checking and avoid errors from passing in invalid constants, and you document which values are legal to use.</description>
+    </item>
+    
+    <item>
+      <title>原来sync.Once还能这么用</title>
+      <link>https://www.syst.top/posts/go/synconce/</link>
+      <pubDate>Sun, 25 Apr 2021 22:25:52 +0800</pubDate>
+      
+      <guid>https://www.syst.top/posts/go/synconce/</guid>
+      <description>介绍 sync.Once估计大家都不陌生，官方介绍中，
+ Once is an object that will perform exactly one action
+ 正是因为这个特性，Once常常被用于单例对象的初始化场景。
+也正是因为这个特性，其实它还能做一些其他的事情。
+缓存击穿 日常背诵八股文，我相信你们对缓存击穿这个词特别熟悉。
+缓存击穿一般待指热点key缓存失效(到期|删了)，同一时刻大量对热点key的并发请求。缓存找不到数据，所有请求都打入到DB层。此时，身为开发的你，明天和意外就不知道哪个先到了。
+为了防止这种情况发生，针对相同key的请求，只需要一个请求(A)到达DB层取数据，其他请求等待A通知就行了。
+就像这样，
+​ 图片来源:caching
+singleflight Go里有很多防缓存击穿的工具，比如singleflight库。
+type call struct { wg sync.WaitGroup val interface{} err error forgotten bool //.....省略部分字段 } type Group struct { mu sync.Mutex m map[string]*call } 通过上面简单的代码大概能看出，其实就是对key做了缓存。
+把一个key对应call结构存储在map中。保证只有一个key真正执行fn()服务 ，其他请求则通过sync.waitGroup的wait等待结果。
+至于g.docall(c,key,fn)，
+当带着全村人希望的那个请求，获取到数据，给对应key的call赋值，最终执行done，通知等待这个key全村的村民获取数据。
+代码并不复杂。
+自定义singleflight 我们也可以实现一个简易版本的。
+package main import ( &amp;#34;fmt&amp;#34; &amp;#34;sync&amp;#34; &amp;#34;time&amp;#34; ) type CacheEntry struct { data []byte err error wait chan struct{} } type OrderSever struct { cache map[string]*CacheEntry mutex sync.</description>
     </item>
     
     <item>

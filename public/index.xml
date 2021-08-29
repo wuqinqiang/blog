@@ -7,7 +7,7 @@
     <generator>Hugo -- gohugo.io</generator>
     <language>zh-hans</language>
     <copyright>This work is licensed under a Creative Commons Attribution-NonCommercial 4.0 International License.</copyright>
-    <lastBuildDate>Wed, 11 Aug 2021 00:00:00 +0000</lastBuildDate><atom:link href="https://www.syst.top/index.xml" rel="self" type="application/rss+xml" />
+    <lastBuildDate>Sun, 29 Aug 2021 15:25:52 +0800</lastBuildDate><atom:link href="https://www.syst.top/index.xml" rel="self" type="application/rss+xml" />
     <item>
       <title>Myfriends</title>
       <link>https://www.syst.top/friends/friends/</link>
@@ -15,6 +15,48 @@
       
       <guid>https://www.syst.top/friends/friends/</guid>
       <description></description>
+    </item>
+    
+    <item>
+      <title>远离社交媒体 </title>
+      <link>https://www.syst.top/lives/medium/</link>
+      <pubDate>Sun, 29 Aug 2021 15:25:52 +0800</pubDate>
+      
+      <guid>https://www.syst.top/lives/medium/</guid>
+      <description>这个标题来源自 &amp;laquo;DEEP WORK&amp;raquo; 准则三:远离社交媒体。</description>
+    </item>
+    
+    <item>
+      <title>可以躺平一时，不能一直躺平</title>
+      <link>https://www.syst.top/lives/tp/</link>
+      <pubDate>Sun, 22 Aug 2021 08:01:52 +0800</pubDate>
+      
+      <guid>https://www.syst.top/lives/tp/</guid>
+      <description>人可以躺平一时，不能一直躺平。
+上周调整了生物钟，晚上十一点前入睡，早上六点起床。
+真是一个明智的调整。
+以前下班回家没有精力干其他的事。现在早上到上班的这段时间可以自我充电。写文章、敲代码，或者看看书&amp;hellip;&amp;hellip;，突然爱上了这种节奏。
+言归正传，
+年初开这个号的时候有规划做一些实战项目，可后面也一直没写。
+转眼半年过去了，这段计划也应该被提上日程了。
+接下来的时间我计划先写三个项目实战。
+ grpc-shop 分布式爬虫 Raft 算法实现  为什么要写项目实战？
+除了把知识点串起来之外，还有一个最重要的原因，我把它称之为 文档的艺术。
+你平常一定会碰到以下困惑。
+场景一：对接文档或者使用工具的时候，一定吐槽过别人写的是什么。
+站在对接人的角度，我的关注点是 what、how，你却一个劲介绍 much niubi。
+虽然我们会吐槽别人的文档，
+但是这并不妨碍自己也写出一塌糊涂的文档，也照样一塌糊涂。别人照样对你口吐芬芳，这种场面太过真实了。
+记忆中，文档和一次性口罩似乎是同性质的物品。前者用过就丢，后者草草写完封版。
+场景二：在和别人讲解自己某个项目、模块、功能的时候，滔滔不绝。可对方依然云里雾里。就像这样：
+归根结底，我觉得有五个原因:
+ 自身对做的东西没有深入去了解。遵循代码和我，有一个能跑的原则。 对细节了如指掌，但是表达能力出现问题。 没有站在读者的角度，你所谓的前置知识、技能、专业名词&amp;hellip;&amp;hellip;，对方完全不知，本质上还是信息(技术认知)差。 内心深处不想让别人了解这个系统，毕竟你想当唯一的消防员👩‍🚒。 读|听者是傻逼。(这个概率有多大?)  能把自己写过的东西、看过的项目&amp;hellip;&amp;hellip;，通过文字、嘴对嘴、视频等方式完整清晰的表达出来是一件非常重要且值得开干的事。
+如果连文档都写不清楚，还指望自己能写好 ppt？
+因为工作中接触过 grpc，然后也去看了部分源码。看源码的时候，恰巧又发现一处非致命的 bug ，顺手给提了个 pr，后面被合并了。
+所以，第一个项目就规划写 grpc-shop。
+大体已经规划完了，后面边开发边写文档，类似极客兔兔的七天系列。
+grpc-shop 计划 15 篇左右完结撒花。
+完毕。</description>
     </item>
     
     <item>
@@ -48,24 +90,6 @@ $ brew tap ktr0731/evans $ brew install evans 我们来操作一下 REPL 模式�
 下图能清晰表达整体流程了。 顺便说一句，这篇文章实现的代码比 Handling 1 Million Requests per Minute with Go 的代码简单多了。
 首先看 job。
 package wpool import ( &amp;#34;context&amp;#34; ) type JobID string type jobType string type jobMetadata map[string]interface{} type ExecutionFn func(ctx context.Context, args interface{}) (interface{}, error) type JobDescriptor struct { ID JobID JType jobType Metadata map[string]interface{} } type Result struct { Value interface{} Err error Descriptor JobDescriptor } type Job struct { Descriptor JobDescriptor ExecFn ExecutionFn Args interface{} } // 处理 job 逻辑,处理结果包装成 Result 结果 func (j Job) execute(ctx context.</description>
-    </item>
-    
-    <item>
-      <title>如何优雅地实现并发编排任务</title>
-      <link>https://www.syst.top/posts/go/test-tip/</link>
-      <pubDate>Tue, 29 Jun 2021 07:44:45 +0800</pubDate>
-      
-      <guid>https://www.syst.top/posts/go/test-tip/</guid>
-      <description>开篇 在
-场景1：调用第三方接口的时候， 一个需求你需要调用不同的接口，做数据组装。 场景2:一个应用首页可能依托于很多服务。那就涉及到在加载页面时需要同时请求多个服务的接口。这一步往往是由后端统一调用组装数据再返回给前端，也就是所谓的 BFF(Backend For Frontend) 层。
-针对以上两种场景，假设在没有强依赖关系下，选择串行调用，那么总耗时即:
-time=s1+s2+....sn 按照当代秒入百万的有为青年，这么长时间早就把你祖宗十八代问候了一遍。
-为了伟大的KPI，我们往往会选择并发地调用这些依赖接口。那么总耗时就是:
-time=max(s1,s2,s3.....,sn) 当然开始堆业务的时候可以先串行化，等到上面的人着急的时候，亮出绝招。
-这样，年底 PPT 就可以加上浓重的一笔流水账:为业务某个接口提高百分之XXX性能，间接产生XXX价值。
-当然这一切的前提是，做老板不懂技术，做技术”懂”你。
-言归正传,如果修改成并发调用，你可能会这么写，
-package main import ( &amp;#34;fmt&amp;#34; &amp;#34;sync&amp;#34; &amp;#34;time&amp;#34; ) func main() { var wg sync.WaitGroup wg.Add(2) var userInfo *User var productList []Product go func() { defer wg.Done() userInfo, _ = getUser() }() go func() { defer wg.Done() productList, _ = getProductList() }() wg.Wait() fmt.Printf(&amp;#34;用户信息:%+v\n&amp;#34;, userInfo) fmt.Printf(&amp;#34;商品信息:%+v\n&amp;#34;, productList) } /********用户服务**********/ type User struct { Name string Age uint8 } func getUser() (*User, error) { time.</description>
     </item>
     
     <item>
@@ -188,17 +212,6 @@ func rob(nums []int) int { n := len(nums) if n == 0 { return 0 } if n == 1 { ret
 我没有反驳他。但是看过我公众号的人都知道，我是最反对这句话的，人为什么一定要和别人比？
 下面是和他的部分对话:
  我:你日常工作996吗？ 小宇:996？事务所里日常007状态，真的太忙了。 我:那我日常995，007感觉自己是个机器，没有时间停下来思考。 小宇:其实我也后悔过，当初大一的时候没转计算机专业，那时候也没这方面的意识，身边也没认识这样的人。如果当初没有把注册会计师考下来，我可能在毕业的时候什么都没。 我:也许当初转了你也后悔。可是，你现在也能转啊。 小宇:现在我觉得太晚了。 我:你98还怕晚？ 小宇:我证书都考下来了。现在我觉得，假如路有100米，我觉得我已经走了40米，很难回头换路了。 我:那你当初没想过考研吗？ 小宇:当初有想过，但是能考什么？我看了半天，也不知道能考哪个方向。文科专业就业性确实不太行，以至于公务员是大部分人的归宿。 那你打算这条路走下去了？没打算考公务员吗？  目前规划是这样的。不过杭州给我的感觉压力很大，老实说，要不是身边有女朋友，我还真不知道能不能坚持下去。女朋友在身边，压力大的时候，至少还有一个人能说话。至于公务员，可能只是 plan B。 &amp;hellip;&amp;hellip; 以上就是昨天和发小们的一些对话。也只有在这种场合下才能凑齐全部的人，尽管早已没了当年的乐趣。 最后，想对着我那些发小说一句:</description>
-    </item>
-    
-    <item>
-      <title>iota 在 Go 中的使用 </title>
-      <link>https://www.syst.top/posts/go/enum/</link>
-      <pubDate>Sun, 25 Apr 2021 22:25:52 +0800</pubDate>
-      
-      <guid>https://www.syst.top/posts/go/enum/</guid>
-      <description>介绍 Go 语言实际上没有直接支持枚举的关键字。一般我们都是通过 const + iota 实现枚举的能力。
-有人要问了，为什么一定要使用枚举呢？stackoverflow 上有一个高赞的回答，如下:
-You should always use enums when a variable (especially a method parameter) can only take one out of a small set of possible values. Examples would be things like type constants (contract status: &amp;quot;permanent&amp;quot;, &amp;quot;temp&amp;quot;, &amp;quot;apprentice&amp;quot;), or flags (&amp;quot;execute now&amp;quot;, &amp;quot;defer execution&amp;quot;). If you use enums instead of integers (or String codes), you increase compile-time checking and avoid errors from passing in invalid constants, and you document which values are legal to use.</description>
     </item>
     
   </channel>
