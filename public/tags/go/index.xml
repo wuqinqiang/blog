@@ -74,7 +74,7 @@ func rob(nums []int) int { n := len(nums) if n == 0 { return 0 } if n == 1 { ret
     </item>
     
     <item>
-      <title>iota 在 Go 中的使用 </title>
+      <title></title>
       <link>https://www.syst.top/posts/go/enum/</link>
       <pubDate>Sun, 25 Apr 2021 22:25:52 +0800</pubDate>
       
@@ -82,6 +82,47 @@ func rob(nums []int) int { n := len(nums) if n == 0 { return 0 } if n == 1 { ret
       <description>介绍 Go 语言实际上没有直接支持枚举的关键字。一般我们都是通过 const + iota 实现枚举的能力。
 有人要问了，为什么一定要使用枚举呢？stackoverflow 上有一个高赞的回答，如下:
 You should always use enums when a variable (especially a method parameter) can only take one out of a small set of possible values. Examples would be things like type constants (contract status: &amp;quot;permanent&amp;quot;, &amp;quot;temp&amp;quot;, &amp;quot;apprentice&amp;quot;), or flags (&amp;quot;execute now&amp;quot;, &amp;quot;defer execution&amp;quot;). If you use enums instead of integers (or String codes), you increase compile-time checking and avoid errors from passing in invalid constants, and you document which values are legal to use.</description>
+    </item>
+    
+    <item>
+      <title>channel原理解析</title>
+      <link>https://www.syst.top/posts/go/channel/</link>
+      <pubDate>Sun, 25 Apr 2021 22:25:52 +0800</pubDate>
+      
+      <guid>https://www.syst.top/posts/go/channel/</guid>
+      <description>躺的太久了，不能太躺了。
+宁可我卷死别人，不能让别人卷我。
+之前断断续续看过Go几个模块的源码，可从未下笔，导致有些细节记不起来了。打算写一些文章重新记录。
+channel源码解析文章太多了，很多上来都是直接讲解源码的，对于完全没看过源码的人来说，就挺突然的。鉴于长篇大论大部分人没耐心看完，我打算分两三篇彻底讲清楚channel，最后附上完整的ppt。
+当然这当中不会涉及过多细节源码，有时候，细节是魔鬼。
+介绍 channel一些基础介绍这里就不过多涉及了，我不相信都1202年了，用过Go的人没用过channel。
+当然下图也涵盖了大部分使用方法。注意是使用姿势，而不是模式。
+顺便再提一句，有一道使用channel进行任务编排的经典的题。题目如下，
+有四个goroutine，编号为 1、2、3、4。每秒钟会有一个 goroutine打印自己的编号。请你实现这个程序，让输出的编号总是按照 1、2、3、4、1、2、3、4、……的顺序打印出来。可以自己先思考下，答案也可以通过后台回复x x x获取。
+原理解析 从一个简单的例子说起。创建一个main.go文件，代码如下，
+当然，你直接执行这段代码会显示死锁，因为系统会检测到没有其他g有接收消息的动作。
+我们来看看这段代码编译以后长啥样。
+得到go程序的汇编代码并不难。
+可以使用go tool compile -N -l -S main.go生成汇编代码：
+或者使用go tool compile -N -l main.go 先编译出代码，然后再使用go tool objdump main.o反汇编出代码。
+当然还可以使用go build -gcflags -S main.go也可以得到汇编的代码。
+上面两种我就不演示了，可以自行实验。他们之中的flag具体含义也可以自行了解，这些都不是本章的重点。
+如果你觉得上面要自己敲代码比较麻烦，我推荐一个更加直接的可视化的工具。
+综上，从编译的代码我们可以看出，上述初始化一个channel,
+ch := make(chan struct{}) 实际上调用的是runtime.makechan。
+我们来了解一下runtime.makechan
+从函数中，我们能知道最终返回一个runtime.hchan的指针。
+runtime.hchan结构。
+我们先来解释hchan结构体各个字段的含义，之后在案例介绍中会更加详细的说明他们的作用。
+我们先来看qcount和dataqsiz有什么区别？
+你去银行办事，银行有5个办事窗口，那么dataqsiz就等于5。在这里体现的是channel的容量为5。去银行的时候，当前有3个窗口有人正在办事，那么qcount就等于3，体现channel当前有3个数据元素。那么此时银行还可以再接待2个客户，对应还可以往channel发送2个数据元素。
+其他字段现在看看说明就行了，后面会细讲。
+到这里我们就知道创建一个channel本质上就是得到一个runtime.hchan的指针，后续对此chan的操作，无非就是对结构体字段进行相对应的操作。
+同时我们也能猜出，为啥channel能在不同的g中传递消息而对于使用者来说不用担心并发的问题，本质上就是hchan内部使用互斥锁来保证了并发安全。
+最后我们来看一下runtime.makechan函数核心实现，当然注释已经很明白了。
+可以看到创建的时候有一段switch分支代码，那么什么情况下会走对应的case呢?
+根据上面的信息，我们可以得出，
+ 如果创建一个无缓冲channel ，那么只需要为runtime.hchan本身分配一段内存空间即可。 如果创建的缓冲channel 存储的类型不是指针类型，会为当前 channel 和存储类型元素的缓冲区分配一块连续的内存空间。 在默认情况下(即存储类型包含指针)，会单独为runtime.hchan和缓冲区分配内存；  总结 这篇我们主要介绍了如何获取go程序的汇编代码，通过汇编代码知道创建channel的具体函数runtime.</description>
     </item>
     
     <item>
@@ -154,21 +195,6 @@ cznic:Unlimited capacity channels ask for a machine with unlimited memory. rsc:T
 在 chanx 中，结构是这样的:
 type UnboundedChan struct { In chan&amp;lt;- T // channel for write 	Out &amp;lt;-chan T // channel for read 	buffer *RingBuffer // buffer } in 和 out 的职责在上篇文章已经说明，这里的 buffer 就是我们所谓的中间临时存储层。其中的 RingBuffer 结构我们后面再说。
 func NewUnboundedChan(initCapacity int) UnboundedChan { return NewUnboundedChanSize(initCapacity, initCapacity, initCapacity) } func NewUnboundedChanSize(initInCapacity, initOutCapacity, initBufCapacity int) UnboundedChan { in := make(chan T, initInCapacity) out := make(chan T, initOutCapacity) ch := UnboundedChan{In: in, Out: out, buffer: NewRingBuffer(initBufCapacity)} go process(in, out, ch) return ch } 它提供了两个初始化 UnboundedChan 的方法，从代码中我们可以明显的看出,NewUnboundedChanSize 可以给每个属性自定义自己的容量大小。仅此而已。</description>
-    </item>
-    
-    <item>
-      <title>为什么把 dig 迁移到 wire</title>
-      <link>https://www.syst.top/posts/go/why-dig-to-wire/</link>
-      <pubDate>Wed, 21 Apr 2021 23:54:52 +0800</pubDate>
-      
-      <guid>https://www.syst.top/posts/go/why-dig-to-wire/</guid>
-      <description>开篇 dig 和 wire 都是 Go 依赖注入的工具，那么，本质上功能相似的框架，为什么要从 dig 切换成 wire？
-场景 我们从场景出发。
-假设我们的项目分层是:router-&amp;gt;controller-&amp;gt;service-&amp;gt;dao。
-大概就长这样:
-现在我们需要对外暴露一个订单服务的接口。
-首页看 main.go 文件。
-package main import ( &amp;#34;fmt&amp;#34; &amp;#34;github.com/gin-gonic/gin&amp;#34; &amp;#34;github.com/wuqinqiang/digvswire/dig&amp;#34; &amp;#34;github.com/wuqinqiang/digvswire/router&amp;#34; ) func main() { serverStart() } func serverStart() { defer func() { if err := recover(); err != nil { fmt.Printf(&amp;#34;init app err:%v\n&amp;#34;, err) } }() e := gin.Default() di := dig.ContainerByDig() err := router.RegisterRouter(e, di) if err != nil { fmt.Printf(&amp;#34;register router err:%v&amp;#34;, err) } _ = e.</description>
     </item>
     
   </channel>
