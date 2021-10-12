@@ -8,27 +8,26 @@
 	<meta name="theme-color" content="#494f5c">
 	<meta name="msapplication-TileColor" content="#494f5c">
 <meta itemprop="name" content="channel原理解析">
-<meta itemprop="description" content="躺的太久了，不能太躺了。
-宁可我卷死别人，不能让别人卷我。
+<meta itemprop="description" content="躺的太久了，该起床了。宁可我卷死别人，不能让别人卷我。
 之前断断续续看过Go几个模块的源码，可从未下笔，导致有些细节记不起来了。打算写一些文章重新记录。
-channel源码解析文章太多了，很多上来都是直接讲解源码的，对于完全没看过源码的人来说，就挺突然的。鉴于长篇大论大部分人没耐心看完，我打算分两三篇彻底讲清楚channel，最后附上完整的ppt。
-当然这当中不会涉及过多细节源码，有时候，细节是魔鬼。
-介绍 channel一些基础介绍这里就不过多涉及了，我不相信都1202年了，用过Go的人没用过channel。
+channel源码解析的文章太多了。只用一篇文章的长篇大论大部分人没耐心看完，所以我打算分开写，最后附上完整的ppt。
+当然这其中不会涉及过多细节源码，因为有时候，细节是魔鬼。
+介绍 channel一些基础介绍这里就不过多涉及了，都1202年了，我不相信用过Go的人没用过channel。
 当然下图也涵盖了大部分使用方法。注意是使用姿势，而不是模式。
 顺便再提一句，有一道使用channel进行任务编排的经典的题。题目如下，
-有四个goroutine，编号为 1、2、3、4。每秒钟会有一个 goroutine打印自己的编号。请你实现这个程序，让输出的编号总是按照 1、2、3、4、1、2、3、4、……的顺序打印出来。可以自己先思考下，答案也可以通过后台回复x x x获取。
-原理解析 从一个简单的例子说起。创建一个main.go文件，代码如下，
-当然，你直接执行这段代码会显示死锁，因为系统会检测到没有其他g有接收消息的动作。
+有四个goroutine，编号为 1、2、3、4。每秒钟会有一个 goroutine打印自己的编号。请你实现这个程序，让输出的编号总是按照 1、2、3、4、1、2、3、4、……的顺序打印出来。就像这样，
+可以自己先思考下，代码也可以通过后台回复击鼓传花获取。
+原理解析 从一个简单的例子说起。
+创建一个main.go文件，代码如下，
 我们来看看这段代码编译以后长啥样。
-得到go程序的汇编代码并不难。
+想得到go程序的汇编代码并不难。
 可以使用go tool compile -N -l -S main.go生成汇编代码：
 或者使用go tool compile -N -l main.go 先编译出代码，然后再使用go tool objdump main.o反汇编出代码。
-当然还可以使用go build -gcflags -S main.go也可以得到汇编的代码。
-上面两种我就不演示了，可以自行实验。他们之中的flag具体含义也可以自行了解，这些都不是本章的重点。
-如果你觉得上面要自己敲代码比较麻烦，我推荐一个更加直接的可视化的工具。
+当然，通过go build -gcflags -S main.go同样可以得到汇编的代码。
+上面两种我就不演示了，可以自行实验。他们之中flag的具体含义也可以自行了解。
+如果你觉得上面要自己敲代码比较麻烦，我推荐一个更加直接可视化的工具。
 综上，从编译的代码我们可以看出，上述初始化一个channel,
-ch := make(chan struct{}) 实际上调用的是runtime.makechan。
-我们来了解一下runtime.makechan
+ch := make(chan struct{}) 实际上调用的是runtime.makechan。我们来了解一下runtime.makechan。
 从函数中，我们能知道最终返回一个runtime.hchan的指针。
 runtime.hchan结构。
 我们先来解释hchan结构体各个字段的含义，之后在案例介绍中会更加详细的说明他们的作用。
@@ -36,40 +35,39 @@ runtime.hchan结构。
 你去银行办事，银行有5个办事窗口，那么dataqsiz就等于5。在这里体现的是channel的容量为5。去银行的时候，当前有3个窗口有人正在办事，那么qcount就等于3，体现channel当前有3个数据元素。那么此时银行还可以再接待2个客户，对应还可以往channel发送2个数据元素。
 其他字段现在看看说明就行了，后面会细讲。
 到这里我们就知道创建一个channel本质上就是得到一个runtime.hchan的指针，后续对此chan的操作，无非就是对结构体字段进行相对应的操作。
-同时我们也能猜出，为啥channel能在不同的g中传递消息而对于使用者来说不用担心并发的问题，本质上就是hchan内部使用互斥锁来保证了并发安全。
+同时我们也能猜出，为啥channel能在不同的g中传递消息，而对于使用者来说不用担心并发的问题，其实就是hchan内部使用互斥锁来保证了并发安全。
 最后我们来看一下runtime.makechan函数核心实现，当然注释已经很明白了。
 可以看到创建的时候有一段switch分支代码，那么什么情况下会走对应的case呢?
 根据上面的信息，我们可以得出，
- 如果创建一个无缓冲channel ，那么只需要为runtime.hchan本身分配一段内存空间即可。 如果创建的缓冲channel 存储的类型不是指针类型，会为当前 channel 和存储类型元素的缓冲区分配一块连续的内存空间。 在默认情况下(即存储类型包含指针)，会单独为runtime.hchan和缓冲区分配内存；  总结 这篇我们主要介绍了如何获取go程序的汇编代码，通过汇编代码知道创建channel的具体函数runtime.">
+ 如果创建一个无缓冲channel ，那么只需要为runtime.hchan本身分配一段内存空间即可。 如果创建的缓冲channel 存储的类型不是指针类型，会为当前 channel 和存储类型元素的缓冲区，分配一块连续的内存空间。 在默认情况下(缓冲channel存储类型包含指针)，会单独为runtime.hchan和缓冲区分配内存。  总结 这篇我们主要介绍了如何获取go程序的汇编代码，通过汇编代码知道创建channel的具体函数runtime.makechan，同时我们还知道不同的创建姿势会导致走向不同的内存空间分配。最后通过创建函数我们知道channel在程序运行时使用runtime.hchan来表示。">
 <meta itemprop="datePublished" content="2021-04-25T22:25:52+08:00" />
 <meta itemprop="dateModified" content="2021-04-25T22:25:52+08:00" />
-<meta itemprop="wordCount" content="72">
+<meta itemprop="wordCount" content="69">
 
 
 
 <meta itemprop="keywords" content="go,enum," />
 <meta property="og:title" content="channel原理解析" />
-<meta property="og:description" content="躺的太久了，不能太躺了。
-宁可我卷死别人，不能让别人卷我。
+<meta property="og:description" content="躺的太久了，该起床了。宁可我卷死别人，不能让别人卷我。
 之前断断续续看过Go几个模块的源码，可从未下笔，导致有些细节记不起来了。打算写一些文章重新记录。
-channel源码解析文章太多了，很多上来都是直接讲解源码的，对于完全没看过源码的人来说，就挺突然的。鉴于长篇大论大部分人没耐心看完，我打算分两三篇彻底讲清楚channel，最后附上完整的ppt。
-当然这当中不会涉及过多细节源码，有时候，细节是魔鬼。
-介绍 channel一些基础介绍这里就不过多涉及了，我不相信都1202年了，用过Go的人没用过channel。
+channel源码解析的文章太多了。只用一篇文章的长篇大论大部分人没耐心看完，所以我打算分开写，最后附上完整的ppt。
+当然这其中不会涉及过多细节源码，因为有时候，细节是魔鬼。
+介绍 channel一些基础介绍这里就不过多涉及了，都1202年了，我不相信用过Go的人没用过channel。
 当然下图也涵盖了大部分使用方法。注意是使用姿势，而不是模式。
 顺便再提一句，有一道使用channel进行任务编排的经典的题。题目如下，
-有四个goroutine，编号为 1、2、3、4。每秒钟会有一个 goroutine打印自己的编号。请你实现这个程序，让输出的编号总是按照 1、2、3、4、1、2、3、4、……的顺序打印出来。可以自己先思考下，答案也可以通过后台回复x x x获取。
-原理解析 从一个简单的例子说起。创建一个main.go文件，代码如下，
-当然，你直接执行这段代码会显示死锁，因为系统会检测到没有其他g有接收消息的动作。
+有四个goroutine，编号为 1、2、3、4。每秒钟会有一个 goroutine打印自己的编号。请你实现这个程序，让输出的编号总是按照 1、2、3、4、1、2、3、4、……的顺序打印出来。就像这样，
+可以自己先思考下，代码也可以通过后台回复击鼓传花获取。
+原理解析 从一个简单的例子说起。
+创建一个main.go文件，代码如下，
 我们来看看这段代码编译以后长啥样。
-得到go程序的汇编代码并不难。
+想得到go程序的汇编代码并不难。
 可以使用go tool compile -N -l -S main.go生成汇编代码：
 或者使用go tool compile -N -l main.go 先编译出代码，然后再使用go tool objdump main.o反汇编出代码。
-当然还可以使用go build -gcflags -S main.go也可以得到汇编的代码。
-上面两种我就不演示了，可以自行实验。他们之中的flag具体含义也可以自行了解，这些都不是本章的重点。
-如果你觉得上面要自己敲代码比较麻烦，我推荐一个更加直接的可视化的工具。
+当然，通过go build -gcflags -S main.go同样可以得到汇编的代码。
+上面两种我就不演示了，可以自行实验。他们之中flag的具体含义也可以自行了解。
+如果你觉得上面要自己敲代码比较麻烦，我推荐一个更加直接可视化的工具。
 综上，从编译的代码我们可以看出，上述初始化一个channel,
-ch := make(chan struct{}) 实际上调用的是runtime.makechan。
-我们来了解一下runtime.makechan
+ch := make(chan struct{}) 实际上调用的是runtime.makechan。我们来了解一下runtime.makechan。
 从函数中，我们能知道最终返回一个runtime.hchan的指针。
 runtime.hchan结构。
 我们先来解释hchan结构体各个字段的含义，之后在案例介绍中会更加详细的说明他们的作用。
@@ -77,38 +75,37 @@ runtime.hchan结构。
 你去银行办事，银行有5个办事窗口，那么dataqsiz就等于5。在这里体现的是channel的容量为5。去银行的时候，当前有3个窗口有人正在办事，那么qcount就等于3，体现channel当前有3个数据元素。那么此时银行还可以再接待2个客户，对应还可以往channel发送2个数据元素。
 其他字段现在看看说明就行了，后面会细讲。
 到这里我们就知道创建一个channel本质上就是得到一个runtime.hchan的指针，后续对此chan的操作，无非就是对结构体字段进行相对应的操作。
-同时我们也能猜出，为啥channel能在不同的g中传递消息而对于使用者来说不用担心并发的问题，本质上就是hchan内部使用互斥锁来保证了并发安全。
+同时我们也能猜出，为啥channel能在不同的g中传递消息，而对于使用者来说不用担心并发的问题，其实就是hchan内部使用互斥锁来保证了并发安全。
 最后我们来看一下runtime.makechan函数核心实现，当然注释已经很明白了。
 可以看到创建的时候有一段switch分支代码，那么什么情况下会走对应的case呢?
 根据上面的信息，我们可以得出，
- 如果创建一个无缓冲channel ，那么只需要为runtime.hchan本身分配一段内存空间即可。 如果创建的缓冲channel 存储的类型不是指针类型，会为当前 channel 和存储类型元素的缓冲区分配一块连续的内存空间。 在默认情况下(即存储类型包含指针)，会单独为runtime.hchan和缓冲区分配内存；  总结 这篇我们主要介绍了如何获取go程序的汇编代码，通过汇编代码知道创建channel的具体函数runtime." />
+ 如果创建一个无缓冲channel ，那么只需要为runtime.hchan本身分配一段内存空间即可。 如果创建的缓冲channel 存储的类型不是指针类型，会为当前 channel 和存储类型元素的缓冲区，分配一块连续的内存空间。 在默认情况下(缓冲channel存储类型包含指针)，会单独为runtime.hchan和缓冲区分配内存。  总结 这篇我们主要介绍了如何获取go程序的汇编代码，通过汇编代码知道创建channel的具体函数runtime.makechan，同时我们还知道不同的创建姿势会导致走向不同的内存空间分配。最后通过创建函数我们知道channel在程序运行时使用runtime.hchan来表示。" />
 <meta property="og:type" content="article" />
 <meta property="og:url" content="https://www.syst.top/posts/go/channel/" />
 <meta property="article:published_time" content="2021-04-25T22:25:52+08:00" />
 <meta property="article:modified_time" content="2021-04-25T22:25:52+08:00" />
 <meta name="twitter:card" content="summary"/>
 <meta name="twitter:title" content="channel原理解析"/>
-<meta name="twitter:description" content="躺的太久了，不能太躺了。
-宁可我卷死别人，不能让别人卷我。
+<meta name="twitter:description" content="躺的太久了，该起床了。宁可我卷死别人，不能让别人卷我。
 之前断断续续看过Go几个模块的源码，可从未下笔，导致有些细节记不起来了。打算写一些文章重新记录。
-channel源码解析文章太多了，很多上来都是直接讲解源码的，对于完全没看过源码的人来说，就挺突然的。鉴于长篇大论大部分人没耐心看完，我打算分两三篇彻底讲清楚channel，最后附上完整的ppt。
-当然这当中不会涉及过多细节源码，有时候，细节是魔鬼。
-介绍 channel一些基础介绍这里就不过多涉及了，我不相信都1202年了，用过Go的人没用过channel。
+channel源码解析的文章太多了。只用一篇文章的长篇大论大部分人没耐心看完，所以我打算分开写，最后附上完整的ppt。
+当然这其中不会涉及过多细节源码，因为有时候，细节是魔鬼。
+介绍 channel一些基础介绍这里就不过多涉及了，都1202年了，我不相信用过Go的人没用过channel。
 当然下图也涵盖了大部分使用方法。注意是使用姿势，而不是模式。
 顺便再提一句，有一道使用channel进行任务编排的经典的题。题目如下，
-有四个goroutine，编号为 1、2、3、4。每秒钟会有一个 goroutine打印自己的编号。请你实现这个程序，让输出的编号总是按照 1、2、3、4、1、2、3、4、……的顺序打印出来。可以自己先思考下，答案也可以通过后台回复x x x获取。
-原理解析 从一个简单的例子说起。创建一个main.go文件，代码如下，
-当然，你直接执行这段代码会显示死锁，因为系统会检测到没有其他g有接收消息的动作。
+有四个goroutine，编号为 1、2、3、4。每秒钟会有一个 goroutine打印自己的编号。请你实现这个程序，让输出的编号总是按照 1、2、3、4、1、2、3、4、……的顺序打印出来。就像这样，
+可以自己先思考下，代码也可以通过后台回复击鼓传花获取。
+原理解析 从一个简单的例子说起。
+创建一个main.go文件，代码如下，
 我们来看看这段代码编译以后长啥样。
-得到go程序的汇编代码并不难。
+想得到go程序的汇编代码并不难。
 可以使用go tool compile -N -l -S main.go生成汇编代码：
 或者使用go tool compile -N -l main.go 先编译出代码，然后再使用go tool objdump main.o反汇编出代码。
-当然还可以使用go build -gcflags -S main.go也可以得到汇编的代码。
-上面两种我就不演示了，可以自行实验。他们之中的flag具体含义也可以自行了解，这些都不是本章的重点。
-如果你觉得上面要自己敲代码比较麻烦，我推荐一个更加直接的可视化的工具。
+当然，通过go build -gcflags -S main.go同样可以得到汇编的代码。
+上面两种我就不演示了，可以自行实验。他们之中flag的具体含义也可以自行了解。
+如果你觉得上面要自己敲代码比较麻烦，我推荐一个更加直接可视化的工具。
 综上，从编译的代码我们可以看出，上述初始化一个channel,
-ch := make(chan struct{}) 实际上调用的是runtime.makechan。
-我们来了解一下runtime.makechan
+ch := make(chan struct{}) 实际上调用的是runtime.makechan。我们来了解一下runtime.makechan。
 从函数中，我们能知道最终返回一个runtime.hchan的指针。
 runtime.hchan结构。
 我们先来解释hchan结构体各个字段的含义，之后在案例介绍中会更加详细的说明他们的作用。
@@ -116,11 +113,11 @@ runtime.hchan结构。
 你去银行办事，银行有5个办事窗口，那么dataqsiz就等于5。在这里体现的是channel的容量为5。去银行的时候，当前有3个窗口有人正在办事，那么qcount就等于3，体现channel当前有3个数据元素。那么此时银行还可以再接待2个客户，对应还可以往channel发送2个数据元素。
 其他字段现在看看说明就行了，后面会细讲。
 到这里我们就知道创建一个channel本质上就是得到一个runtime.hchan的指针，后续对此chan的操作，无非就是对结构体字段进行相对应的操作。
-同时我们也能猜出，为啥channel能在不同的g中传递消息而对于使用者来说不用担心并发的问题，本质上就是hchan内部使用互斥锁来保证了并发安全。
+同时我们也能猜出，为啥channel能在不同的g中传递消息，而对于使用者来说不用担心并发的问题，其实就是hchan内部使用互斥锁来保证了并发安全。
 最后我们来看一下runtime.makechan函数核心实现，当然注释已经很明白了。
 可以看到创建的时候有一段switch分支代码，那么什么情况下会走对应的case呢?
 根据上面的信息，我们可以得出，
- 如果创建一个无缓冲channel ，那么只需要为runtime.hchan本身分配一段内存空间即可。 如果创建的缓冲channel 存储的类型不是指针类型，会为当前 channel 和存储类型元素的缓冲区分配一块连续的内存空间。 在默认情况下(即存储类型包含指针)，会单独为runtime.hchan和缓冲区分配内存；  总结 这篇我们主要介绍了如何获取go程序的汇编代码，通过汇编代码知道创建channel的具体函数runtime."/>
+ 如果创建一个无缓冲channel ，那么只需要为runtime.hchan本身分配一段内存空间即可。 如果创建的缓冲channel 存储的类型不是指针类型，会为当前 channel 和存储类型元素的缓冲区，分配一块连续的内存空间。 在默认情况下(缓冲channel存储类型包含指针)，会单独为runtime.hchan和缓冲区分配内存。  总结 这篇我们主要介绍了如何获取go程序的汇编代码，通过汇编代码知道创建channel的具体函数runtime.makechan，同时我们还知道不同的创建姿势会导致走向不同的内存空间分配。最后通过创建函数我们知道channel在程序运行时使用runtime.hchan来表示。"/>
 
 	<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
 	<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
@@ -172,34 +169,34 @@ runtime.hchan结构。
 				<h1>channel原理解析</h1>
 			</header>
 			<div class="content">
-				<p>躺的太久了，不能太躺了。</p>
-<p>宁可我卷死别人，不能让别人卷我。</p>
+				<p>躺的太久了，该起床了。宁可我卷死别人，不能让别人卷我。</p>
 <p>之前断断续续看过<code>Go</code>几个模块的源码，可从未下笔，导致有些细节记不起来了。打算写一些文章重新记录。</p>
-<p><code>channel</code>源码解析文章太多了，很多上来都是直接讲解源码的，对于完全没看过源码的人来说，就挺突然的。鉴于长篇大论大部分人没耐心看完，我打算分两三篇彻底讲清楚<code>channel</code>，最后附上完整的<code>ppt</code>。</p>
-<p>当然这当中不会涉及过多细节源码，有时候，细节是魔鬼。</p>
+<p><code>channel</code>源码解析的文章太多了。只用一篇文章的长篇大论大部分人没耐心看完，所以我打算分开写，最后附上完整的<code>ppt</code>。</p>
+<p>当然这其中不会涉及过多细节源码，因为有时候，细节是魔鬼。</p>
 <h3 id="介绍">介绍<a href="#介绍" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h3>
-<p>channel一些基础介绍这里就不过多涉及了，我不相信都1202年了，用过<code>Go</code>的人没用过<code>channel</code>。</p>
+<p><code>channel</code>一些基础介绍这里就不过多涉及了，都1202年了，我不相信用过<code>Go</code>的人没用过<code>channel</code>。</p>
 <p>当然下图也涵盖了大部分使用方法。注意是使用姿势，而不是模式。</p>
 <p><img src="https://cdn.syst.top/use-channel.png" alt="image"></p>
 <p>顺便再提一句，有一道使用<code>channel</code>进行任务编排的经典的题。题目如下，</p>
-<p>有四个<code>goroutine</code>，编号为 1、2、3、4。每秒钟会有一个 <code>goroutine</code>打印自己的编号。请你实现这个程序，让输出的编号总是按照 1、2、3、4、1、2、3、4、……的顺序打印出来。可以自己先思考下，答案也可以通过后台回复x x x获取。</p>
+<p>有四个<code>goroutine</code>，编号为 1、2、3、4。每秒钟会有一个 <code>goroutine</code>打印自己的编号。请你实现这个程序，让输出的编号总是按照 1、2、3、4、1、2、3、4、……的顺序打印出来。就像这样，</p>
+<p><img src="https://cdn.syst.top/channel-gif.gif" alt="image"></p>
+<p>可以自己先思考下，代码也可以通过后台回复<code>击鼓传花</code>获取。</p>
 <h3 id="原理解析">原理解析<a href="#原理解析" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h3>
-<p>从一个简单的例子说起。创建一个<code>main.go</code>文件，代码如下，</p>
+<p>从一个简单的例子说起。</p>
+<p>创建一个<code>main.go</code>文件，代码如下，</p>
 <p><img src="https://cdn.syst.top/ch-send.png" alt="image"></p>
-<p>当然，你直接执行这段代码会显示死锁，因为系统会检测到没有其他<code>g</code>有接收消息的动作。</p>
 <p>我们来看看这段代码编译以后长啥样。</p>
-<p>得到<code>go</code>程序的汇编代码并不难。</p>
+<p>想得到<code>go</code>程序的汇编代码并不难。</p>
 <p>可以使用<code>go tool compile -N -l -S main.go</code>生成汇编代码：</p>
 <p><img src="https://cdn.syst.top/compile-channel.png" alt="image"></p>
 <p>或者使用<code>go tool compile -N -l main.go</code> 先编译出代码，然后再使用<code>go tool objdump main.o</code>反汇编出代码。</p>
-<p>当然还可以使用<code>go build -gcflags -S main.go</code>也可以得到汇编的代码。</p>
-<p>上面两种我就不演示了，可以自行实验。他们之中的<code>flag</code>具体含义也可以自行了解，这些都不是本章的重点。</p>
-<p>如果你觉得上面要自己敲代码比较麻烦，我推荐一个更加直接的可视化的工具。</p>
+<p>当然，通过<code>go build -gcflags -S main.go</code>同样可以得到汇编的代码。</p>
+<p>上面两种我就不演示了，可以自行实验。他们之中<code>flag</code>的具体含义也可以自行了解。</p>
+<p>如果你觉得上面要自己敲代码比较麻烦，我推荐一个更加直接可视化的工具。</p>
 <p><img src="https://cdn.syst.top/compile-show.png" alt="image"></p>
 <p>综上，从编译的代码我们可以看出，上述初始化一个<code>channel</code>,</p>
 <div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go">	<span class="nx">ch</span> <span class="o">:=</span> <span class="nb">make</span><span class="p">(</span><span class="kd">chan</span> <span class="kd">struct</span><span class="p">{})</span>
-</code></pre></div><p>实际上调用的是<code>runtime.makechan</code>。</p>
-<p>我们来了解一下<code>runtime.makechan</code></p>
+</code></pre></div><p>实际上调用的是<code>runtime.makechan</code>。我们来了解一下<code>runtime.makechan</code>。</p>
 <p><img src="https://cdn.syst.top/makechannel.png" alt="image"></p>
 <p>从函数中，我们能知道最终返回一个<code>runtime.hchan</code>的指针。</p>
 <p><code>runtime.hchan</code>结构。</p>
@@ -210,7 +207,7 @@ runtime.hchan结构。
 <p>你去银行办事，银行有5个办事窗口，那么<code>dataqsiz</code>就等于5。在这里体现的是<code>channel</code>的容量为5。去银行的时候，当前有3个窗口有人正在办事，那么<code>qcount</code>就等于3，体现<code>channel</code>当前有3个数据元素。那么此时银行还可以再接待2个客户，对应还可以往<code>channel</code>发送2个数据元素。</p>
 <p>其他字段现在看看说明就行了，后面会细讲。</p>
 <p>到这里我们就知道创建一个<code>channel</code>本质上就是得到一个<code>runtime.hchan</code>的指针，后续对此<code>chan</code>的操作，无非就是对结构体字段进行相对应的操作。</p>
-<p>同时我们也能猜出，为啥<code>channel</code>能在不同的g中传递消息而对于使用者来说不用担心并发的问题，本质上就是<code>hchan</code>内部使用互斥锁来保证了并发安全。</p>
+<p>同时我们也能猜出，为啥<code>channel</code>能在不同的<code>g</code>中传递消息，而对于使用者来说不用担心并发的问题，其实就是<code>hchan</code>内部使用互斥锁来保证了并发安全。</p>
 <p>最后我们来看一下<code>runtime.makechan</code>函数核心实现，当然注释已经很明白了。</p>
 <p><img src="https://cdn.syst.top/makechan2.png" alt="image-20211009084700993"></p>
 <p>可以看到创建的时候有一段<code>switch</code>分支代码，那么什么情况下会走对应的<code>case</code>呢?</p>
@@ -218,12 +215,13 @@ runtime.hchan结构。
 <p>根据上面的信息，我们可以得出，</p>
 <ul>
 <li>如果创建一个无缓冲<code>channel</code> ，那么只需要为<code>runtime.hchan</code>本身分配一段内存空间即可。</li>
-<li>如果创建的缓冲<code>channel</code> 存储的类型不是指针类型，会为当前 <code>channel</code> 和存储类型元素的缓冲区分配一块连续的内存空间。</li>
-<li>在默认情况下(即存储类型包含指针)，会单独为<code>runtime.hchan</code>和缓冲区分配内存；</li>
+<li>如果创建的缓冲<code>channel</code> 存储的类型不是指针类型，会为当前 <code>channel</code> 和存储类型元素的缓冲区，分配一块连续的内存空间。</li>
+<li>在默认情况下(缓冲<code>channel</code>存储类型包含指针)，会单独为<code>runtime.hchan</code>和缓冲区分配内存。</li>
 </ul>
 <h3 id="总结">总结<a href="#总结" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h3>
 <p>这篇我们主要介绍了如何获取<code>go</code>程序的汇编代码，通过汇编代码知道创建<code>channel</code>的具体函数<code>runtime.makechan</code>，同时我们还知道不同的创建姿势会导致走向不同的内存空间分配。最后通过创建函数我们知道<code>channel</code>在程序运行时使用<code>runtime.hchan</code>来表示。</p>
 <p>下一篇我们继续。</p>
+<p><img src="/Users/wuqinqiang/Desktop/image-20211009180357516.png" alt="image-20211009180357516"></p>
 
 			</div>
 			<div class="content"><br><img src="https://image.syst.top/image/wechat-qr.png"></div>
@@ -232,7 +230,7 @@ runtime.hchan结构。
 				<p>
 					<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-tag meta-icon"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"></path><line x1="7" y1="7" x2="7" y2="7"></line></svg><span class="tag"><a href="https://www.syst.top/tags/go">go</a></span><span class="tag"><a href="https://www.syst.top/tags/enum">enum</a></span>
 				</p>
-				<p><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-file-text"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>72 Words</p>
+				<p><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-file-text"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>69 Words</p>
 				<p><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-calendar"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>2021-04-25 22:25 &#43;0800</p>
 			</footer>
 		</article>
@@ -254,8 +252,8 @@ runtime.hchan结构。
 			<a class="next-post" href="https://www.syst.top/posts/go/enum/">
 				<span class="post-nav-label"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-arrow-left"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>&nbsp;Newer</span><br><span></span>
 			</a>
-			<a class="prev-post" href="https://www.syst.top/posts/go/synconce/">
-				<span class="post-nav-label">Older&nbsp;<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-arrow-right"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg></span><br><span>原来sync.Once还能这么用</span>
+			<a class="prev-post" href="https://www.syst.top/posts/go/channel2/">
+				<span class="post-nav-label">Older&nbsp;<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-arrow-right"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg></span><br><span>channel原理解析(二)</span>
 			</a>
 		</div>
 		<div id="comments" class="thin">
