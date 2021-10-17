@@ -6,8 +6,215 @@
 		<generator>Hugo -- gohugo.io</generator>
 		<language>zh-hans</language>
 		<copyright>This work is licensed under a Creative Commons Attribution-NonCommercial 4.0 International License.</copyright>
-		<lastBuildDate>Tue, 27 Jul 2021 10:01:52 +0800</lastBuildDate>
+		<lastBuildDate>Sun, 10 Oct 2021 21:25:52 +0800</lastBuildDate>
 		<atom:link href="https://www.syst.top/posts/index.xml" rel="self" type="application/rss+xml" />
+		
+		<item>
+			<title>channel原理解析(三)</title>
+			<link>https://www.syst.top/posts/go/channel3/</link>
+			<pubDate>Sun, 10 Oct 2021 21:25:52 +0800</pubDate>
+			
+			<guid>https://www.syst.top/posts/go/channel3/</guid>
+			<description>上一篇文章主要通过一个现实例子间接反映channel的一些原理。最后一篇开始介绍一些细节，会涉及到源码。
+还是从一个简单的代码程序看起。
+我们创建了一个无缓冲channel，然后往这个channel发送数据。因为程序中没有读操作ready，所以发送的时候会阻塞。我们通过汇编代码看它底层的调用。
+从图中我们看到，上述发送操作，程序运行时实际调用的runtime.chansend1。
+最终chansend1最终调用的还是chansend，chansend的第三个参数block是个bool值，表示操作channel不能立即成功时是否需要阻塞。
+具体哪些操作？
+ 向无缓冲channel发送数据且当前无接收者ready。 接收无缓冲channel数据且当前无发送者ready。 缓冲channel已满，往channel发送数据。 缓冲channel为空，接收channel数据 向一个nil的channel发送数据。(注意，向一个nil的channel发送数据并不会引发panic)。 向一个nil的channel接收数据。  碰到上面的操作，如果不是特殊处理，我们的应用程序会被阻塞，直到被唤醒。
+当然对于向nil的channel发送|接收数据，后续再也没机会被唤醒了。
+那么如果是快速试错的场景，是不是只要把block改成false，在失败的场景下就不会被阻塞了。
+编译这段代码。
+可以看出，上面这段代码编译后调用selectnbsend最终发送动作调用的还是chansned，只是传入的block是false。这样一旦操作失败，程序不会被阻塞。
+同理我们可以得出接收的调用动作。
+到这里我们已经知道，
+发送数据，最终调用的runtime.chansend。
+接收数据，最终调用的runtime.chanrecv。
+接下来我们来说明这两个函数底层是如何操作的。
+我们还是以一个无缓冲的channel和缓冲channel来说明。
+来看一段简单的程序。
+值得一提的是，在Go中使用 go func的时候，本质上调用的是runtime.newproc创建一个g，然后把这个g交给调度器调度。至于什么时候g被调度，然后执行你的代码逻辑，那就要看调度器的&amp;quot;心情&amp;quot;了。
+所以上面创建的两个g(暂且称为g1和g2)，可以看成是我们向调度器提交了两个任务g，我们无法保证哪个g会被先调度器调度执行，因此我们也不确定发送和接收这两个操作，谁会先被执行。
+假设g1先被调度器运行，然后执行代码ch&amp;lt;-struct{}{}。
+如果g2先被调度器运行，然后执行代码&amp;lt;-ch。
+当然我们也可以把上面的代码换成画成详细的无缓冲队列核心流程图。
+缓冲channel发送的时候分为三种情况，想想我们上篇文章快递员送快递场景。
+ 如果快递柜未满，直接把快递放入到快递柜。(对应缓冲区未满，把发送数据拷贝到缓冲区) 如果快递柜满了，那快递员只能在那等待快递柜空了。(对应把当前g封装成sudog，然后把sudog放到等待发送消息队列sendq中，最后挂起当前g) 如果送快递的时候正好客户在那里等，那就直接把快递给他就是了(对应如果发送的时候发现有等待者，直接数据拷贝给他呗)  我们来创建一个例子。
+我们创建了一个缓冲区为7的channel。buffer就是用来存储缓冲元素的，它实际上是一个环形数组。为什么是环形的？因为这样就可以达到复用空间的效果。
+此时没有发送接收动作，所以qcount为0，发送(sendx)和接收(recvx)的位置都为0。
+我们来看上面的第一种情况。缓冲区未满，
+这块代码就比较简单了。如果缓冲区未满，那就把当前要发送的数据拷贝到缓冲区的发送位置，然后发送位置sendx+1，然后当然channel个数qcount+1，整个流程就结束了。
+如果缓冲满的情况下，封装当前g成sudog，把这个sudog入队等待发送队列，最后调用gopark挂起当前g，上面无缓冲的时候有提到。
+最后一种情况，发送的时候正好有等待接收消息者，那么就从recvq中拿出最早开始等待的接受者，然后把发送的数据直接拷贝给他。
+send整体有两个动作：拷贝数据&amp;mdash;&amp;ndash;&amp;gt;唤醒等待的recvq。
+那么对于接收操作呢？
+ 快递柜里有我的快递，那我直接拿就行了。(对应缓冲区有数据，根据读recvx的位置拿数据) 快递柜还没我的快递，但是快递哥打电话说快到了，那我现在楼下转转。(对应缓冲区无数据，把当前g封装成sudog,然后放入到等待接收消息队列recvq中)。 去拿一个快递的时候，正好一个快递员放我另一个快递的时候因为快递柜满了，在那等着。(对应缓冲区满了，且还有等待发送者。此时先到缓冲区获取当前读recvx位置的数据，然后再从等待发送者队列中取出最早等待的发送者，把他要发送的数据拷贝拷贝到当前我读取数据的位置(保证先入先出的顺序)，最后更新发送位置和更新位置即可)。  第一种情况就简单了。直接通过当前读位置recvx读取buffer对应的值，这里还需要通过判断是否忽略返回值，而决定需不需要往当前接收操作拷贝数据。然后移动recvx位置，元素个数qcount-- ，最后解锁即可。
+第二种情况，封装当前g成sudog，把这个sudog入队等待接收队列，最后调用gopark挂起当前g。上面无缓冲的时候画过这个逻辑。
+第三种情况有点复杂。
+这种情况下，当获取到一个等待发送者，对于接收者来说，如果我们直接拿它的发送数据返回会发生什么？举个例子
+上图，channel满了，且sendq有一个等待发送者(假设是G8，发送数据为800)，此时执行接收操作，也就出现上述第三种情况。
+如果此时我们直接拿G8的数据，那么数据就不能保证先入先出了。
+所以正确的操作是，读取当前recvx位置(0)buffer值100，然后把G8的数据800拷贝到0的位置，最后把recvq的位置向前移动，同步发送位置sendx等于recvq。这里，可以思考下为啥？
+到这里缓冲channel的核心流程就说完了。如图，
+另外后台回复channel有我准备的一个小ppt，可以跟着一起看。</description>
+			<content type="html"><![CDATA[<p>上一篇文章主要通过一个现实例子间接反映<code>channel</code>的一些原理。最后一篇开始介绍一些细节，会涉及到源码。</p>
+<p>还是从一个简单的代码程序看起。</p>
+<p><img src="https://cdn.syst.top/12-1.png" alt="image-20211012211523725"></p>
+<p>我们创建了一个无缓冲<code>channel</code>，然后往这个<code>channel</code>发送数据。因为程序中没有读操作<code>ready</code>，所以发送的时候会阻塞。我们通过汇编代码看它底层的调用。</p>
+<p><img src="https://cdn.syst.top/12-2.png" alt="image-20211012211523725"></p>
+<p>从图中我们看到，上述发送操作，程序运行时实际调用的<code>runtime.chansend1</code>。</p>
+<p><img src="https://cdn.syst.top/12-3.png" alt="image-20211012211523725"></p>
+<p>最终<code>chansend1</code>最终调用的还是<code>chansend</code>，<code>chansend</code>的第三个参数<code>block</code>是个<code>bool</code>值，表示操作<code>channel</code>不能立即成功时是否需要阻塞。</p>
+<p>具体哪些操作？</p>
+<ul>
+<li>向无缓冲<code>channel</code>发送数据且当前无接收者<code>ready</code>。</li>
+<li>接收无缓冲<code>channel</code>数据且当前无发送者<code>ready</code>。</li>
+<li>缓冲<code>channel</code>已满，往<code>channel</code>发送数据。</li>
+<li>缓冲<code>channel</code>为空，接收<code>channel</code>数据</li>
+<li>向一个<code>nil</code>的<code>channel</code>发送数据。(注意，向一个<code>nil</code>的<code>channel</code>发送数据并不会引发<code>panic</code>)。</li>
+<li>向一个<code>nil</code>的<code>channel</code>接收数据。</li>
+</ul>
+<p>碰到上面的操作，如果不是特殊处理，我们的应用程序会被阻塞，直到被唤醒。</p>
+<p>当然对于向<code>nil</code>的<code>channel</code>发送|接收数据，后续再也没机会被唤醒了。</p>
+<p>那么如果是快速试错的场景，是不是只要把<code>block</code>改成<code>false</code>，在失败的场景下就不会被阻塞了。</p>
+<p>编译这段代码。</p>
+<p><img src="https://cdn.syst.top/12-4.png" alt="image-20211012215229617"></p>
+<p><img src="https://cdn.syst.top/12-5.png" alt="image-20211012215229617"></p>
+<p><img src="https://cdn.syst.top/12-6.png" alt="12-6"></p>
+<p>可以看出，上面这段代码编译后调用<code>selectnbsend</code>最终发送动作调用的还是<code>chansned</code>，只是传入的<code>block</code>是<code>false</code>。这样一旦操作失败，程序不会被阻塞。</p>
+<p>同理我们可以得出接收的调用动作。</p>
+<p><img src="https://cdn.syst.top/12-7.png" alt="12-6"></p>
+<p><img src="https://cdn.syst.top/12-8.png" alt="12-6"></p>
+<p><img src="https://cdn.syst.top/12-9.png" alt="12-6"></p>
+<p><img src="https://cdn.syst.top/12-10.png" alt="12-6"></p>
+<p>到这里我们已经知道，</p>
+<p>发送数据，最终调用的<code>runtime.chansend</code>。</p>
+<p>接收数据，最终调用的<code>runtime.chanrecv</code>。</p>
+<p>接下来我们来说明这两个函数底层是如何操作的。</p>
+<p>我们还是以一个无缓冲的<code>channel</code>和缓冲<code>channel</code>来说明。</p>
+<p>来看一段简单的程序。</p>
+<p><img src="https://cdn.syst.top/12-11.png" alt="image-20211012221535539"></p>
+<p>值得一提的是，在Go中使用 <code>go func</code>的时候，本质上调用的是<code>runtime.newproc</code>创建一个<code>g</code>，然后把这个<code>g</code>交给调度器调度。至于什么时候<code>g</code>被调度，然后执行你的代码逻辑，那就要看调度器的&quot;心情&quot;了。</p>
+<p>所以上面创建的两个<code>g</code>(暂且称为g1和g2)，可以看成是我们向调度器提交了两个任务<code>g</code>，我们无法保证哪个<code>g</code>会被先调度器调度执行，因此我们也不确定发送和接收这两个操作，谁会先被执行。</p>
+<p>假设<code>g1</code>先被调度器运行，然后执行代码<code>ch&lt;-struct{}{}</code>。</p>
+<p><img src="https://cdn.syst.top/12-11-2.png" alt="image-20211012223319977"></p>
+<p>如果<code>g2</code>先被调度器运行，然后执行代码<code>&lt;-ch</code>。</p>
+<p><img src="https://cdn.syst.top/12-13.png" alt="image-20211012230756372"></p>
+<p>当然我们也可以把上面的代码换成画成详细的无缓冲队列核心流程图。</p>
+<p><img src="https://cdn.syst.top/12-12.jpg" alt="12-12"></p>
+<p>缓冲<code>channel</code>发送的时候分为三种情况，想想我们上篇文章快递员送快递场景。</p>
+<ul>
+<li>如果快递柜未满，直接把快递放入到快递柜。(对应缓冲区未满，把发送数据拷贝到缓冲区)</li>
+<li>如果快递柜满了，那快递员只能在那等待快递柜空了。(对应把当前<code>g</code>封装成<code>sudog</code>，然后把sudog放到等待发送消息队列<code>sendq</code>中，最后挂起当前<code>g</code>)</li>
+<li>如果送快递的时候正好客户在那里等，那就直接把快递给他就是了(对应如果发送的时候发现有等待者，直接数据拷贝给他呗)</li>
+</ul>
+<p>我们来创建一个例子。</p>
+<p><img src="https://cdn.syst.top/12-14.png" alt="12-14"></p>
+<p>我们创建了一个缓冲区为7的<code>channel</code>。<code>buffer</code>就是用来存储缓冲元素的，它实际上是一个环形数组。为什么是环形的？因为这样就可以达到复用空间的效果。</p>
+<p>此时没有发送接收动作，所以<code>qcount</code>为0，发送(<code>sendx</code>)和接收(<code>recvx</code>)的位置都为0。</p>
+<p>我们来看上面的第一种情况。缓冲区未满，</p>
+<p><img src="https://cdn.syst.top/12-27.png" alt="12-15"></p>
+<p>这块代码就比较简单了。如果缓冲区未满，那就把当前要发送的数据拷贝到缓冲区的发送位置，然后发送位置<code>sendx+1</code>，然后当然<code>channel</code>个数<code>qcount+1</code>，整个流程就结束了。</p>
+<p>如果缓冲满的情况下，封装当前<code>g</code>成<code>sudog</code>，把这个<code>sudog</code>入队等待发送队列，最后调用<code>gopark</code>挂起当前<code>g</code>，上面无缓冲的时候有提到。</p>
+<p>最后一种情况，发送的时候正好有等待接收消息者，那么就从<code>recvq</code>中拿出最早开始等待的接受者，然后把发送的数据直接拷贝给他。</p>
+<p><img src="https://cdn.syst.top/12-28.png" alt="image-20211015002454895"></p>
+<p><img src="https://cdn.syst.top/12-29.png" alt="image-20211014224054936"></p>
+<p><code>send</code>整体有两个动作：拷贝数据&mdash;&ndash;&gt;唤醒等待的<code>recvq</code>。</p>
+<p>那么对于接收操作呢？</p>
+<ul>
+<li>快递柜里有我的快递，那我直接拿就行了。(对应缓冲区有数据，根据读<code>recvx</code>的位置拿数据)</li>
+<li>快递柜还没我的快递，但是快递哥打电话说快到了，那我现在楼下转转。(对应缓冲区无数据，把当前<code>g</code>封装成<code>sudog</code>,然后放入到等待接收消息队列<code>recvq</code>中)。</li>
+<li>去拿一个快递的时候，正好一个快递员放我另一个快递的时候因为快递柜满了，在那等着。(对应缓冲区满了，且还有等待发送者。此时先到缓冲区获取当前读<code>recvx</code>位置的数据，然后再从等待发送者队列中取出最早等待的发送者，把他要发送的数据拷贝拷贝到当前我读取数据的位置(保证先入先出的顺序)，最后更新发送位置和更新位置即可)。</li>
+</ul>
+<p>第一种情况就简单了。直接通过当前读位置<code>recvx</code>读取<code>buffer</code>对应的值，这里还需要通过判断是否忽略返回值，而决定需不需要往当前接收操作拷贝数据。然后移动<code>recvx</code>位置，元素个数<code>qcount--</code> ，最后解锁即可。</p>
+<p><img src="https://cdn.syst.top/12-30.png" alt="image-20211014224602030"></p>
+<p>第二种情况，封装当前<code>g</code>成<code>sudog</code>，把这个<code>sudog</code>入队等待接收队列，最后调用<code>gopark</code>挂起当前<code>g</code>。上面无缓冲的时候画过这个逻辑。</p>
+<p>第三种情况有点复杂。</p>
+<p><img src="https://cdn.syst.top/12-31.png" alt="image-20211014230147629"></p>
+<p>这种情况下，当获取到一个等待发送者，对于接收者来说，如果我们直接拿它的发送数据返回会发生什么？举个例子</p>
+<p><img src="https://cdn.syst.top/12-32.png" alt="image-20211014230147629"></p>
+<p>上图，<code>channel</code>满了，且<code>sendq</code>有一个等待发送者(假设是<code>G8</code>，发送数据为<code>800</code>)，此时执行接收操作，也就出现上述第三种情况。</p>
+<p>如果此时我们直接拿<code>G8</code>的数据，那么数据就不能保证先入先出了。</p>
+<p>所以正确的操作是，读取当前<code>recvx</code>位置(0)<code>buffer</code>值<code>100</code>，然后把<code>G8</code>的数据800拷贝到0的位置，最后把<code>recvq</code>的位置向前移动，同步发送位置<code>sendx</code>等于<code>recvq</code>。这里，可以思考下为啥？</p>
+<p>到这里缓冲<code>channel</code>的核心流程就说完了。如图，</p>
+<p><img src="https://cdn.syst.top/12-33.jpg" alt="image-20211014230147629"></p>
+<p>另外后台回复<code>channel</code>有我准备的一个小<code>ppt</code>，可以跟着一起看。</p>
+]]></content>
+		</item>
+		
+		<item>
+			<title>channel原理解析(二)</title>
+			<link>https://www.syst.top/posts/go/channel2/</link>
+			<pubDate>Sun, 10 Oct 2021 21:25:52 +0800</pubDate>
+			
+			<guid>https://www.syst.top/posts/go/channel2/</guid>
+			<description>上一篇文章主要介绍channel运行时是通过hchan表示的，也简单说明了hchan各个字段的含义。
+我们提到，对channel的操作，本质上就是对hchan里字段的操作。因为在操作的过程中使用了互斥锁，所以保证了channel的并发安全。
+这篇文章主要通过现实生活的一些例子来说明channel的一些原理，当然还是不会涉及过多源码。
+无缓冲 我们都知道，channel分为无缓冲和缓冲。这两者最大的区别是什么？
+我们用一个现实生活的快递例子来说明。
+上面场景是快递员在等小库，当然反过来小库也可能在等快递员。
+如果没有快递柜，快递员在送快递的过程中，如果家里没人，他就得在那等着，等着有人来签收快递，他才送货结束。
+客户在快递员到来之前，他也不能离开家，不然快递来了没人收，所以他也得等到快递员上门，签字收了快递，他才算收货结束。
+当然，客户不止有这家快递，如果快递员A在等的时候又来一个快递员B给他送货。这个快递员B不仅得等着，还得排队。等到客户到家后，肯定是先签收A的快递，然后再签收B的快递。
+对应到无缓冲channel，
+发送数据的时候，如果没有对应的接收者ready，那么发送者就进入到等待发送队列中，等待有对应的接收者唤醒它。
+接收数据的时候，如果没有对应的发送者ready，那么接收者就进入到等待接收队列中，等待有对应的发送者唤醒它。
+还记得上一篇文章我们介绍过hchan的结构吗。
+其中recvq 表示等待接收消息的队列，sendq表示等待发送消息的队列。
+我们来看waitq。
+本质上waitq就是一个链表，更确切的说是一个双向循环的链表。其中waitq记录了链表的头尾，sudog记录了当前等待者的上一个等待者(prev)和下一个等待者(next)。
+这就好像小库在签收完A的快递后喊，下一个是谁啊？
+A会说:我的下一个是B。
+B会说:是我。我记得我上一个是A，目前我没有下一个，所以我是最后一个。
+缓冲 看完了无缓冲队列，我们再来看缓冲队列。还是用上面的故事，
+只要快递柜有空闲柜子，快递员就可以直接把快递放到柜子里，让客户自己去柜子拿。如果发送没有空闲的柜子，那就只能等，等到别人告诉我有空闲柜子，我再把快递放到空出来的柜子里。
+对应到缓冲channel，上面的快递柜，就是缓冲channel中存储数据的buffer。
+对于发送者来说：只要缓冲区未满，发送者就可以继续发送数据存放在缓冲区。一旦缓冲区满了，发送者就只能进入到等待发送队列中，等待有对应的接收者唤醒它，然后它再把数据放入到刚刚被取走数据的位置。
+对于接收者来说：只要缓冲区不为空，接收者就可以继续接收数据。一旦缓冲区空了，那么接收者就只能进入到等待接收队列中，等待有对应的发送者唤醒它。
+上面还有什么问题吗？还真有。
+我们取快递的时候，你一定会按照快递放入到快递柜的先后顺序取快递吗？咋么可能。
+但是在channel中，是会保证消息的先进先出(FIFO)关系的。至于咋么保证的，我们终结篇解析代码细节的时候再说。
+总结 这篇文章主要通过一个快递的例子来介绍channel操作的原理。下一篇我们介绍channel针对上述处理的细节逻辑。</description>
+			<content type="html"><![CDATA[<p>上一篇文章主要介绍<code>channel</code>运行时是通过<code>hchan</code>表示的，也简单说明了<code>hchan</code>各个字段的含义。</p>
+<p>我们提到，对<code>channel</code>的操作，本质上就是对<code>hchan</code>里字段的操作。因为在操作的过程中使用了互斥锁，所以保证了<code>channel</code>的并发安全。</p>
+<p>这篇文章主要通过现实生活的一些例子来说明<code>channel</code>的一些原理，当然还是不会涉及过多源码。</p>
+<h3 id="无缓冲">无缓冲</h3>
+<p>我们都知道，<code>channel</code>分为无缓冲和缓冲。这两者最大的区别是什么？</p>
+<p>我们用一个现实生活的快递例子来说明。</p>
+<p><img src="https://cdn.syst.top/%E6%88%AA%E5%B1%8F2021-10-10%20%E4%B8%8B%E5%8D%8810.38.35.png" alt="image"></p>
+<p>上面场景是快递员在等小库，当然反过来小库也可能在等快递员。</p>
+<p><img src="https://cdn.syst.top/%E6%88%AA%E5%B1%8F2021-10-10%20%E4%B8%8B%E5%8D%8810.47.13.png" alt="image"></p>
+<p>如果没有快递柜，快递员在送快递的过程中，如果家里没人，他就得在那等着，等着有人来签收快递，他才送货结束。</p>
+<p>客户在快递员到来之前，他也不能离开家，不然快递来了没人收，所以他也得等到快递员上门，签字收了快递，他才算收货结束。</p>
+<p>当然，客户不止有这家快递，如果快递员A在等的时候又来一个快递员B给他送货。这个快递员B不仅得等着，还得排队。等到客户到家后，肯定是先签收A的快递，然后再签收B的快递。</p>
+<p>对应到无缓冲<code>channel</code>，</p>
+<p>发送数据的时候，如果没有对应的接收者<code>ready</code>，那么发送者就进入到等待发送队列中，等待有对应的接收者唤醒它。</p>
+<p>接收数据的时候，如果没有对应的发送者<code>ready</code>，那么接收者就进入到等待接收队列中，等待有对应的发送者唤醒它。</p>
+<p>还记得上一篇文章我们介绍过<code>hchan</code>的结构吗。</p>
+<p><img src="https://cdn.syst.top/hchan.png" alt="image"></p>
+<p>其中<code>recvq</code> 表示等待接收消息的队列，<code>sendq</code>表示等待发送消息的队列。</p>
+<p>我们来看<code>waitq</code>。</p>
+<p><img src="/Users/wuqinqiang/Desktop/waitq.png" alt="image-20211010230421470"></p>
+<p><img src="/Users/wuqinqiang/Desktop/sudog.png" alt="image-20211010230607222"></p>
+<p>本质上<code>waitq</code>就是一个链表，更确切的说是一个双向循环的链表。其中<code>waitq</code>记录了链表的头尾，<code>sudog</code>记录了当前等待者的上一个等待者(<code>prev</code>)和下一个等待者(<code>next</code>)。</p>
+<p>这就好像小库在签收完A的快递后喊，下一个是谁啊？</p>
+<p>A会说:我的下一个是B。</p>
+<p>B会说:是我。我记得我上一个是A，目前我没有下一个，所以我是最后一个。</p>
+<h3 id="缓冲">缓冲</h3>
+<p>看完了无缓冲队列，我们再来看缓冲队列。还是用上面的故事，</p>
+<p><img src="/Users/wuqinqiang/Desktop/Xnip2021-10-10_23-40-05.jpg" alt="Xnip2021-10-10_23-40-05"></p>
+<p>只要快递柜有空闲柜子，快递员就可以直接把快递放到柜子里，让客户自己去柜子拿。如果发送没有空闲的柜子，那就只能等，等到别人告诉我有空闲柜子，我再把快递放到空出来的柜子里。</p>
+<p>对应到缓冲<code>channel</code>，上面的快递柜，就是缓冲<code>channel</code>中存储数据的<code>buffer</code>。</p>
+<p>对于发送者来说：只要缓冲区未满，发送者就可以继续发送数据存放在缓冲区。一旦缓冲区满了，发送者就只能进入到等待发送队列中，等待有对应的接收者唤醒它，然后它再把数据放入到刚刚被取走数据的位置。</p>
+<p>对于接收者来说：只要缓冲区不为空，接收者就可以继续接收数据。一旦缓冲区空了，那么接收者就只能进入到等待接收队列中，等待有对应的发送者唤醒它。</p>
+<p>上面还有什么问题吗？还真有。</p>
+<p>我们取快递的时候，你一定会按照快递放入到快递柜的先后顺序取快递吗？咋么可能。</p>
+<p>但是在<code>channel</code>中，是会保证消息的先进先出(FIFO)关系的。至于咋么保证的，我们终结篇解析代码细节的时候再说。</p>
+<h3 id="总结">总结</h3>
+<p>这篇文章主要通过一个快递的例子来介绍<code>channel</code>操作的原理。下一篇我们介绍<code>channel</code>针对上述处理的细节逻辑。</p>
+]]></content>
+		</item>
 		
 		<item>
 			<title>超实用的 gRPC 客户端调试工具</title>
@@ -644,80 +851,6 @@ runtime.hchan结构。
 <p>这篇我们主要介绍了如何获取<code>go</code>程序的汇编代码，通过汇编代码知道创建<code>channel</code>的具体函数<code>runtime.makechan</code>，同时我们还知道不同的创建姿势会导致走向不同的内存空间分配。最后通过创建函数我们知道<code>channel</code>在程序运行时使用<code>runtime.hchan</code>来表示。</p>
 <p>下一篇我们继续。</p>
 <p><img src="/Users/wuqinqiang/Desktop/image-20211009180357516.png" alt="image-20211009180357516"></p>
-]]></content>
-		</item>
-		
-		<item>
-			<title>channel原理解析(二)</title>
-			<link>https://www.syst.top/posts/go/channel2/</link>
-			<pubDate>Sun, 25 Apr 2021 22:25:52 +0800</pubDate>
-			
-			<guid>https://www.syst.top/posts/go/channel2/</guid>
-			<description>上一篇文章主要介绍channel运行时是通过hchan表示的，也简单说明了hchan各个字段的含义。
-我们提到，对channel的操作，本质上就是对hchan里字段的操作。因为在操作的过程中使用了互斥锁，所以保证了channel的并发安全。
-这篇文章主要通过现实生活的一些例子来说明channel的一些原理，当然还是不会涉及过多源码。
-无缓冲 我们都知道，channel分为无缓冲和缓冲。这两者最大的区别是什么？
-我们用一个现实生活的快递例子来说明。
-上面场景是快递员在等小库，当然反过来小库也可能在等快递员。
-如果没有快递柜，快递员在送快递的过程中，如果家里没人，他就得在那等着，等着有人来签收快递，他才送货结束。
-客户在快递员到来之前，他也不能离开家，不然快递来了没人收，所以他也得等到快递员上门，签字收了快递，他才算收货结束。
-当然，客户不止有这家快递，如果快递员A在等的时候又来一个快递员B给他送货。这个快递员B不仅得等着，还得排队。等到客户到家后，肯定是先签收A的快递，然后再签收B的快递。
-对应到无缓冲channel，
-发送数据的时候，如果没有对应的接收者ready，那么发送者就进入到等待发送队列中，等待有对应的接收者唤醒它。
-接收数据的时候，如果没有对应的发送者ready，那么接收者就进入到等待接收队列中，等待有对应的发送者唤醒它。
-还记得上一篇文章我们介绍过hchan的结构吗。
-其中recvq 表示等待接收消息的队列，sendq表示等待发送消息的队列。
-我们来看waitq。
-本质上waitq就是一个链表，更确切的说是一个双向循环的链表。其中waitq记录了链表的头尾，sudog记录了当前等待者的上一个等待者(prev)和下一个等待者(next)。
-这就好像小库在签收完A的快递后喊，下一个是谁啊？
-A会说:我的下一个是B。
-B会说:是我。我记得我上一个是A，目前我没有下一个，所以我是最后一个。
-缓冲 看完了无缓冲队列，我们再来看缓冲队列。还是用上面的故事，
-只要快递柜有空闲柜子，快递员就可以直接把快递放到柜子里，让客户自己去柜子拿。如果发送没有空闲的柜子，那就只能等，等到别人告诉我有空闲柜子，我再把快递放到空出来的柜子里。
-对应到缓冲channel，上面的快递柜，就是缓冲channel中存储数据的buffer。
-对于发送者来说：只要缓冲区未满，发送者就可以继续发送数据存放在缓冲区。一旦缓冲区满了，发送者就只能进入到等待发送队列中，等待有对应的接收者唤醒它，然后它再把数据放入到刚刚被取走数据的位置。
-对于接收者来说：只要缓冲区不为空，接收者就可以继续接收数据。一旦缓冲区空了，那么接收者就只能进入到等待接收队列中，等待有对应的发送者唤醒它。
-上面还有什么问题吗？还真有。
-我们取快递的时候，你一定会按照快递放入到快递柜的先后顺序取快递吗？咋么可能。
-但是在channel中，是会保证消息的先进先出(FIFO)关系的。至于咋么保证的，我们终结篇解析代码细节的时候再说。
-总结 这篇文章主要通过一个快递的例子来介绍channel操作的原理。下一篇我们介绍channel针对上述处理的细节逻辑。</description>
-			<content type="html"><![CDATA[<p>上一篇文章主要介绍<code>channel</code>运行时是通过<code>hchan</code>表示的，也简单说明了<code>hchan</code>各个字段的含义。</p>
-<p>我们提到，对<code>channel</code>的操作，本质上就是对<code>hchan</code>里字段的操作。因为在操作的过程中使用了互斥锁，所以保证了<code>channel</code>的并发安全。</p>
-<p>这篇文章主要通过现实生活的一些例子来说明<code>channel</code>的一些原理，当然还是不会涉及过多源码。</p>
-<h3 id="无缓冲">无缓冲</h3>
-<p>我们都知道，<code>channel</code>分为无缓冲和缓冲。这两者最大的区别是什么？</p>
-<p>我们用一个现实生活的快递例子来说明。</p>
-<p><img src="https://cdn.syst.top/%E6%88%AA%E5%B1%8F2021-10-10%20%E4%B8%8B%E5%8D%8810.38.35.png" alt="image"></p>
-<p>上面场景是快递员在等小库，当然反过来小库也可能在等快递员。</p>
-<p><img src="https://cdn.syst.top/%E6%88%AA%E5%B1%8F2021-10-10%20%E4%B8%8B%E5%8D%8810.47.13.png" alt="image"></p>
-<p>如果没有快递柜，快递员在送快递的过程中，如果家里没人，他就得在那等着，等着有人来签收快递，他才送货结束。</p>
-<p>客户在快递员到来之前，他也不能离开家，不然快递来了没人收，所以他也得等到快递员上门，签字收了快递，他才算收货结束。</p>
-<p>当然，客户不止有这家快递，如果快递员A在等的时候又来一个快递员B给他送货。这个快递员B不仅得等着，还得排队。等到客户到家后，肯定是先签收A的快递，然后再签收B的快递。</p>
-<p>对应到无缓冲<code>channel</code>，</p>
-<p>发送数据的时候，如果没有对应的接收者<code>ready</code>，那么发送者就进入到等待发送队列中，等待有对应的接收者唤醒它。</p>
-<p>接收数据的时候，如果没有对应的发送者<code>ready</code>，那么接收者就进入到等待接收队列中，等待有对应的发送者唤醒它。</p>
-<p>还记得上一篇文章我们介绍过<code>hchan</code>的结构吗。</p>
-<p><img src="https://cdn.syst.top/hchan.png" alt="image"></p>
-<p>其中<code>recvq</code> 表示等待接收消息的队列，<code>sendq</code>表示等待发送消息的队列。</p>
-<p>我们来看<code>waitq</code>。</p>
-<p><img src="/Users/wuqinqiang/Desktop/waitq.png" alt="image-20211010230421470"></p>
-<p><img src="/Users/wuqinqiang/Desktop/sudog.png" alt="image-20211010230607222"></p>
-<p>本质上<code>waitq</code>就是一个链表，更确切的说是一个双向循环的链表。其中<code>waitq</code>记录了链表的头尾，<code>sudog</code>记录了当前等待者的上一个等待者(<code>prev</code>)和下一个等待者(<code>next</code>)。</p>
-<p>这就好像小库在签收完A的快递后喊，下一个是谁啊？</p>
-<p>A会说:我的下一个是B。</p>
-<p>B会说:是我。我记得我上一个是A，目前我没有下一个，所以我是最后一个。</p>
-<h3 id="缓冲">缓冲</h3>
-<p>看完了无缓冲队列，我们再来看缓冲队列。还是用上面的故事，</p>
-<p><img src="/Users/wuqinqiang/Desktop/Xnip2021-10-10_23-40-05.jpg" alt="Xnip2021-10-10_23-40-05"></p>
-<p>只要快递柜有空闲柜子，快递员就可以直接把快递放到柜子里，让客户自己去柜子拿。如果发送没有空闲的柜子，那就只能等，等到别人告诉我有空闲柜子，我再把快递放到空出来的柜子里。</p>
-<p>对应到缓冲<code>channel</code>，上面的快递柜，就是缓冲<code>channel</code>中存储数据的<code>buffer</code>。</p>
-<p>对于发送者来说：只要缓冲区未满，发送者就可以继续发送数据存放在缓冲区。一旦缓冲区满了，发送者就只能进入到等待发送队列中，等待有对应的接收者唤醒它，然后它再把数据放入到刚刚被取走数据的位置。</p>
-<p>对于接收者来说：只要缓冲区不为空，接收者就可以继续接收数据。一旦缓冲区空了，那么接收者就只能进入到等待接收队列中，等待有对应的发送者唤醒它。</p>
-<p>上面还有什么问题吗？还真有。</p>
-<p>我们取快递的时候，你一定会按照快递放入到快递柜的先后顺序取快递吗？咋么可能。</p>
-<p>但是在<code>channel</code>中，是会保证消息的先进先出(FIFO)关系的。至于咋么保证的，我们终结篇解析代码细节的时候再说。</p>
-<h3 id="总结">总结</h3>
-<p>这篇文章主要通过一个快递的例子来介绍<code>channel</code>操作的原理。下一篇我们介绍<code>channel</code>针对上述处理的细节逻辑。</p>
 ]]></content>
 		</item>
 		

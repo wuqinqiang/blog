@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="zh-hans">
+
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<meta http-equiv="X-UA-Compatible" content="ie=edge">
+	<meta name="theme-color" content="#494f5c">
+	<meta name="msapplication-TileColor" content="#494f5c">
+<meta itemprop="name" content="channel原理解析(三)">
+<meta itemprop="description" content="上一篇文章主要通过一个现实例子间接反映channel的一些原理。最后一篇开始介绍一些细节，会涉及到源码。
+还是从一个简单的代码程序看起。
+我们创建了一个无缓冲channel，然后往这个channel发送数据。因为程序中没有读操作ready，所以发送的时候会阻塞。我们通过汇编代码看它底层的调用。
+从图中我们看到，上述发送操作，程序运行时实际调用的runtime.chansend1。
+最终chansend1最终调用的还是chansend，chansend的第三个参数block是个bool值，表示操作channel不能立即成功时是否需要阻塞。
+具体哪些操作？
+ 向无缓冲channel发送数据且当前无接收者ready。 接收无缓冲channel数据且当前无发送者ready。 缓冲channel已满，往channel发送数据。 缓冲channel为空，接收channel数据 向一个nil的channel发送数据。(注意，向一个nil的channel发送数据并不会引发panic)。 向一个nil的channel接收数据。  碰到上面的操作，如果不是特殊处理，我们的应用程序会被阻塞，直到被唤醒。
+当然对于向nil的channel发送|接收数据，后续再也没机会被唤醒了。
+那么如果是快速试错的场景，是不是只要把block改成false，在失败的场景下就不会被阻塞了。
+编译这段代码。
+可以看出，上面这段代码编译后调用selectnbsend最终发送动作调用的还是chansned，只是传入的block是false。这样一旦操作失败，程序不会被阻塞。
+同理我们可以得出接收的调用动作。
+到这里我们已经知道，
+发送数据，最终调用的runtime.chansend。
+接收数据，最终调用的runtime.chanrecv。
+接下来我们来说明这两个函数底层是如何操作的。
+我们还是以一个无缓冲的channel和缓冲channel来说明。
+来看一段简单的程序。
+值得一提的是，在Go中使用 go func的时候，本质上调用的是runtime.newproc创建一个g，然后把这个g交给调度器调度。至于什么时候g被调度，然后执行你的代码逻辑，那就要看调度器的&quot;心情&quot;了。
+所以上面创建的两个g(暂且称为g1和g2)，可以看成是我们向调度器提交了两个任务g，我们无法保证哪个g会被先调度器调度执行，因此我们也不确定发送和接收这两个操作，谁会先被执行。
+假设g1先被调度器运行，然后执行代码ch&lt;-struct{}{}。
+如果g2先被调度器运行，然后执行代码&lt;-ch。
+当然我们也可以把上面的代码换成画成详细的无缓冲队列核心流程图。
+缓冲channel发送的时候分为三种情况，想想我们上篇文章快递员送快递场景。
+ 如果快递柜未满，直接把快递放入到快递柜。(对应缓冲区未满，把发送数据拷贝到缓冲区) 如果快递柜满了，那快递员只能在那等待快递柜空了。(对应把当前g封装成sudog，然后把sudog放到等待发送消息队列sendq中，最后挂起当前g) 如果送快递的时候正好客户在那里等，那就直接把快递给他就是了(对应如果发送的时候发现有等待者，直接数据拷贝给他呗)  我们来创建一个例子。
+我们创建了一个缓冲区为7的channel。buffer就是用来存储缓冲元素的，它实际上是一个环形数组。为什么是环形的？因为这样就可以达到复用空间的效果。
+此时没有发送接收动作，所以qcount为0，发送(sendx)和接收(recvx)的位置都为0。
+我们来看上面的第一种情况。缓冲区未满，
+这块代码就比较简单了。如果缓冲区未满，那就把当前要发送的数据拷贝到缓冲区的发送位置，然后发送位置sendx&#43;1，然后当然channel个数qcount&#43;1，整个流程就结束了。
+如果缓冲满的情况下，封装当前g成sudog，把这个sudog入队等待发送队列，最后调用gopark挂起当前g，上面无缓冲的时候有提到。
+最后一种情况，发送的时候正好有等待接收消息者，那么就从recvq中拿出最早开始等待的接受者，然后把发送的数据直接拷贝给他。
+send整体有两个动作：拷贝数据&mdash;&ndash;&gt;唤醒等待的recvq。
+那么对于接收操作呢？
+ 快递柜里有我的快递，那我直接拿就行了。(对应缓冲区有数据，根据读recvx的位置拿数据) 快递柜还没我的快递，但是快递哥打电话说快到了，那我现在楼下转转。(对应缓冲区无数据，把当前g封装成sudog,然后放入到等待接收消息队列recvq中)。 去拿一个快递的时候，正好一个快递员放我另一个快递的时候因为快递柜满了，在那等着。(对应缓冲区满了，且还有等待发送者。此时先到缓冲区获取当前读recvx位置的数据，然后再从等待发送者队列中取出最早等待的发送者，把他要发送的数据拷贝拷贝到当前我读取数据的位置(保证先入先出的顺序)，最后更新发送位置和更新位置即可)。  第一种情况就简单了。直接通过当前读位置recvx读取buffer对应的值，这里还需要通过判断是否忽略返回值，而决定需不需要往当前接收操作拷贝数据。然后移动recvx位置，元素个数qcount-- ，最后解锁即可。
+第二种情况，封装当前g成sudog，把这个sudog入队等待接收队列，最后调用gopark挂起当前g。上面无缓冲的时候画过这个逻辑。
+第三种情况有点复杂。
+这种情况下，当获取到一个等待发送者，对于接收者来说，如果我们直接拿它的发送数据返回会发生什么？举个例子
+上图，channel满了，且sendq有一个等待发送者(假设是G8，发送数据为800)，此时执行接收操作，也就出现上述第三种情况。
+如果此时我们直接拿G8的数据，那么数据就不能保证先入先出了。
+所以正确的操作是，读取当前recvx位置(0)buffer值100，然后把G8的数据800拷贝到0的位置，最后把recvq的位置向前移动，同步发送位置sendx等于recvq。这里，可以思考下为啥？
+到这里缓冲channel的核心流程就说完了。如图，
+另外后台回复channel有我准备的一个小ppt，可以跟着一起看。">
+<meta itemprop="datePublished" content="2021-10-10T21:25:52+08:00" />
+<meta itemprop="dateModified" content="2021-10-10T21:25:52+08:00" />
+<meta itemprop="wordCount" content="57">
+
+
+
+<meta itemprop="keywords" content="go,channel," />
+<meta property="og:title" content="channel原理解析(三)" />
+<meta property="og:description" content="上一篇文章主要通过一个现实例子间接反映channel的一些原理。最后一篇开始介绍一些细节，会涉及到源码。
+还是从一个简单的代码程序看起。
+我们创建了一个无缓冲channel，然后往这个channel发送数据。因为程序中没有读操作ready，所以发送的时候会阻塞。我们通过汇编代码看它底层的调用。
+从图中我们看到，上述发送操作，程序运行时实际调用的runtime.chansend1。
+最终chansend1最终调用的还是chansend，chansend的第三个参数block是个bool值，表示操作channel不能立即成功时是否需要阻塞。
+具体哪些操作？
+ 向无缓冲channel发送数据且当前无接收者ready。 接收无缓冲channel数据且当前无发送者ready。 缓冲channel已满，往channel发送数据。 缓冲channel为空，接收channel数据 向一个nil的channel发送数据。(注意，向一个nil的channel发送数据并不会引发panic)。 向一个nil的channel接收数据。  碰到上面的操作，如果不是特殊处理，我们的应用程序会被阻塞，直到被唤醒。
+当然对于向nil的channel发送|接收数据，后续再也没机会被唤醒了。
+那么如果是快速试错的场景，是不是只要把block改成false，在失败的场景下就不会被阻塞了。
+编译这段代码。
+可以看出，上面这段代码编译后调用selectnbsend最终发送动作调用的还是chansned，只是传入的block是false。这样一旦操作失败，程序不会被阻塞。
+同理我们可以得出接收的调用动作。
+到这里我们已经知道，
+发送数据，最终调用的runtime.chansend。
+接收数据，最终调用的runtime.chanrecv。
+接下来我们来说明这两个函数底层是如何操作的。
+我们还是以一个无缓冲的channel和缓冲channel来说明。
+来看一段简单的程序。
+值得一提的是，在Go中使用 go func的时候，本质上调用的是runtime.newproc创建一个g，然后把这个g交给调度器调度。至于什么时候g被调度，然后执行你的代码逻辑，那就要看调度器的&quot;心情&quot;了。
+所以上面创建的两个g(暂且称为g1和g2)，可以看成是我们向调度器提交了两个任务g，我们无法保证哪个g会被先调度器调度执行，因此我们也不确定发送和接收这两个操作，谁会先被执行。
+假设g1先被调度器运行，然后执行代码ch&lt;-struct{}{}。
+如果g2先被调度器运行，然后执行代码&lt;-ch。
+当然我们也可以把上面的代码换成画成详细的无缓冲队列核心流程图。
+缓冲channel发送的时候分为三种情况，想想我们上篇文章快递员送快递场景。
+ 如果快递柜未满，直接把快递放入到快递柜。(对应缓冲区未满，把发送数据拷贝到缓冲区) 如果快递柜满了，那快递员只能在那等待快递柜空了。(对应把当前g封装成sudog，然后把sudog放到等待发送消息队列sendq中，最后挂起当前g) 如果送快递的时候正好客户在那里等，那就直接把快递给他就是了(对应如果发送的时候发现有等待者，直接数据拷贝给他呗)  我们来创建一个例子。
+我们创建了一个缓冲区为7的channel。buffer就是用来存储缓冲元素的，它实际上是一个环形数组。为什么是环形的？因为这样就可以达到复用空间的效果。
+此时没有发送接收动作，所以qcount为0，发送(sendx)和接收(recvx)的位置都为0。
+我们来看上面的第一种情况。缓冲区未满，
+这块代码就比较简单了。如果缓冲区未满，那就把当前要发送的数据拷贝到缓冲区的发送位置，然后发送位置sendx&#43;1，然后当然channel个数qcount&#43;1，整个流程就结束了。
+如果缓冲满的情况下，封装当前g成sudog，把这个sudog入队等待发送队列，最后调用gopark挂起当前g，上面无缓冲的时候有提到。
+最后一种情况，发送的时候正好有等待接收消息者，那么就从recvq中拿出最早开始等待的接受者，然后把发送的数据直接拷贝给他。
+send整体有两个动作：拷贝数据&mdash;&ndash;&gt;唤醒等待的recvq。
+那么对于接收操作呢？
+ 快递柜里有我的快递，那我直接拿就行了。(对应缓冲区有数据，根据读recvx的位置拿数据) 快递柜还没我的快递，但是快递哥打电话说快到了，那我现在楼下转转。(对应缓冲区无数据，把当前g封装成sudog,然后放入到等待接收消息队列recvq中)。 去拿一个快递的时候，正好一个快递员放我另一个快递的时候因为快递柜满了，在那等着。(对应缓冲区满了，且还有等待发送者。此时先到缓冲区获取当前读recvx位置的数据，然后再从等待发送者队列中取出最早等待的发送者，把他要发送的数据拷贝拷贝到当前我读取数据的位置(保证先入先出的顺序)，最后更新发送位置和更新位置即可)。  第一种情况就简单了。直接通过当前读位置recvx读取buffer对应的值，这里还需要通过判断是否忽略返回值，而决定需不需要往当前接收操作拷贝数据。然后移动recvx位置，元素个数qcount-- ，最后解锁即可。
+第二种情况，封装当前g成sudog，把这个sudog入队等待接收队列，最后调用gopark挂起当前g。上面无缓冲的时候画过这个逻辑。
+第三种情况有点复杂。
+这种情况下，当获取到一个等待发送者，对于接收者来说，如果我们直接拿它的发送数据返回会发生什么？举个例子
+上图，channel满了，且sendq有一个等待发送者(假设是G8，发送数据为800)，此时执行接收操作，也就出现上述第三种情况。
+如果此时我们直接拿G8的数据，那么数据就不能保证先入先出了。
+所以正确的操作是，读取当前recvx位置(0)buffer值100，然后把G8的数据800拷贝到0的位置，最后把recvq的位置向前移动，同步发送位置sendx等于recvq。这里，可以思考下为啥？
+到这里缓冲channel的核心流程就说完了。如图，
+另外后台回复channel有我准备的一个小ppt，可以跟着一起看。" />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="https://www.syst.top/posts/go/channel3/" />
+<meta property="article:published_time" content="2021-10-10T21:25:52+08:00" />
+<meta property="article:modified_time" content="2021-10-10T21:25:52+08:00" />
+<meta name="twitter:card" content="summary"/>
+<meta name="twitter:title" content="channel原理解析(三)"/>
+<meta name="twitter:description" content="上一篇文章主要通过一个现实例子间接反映channel的一些原理。最后一篇开始介绍一些细节，会涉及到源码。
+还是从一个简单的代码程序看起。
+我们创建了一个无缓冲channel，然后往这个channel发送数据。因为程序中没有读操作ready，所以发送的时候会阻塞。我们通过汇编代码看它底层的调用。
+从图中我们看到，上述发送操作，程序运行时实际调用的runtime.chansend1。
+最终chansend1最终调用的还是chansend，chansend的第三个参数block是个bool值，表示操作channel不能立即成功时是否需要阻塞。
+具体哪些操作？
+ 向无缓冲channel发送数据且当前无接收者ready。 接收无缓冲channel数据且当前无发送者ready。 缓冲channel已满，往channel发送数据。 缓冲channel为空，接收channel数据 向一个nil的channel发送数据。(注意，向一个nil的channel发送数据并不会引发panic)。 向一个nil的channel接收数据。  碰到上面的操作，如果不是特殊处理，我们的应用程序会被阻塞，直到被唤醒。
+当然对于向nil的channel发送|接收数据，后续再也没机会被唤醒了。
+那么如果是快速试错的场景，是不是只要把block改成false，在失败的场景下就不会被阻塞了。
+编译这段代码。
+可以看出，上面这段代码编译后调用selectnbsend最终发送动作调用的还是chansned，只是传入的block是false。这样一旦操作失败，程序不会被阻塞。
+同理我们可以得出接收的调用动作。
+到这里我们已经知道，
+发送数据，最终调用的runtime.chansend。
+接收数据，最终调用的runtime.chanrecv。
+接下来我们来说明这两个函数底层是如何操作的。
+我们还是以一个无缓冲的channel和缓冲channel来说明。
+来看一段简单的程序。
+值得一提的是，在Go中使用 go func的时候，本质上调用的是runtime.newproc创建一个g，然后把这个g交给调度器调度。至于什么时候g被调度，然后执行你的代码逻辑，那就要看调度器的&quot;心情&quot;了。
+所以上面创建的两个g(暂且称为g1和g2)，可以看成是我们向调度器提交了两个任务g，我们无法保证哪个g会被先调度器调度执行，因此我们也不确定发送和接收这两个操作，谁会先被执行。
+假设g1先被调度器运行，然后执行代码ch&lt;-struct{}{}。
+如果g2先被调度器运行，然后执行代码&lt;-ch。
+当然我们也可以把上面的代码换成画成详细的无缓冲队列核心流程图。
+缓冲channel发送的时候分为三种情况，想想我们上篇文章快递员送快递场景。
+ 如果快递柜未满，直接把快递放入到快递柜。(对应缓冲区未满，把发送数据拷贝到缓冲区) 如果快递柜满了，那快递员只能在那等待快递柜空了。(对应把当前g封装成sudog，然后把sudog放到等待发送消息队列sendq中，最后挂起当前g) 如果送快递的时候正好客户在那里等，那就直接把快递给他就是了(对应如果发送的时候发现有等待者，直接数据拷贝给他呗)  我们来创建一个例子。
+我们创建了一个缓冲区为7的channel。buffer就是用来存储缓冲元素的，它实际上是一个环形数组。为什么是环形的？因为这样就可以达到复用空间的效果。
+此时没有发送接收动作，所以qcount为0，发送(sendx)和接收(recvx)的位置都为0。
+我们来看上面的第一种情况。缓冲区未满，
+这块代码就比较简单了。如果缓冲区未满，那就把当前要发送的数据拷贝到缓冲区的发送位置，然后发送位置sendx&#43;1，然后当然channel个数qcount&#43;1，整个流程就结束了。
+如果缓冲满的情况下，封装当前g成sudog，把这个sudog入队等待发送队列，最后调用gopark挂起当前g，上面无缓冲的时候有提到。
+最后一种情况，发送的时候正好有等待接收消息者，那么就从recvq中拿出最早开始等待的接受者，然后把发送的数据直接拷贝给他。
+send整体有两个动作：拷贝数据&mdash;&ndash;&gt;唤醒等待的recvq。
+那么对于接收操作呢？
+ 快递柜里有我的快递，那我直接拿就行了。(对应缓冲区有数据，根据读recvx的位置拿数据) 快递柜还没我的快递，但是快递哥打电话说快到了，那我现在楼下转转。(对应缓冲区无数据，把当前g封装成sudog,然后放入到等待接收消息队列recvq中)。 去拿一个快递的时候，正好一个快递员放我另一个快递的时候因为快递柜满了，在那等着。(对应缓冲区满了，且还有等待发送者。此时先到缓冲区获取当前读recvx位置的数据，然后再从等待发送者队列中取出最早等待的发送者，把他要发送的数据拷贝拷贝到当前我读取数据的位置(保证先入先出的顺序)，最后更新发送位置和更新位置即可)。  第一种情况就简单了。直接通过当前读位置recvx读取buffer对应的值，这里还需要通过判断是否忽略返回值，而决定需不需要往当前接收操作拷贝数据。然后移动recvx位置，元素个数qcount-- ，最后解锁即可。
+第二种情况，封装当前g成sudog，把这个sudog入队等待接收队列，最后调用gopark挂起当前g。上面无缓冲的时候画过这个逻辑。
+第三种情况有点复杂。
+这种情况下，当获取到一个等待发送者，对于接收者来说，如果我们直接拿它的发送数据返回会发生什么？举个例子
+上图，channel满了，且sendq有一个等待发送者(假设是G8，发送数据为800)，此时执行接收操作，也就出现上述第三种情况。
+如果此时我们直接拿G8的数据，那么数据就不能保证先入先出了。
+所以正确的操作是，读取当前recvx位置(0)buffer值100，然后把G8的数据800拷贝到0的位置，最后把recvq的位置向前移动，同步发送位置sendx等于recvq。这里，可以思考下为啥？
+到这里缓冲channel的核心流程就说完了。如图，
+另外后台回复channel有我准备的一个小ppt，可以跟着一起看。"/>
+
+	<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+	<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+	<link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+	<link rel="manifest" href="/site.webmanifest">
+	<link rel="mask-icon" href="/safari-pinned-tab.svg" color="">
+	<link rel="shortcut icon" href="/favicon.ico">
+
+	<title>channel原理解析(三)</title>
+	<link rel="stylesheet" href="https://www.syst.top/css/style.min.d3141168199607bf3a517216ce3c263814eecdbc8fca72a9a88700799a838219.css">
+	
+</head>
+
+<body id="page">
+	
+	<header id="site-header" class="animated slideInUp faster">
+		<div class="hdr-wrapper section-inner">
+			<div class="hdr-left">
+				<div class="site-branding">
+					<a href="https://www.syst.top">记得</a>
+				</div>
+				<nav class="site-nav hide-in-mobile">
+					<a href="https://www.syst.top/posts/">文章</a>
+					<a href="https://www.syst.top/leetcode/">刷题</a>
+					<a href="https://www.syst.top/lives/">生活</a>
+					<a href="https://www.syst.top/translations/">翻译</a>
+					<a href="https://www.syst.top/friends/">朋友</a>
+					<a href="https://go.aabbccm.com">grpc-shop</a>
+				</nav>
+			</div>
+			<div class="hdr-right hdr-icons">
+				<button id="toc-btn" class="hdr-btn desktop-only-ib" title="Table of Contents"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-list"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3" y2="6"></line><line x1="3" y1="12" x2="3" y2="12"></line><line x1="3" y1="18" x2="3" y2="18"></line></svg></button><span class="hdr-social hide-in-mobile"><a href="https://github.com/wuqinqiang" target="_blank" rel="noopener me" title="Github"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-github"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"></path></svg></a></span><button id="menu-btn" class="hdr-btn" title="Menu"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-menu"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg></button>
+			</div>
+		</div>
+	</header>
+	<div id="mobile-menu" class="animated fast">
+		<ul>
+			<li><a href="https://www.syst.top/posts/">文章</a></li>
+			<li><a href="https://www.syst.top/tags/">标签</a></li>
+			<li><a href="https://www.syst.top/about/">关于</a></li>
+		</ul>
+	</div>
+
+
+	<main class="site-main section-inner animated fadeIn faster">
+		<article class="thin">
+			<header class="post-header">
+				<div class="post-meta"><span>Oct 10, 2021</span></div>
+				<h1>channel原理解析(三)</h1>
+			</header>
+			<div class="content">
+				<p>上一篇文章主要通过一个现实例子间接反映<code>channel</code>的一些原理。最后一篇开始介绍一些细节，会涉及到源码。</p>
+<p>还是从一个简单的代码程序看起。</p>
+<p><img src="https://cdn.syst.top/12-1.png" alt="image-20211012211523725"></p>
+<p>我们创建了一个无缓冲<code>channel</code>，然后往这个<code>channel</code>发送数据。因为程序中没有读操作<code>ready</code>，所以发送的时候会阻塞。我们通过汇编代码看它底层的调用。</p>
+<p><img src="https://cdn.syst.top/12-2.png" alt="image-20211012211523725"></p>
+<p>从图中我们看到，上述发送操作，程序运行时实际调用的<code>runtime.chansend1</code>。</p>
+<p><img src="https://cdn.syst.top/12-3.png" alt="image-20211012211523725"></p>
+<p>最终<code>chansend1</code>最终调用的还是<code>chansend</code>，<code>chansend</code>的第三个参数<code>block</code>是个<code>bool</code>值，表示操作<code>channel</code>不能立即成功时是否需要阻塞。</p>
+<p>具体哪些操作？</p>
+<ul>
+<li>向无缓冲<code>channel</code>发送数据且当前无接收者<code>ready</code>。</li>
+<li>接收无缓冲<code>channel</code>数据且当前无发送者<code>ready</code>。</li>
+<li>缓冲<code>channel</code>已满，往<code>channel</code>发送数据。</li>
+<li>缓冲<code>channel</code>为空，接收<code>channel</code>数据</li>
+<li>向一个<code>nil</code>的<code>channel</code>发送数据。(注意，向一个<code>nil</code>的<code>channel</code>发送数据并不会引发<code>panic</code>)。</li>
+<li>向一个<code>nil</code>的<code>channel</code>接收数据。</li>
+</ul>
+<p>碰到上面的操作，如果不是特殊处理，我们的应用程序会被阻塞，直到被唤醒。</p>
+<p>当然对于向<code>nil</code>的<code>channel</code>发送|接收数据，后续再也没机会被唤醒了。</p>
+<p>那么如果是快速试错的场景，是不是只要把<code>block</code>改成<code>false</code>，在失败的场景下就不会被阻塞了。</p>
+<p>编译这段代码。</p>
+<p><img src="https://cdn.syst.top/12-4.png" alt="image-20211012215229617"></p>
+<p><img src="https://cdn.syst.top/12-5.png" alt="image-20211012215229617"></p>
+<p><img src="https://cdn.syst.top/12-6.png" alt="12-6"></p>
+<p>可以看出，上面这段代码编译后调用<code>selectnbsend</code>最终发送动作调用的还是<code>chansned</code>，只是传入的<code>block</code>是<code>false</code>。这样一旦操作失败，程序不会被阻塞。</p>
+<p>同理我们可以得出接收的调用动作。</p>
+<p><img src="https://cdn.syst.top/12-7.png" alt="12-6"></p>
+<p><img src="https://cdn.syst.top/12-8.png" alt="12-6"></p>
+<p><img src="https://cdn.syst.top/12-9.png" alt="12-6"></p>
+<p><img src="https://cdn.syst.top/12-10.png" alt="12-6"></p>
+<p>到这里我们已经知道，</p>
+<p>发送数据，最终调用的<code>runtime.chansend</code>。</p>
+<p>接收数据，最终调用的<code>runtime.chanrecv</code>。</p>
+<p>接下来我们来说明这两个函数底层是如何操作的。</p>
+<p>我们还是以一个无缓冲的<code>channel</code>和缓冲<code>channel</code>来说明。</p>
+<p>来看一段简单的程序。</p>
+<p><img src="https://cdn.syst.top/12-11.png" alt="image-20211012221535539"></p>
+<p>值得一提的是，在Go中使用 <code>go func</code>的时候，本质上调用的是<code>runtime.newproc</code>创建一个<code>g</code>，然后把这个<code>g</code>交给调度器调度。至于什么时候<code>g</code>被调度，然后执行你的代码逻辑，那就要看调度器的&quot;心情&quot;了。</p>
+<p>所以上面创建的两个<code>g</code>(暂且称为g1和g2)，可以看成是我们向调度器提交了两个任务<code>g</code>，我们无法保证哪个<code>g</code>会被先调度器调度执行，因此我们也不确定发送和接收这两个操作，谁会先被执行。</p>
+<p>假设<code>g1</code>先被调度器运行，然后执行代码<code>ch&lt;-struct{}{}</code>。</p>
+<p><img src="https://cdn.syst.top/12-11-2.png" alt="image-20211012223319977"></p>
+<p>如果<code>g2</code>先被调度器运行，然后执行代码<code>&lt;-ch</code>。</p>
+<p><img src="https://cdn.syst.top/12-13.png" alt="image-20211012230756372"></p>
+<p>当然我们也可以把上面的代码换成画成详细的无缓冲队列核心流程图。</p>
+<p><img src="https://cdn.syst.top/12-12.jpg" alt="12-12"></p>
+<p>缓冲<code>channel</code>发送的时候分为三种情况，想想我们上篇文章快递员送快递场景。</p>
+<ul>
+<li>如果快递柜未满，直接把快递放入到快递柜。(对应缓冲区未满，把发送数据拷贝到缓冲区)</li>
+<li>如果快递柜满了，那快递员只能在那等待快递柜空了。(对应把当前<code>g</code>封装成<code>sudog</code>，然后把sudog放到等待发送消息队列<code>sendq</code>中，最后挂起当前<code>g</code>)</li>
+<li>如果送快递的时候正好客户在那里等，那就直接把快递给他就是了(对应如果发送的时候发现有等待者，直接数据拷贝给他呗)</li>
+</ul>
+<p>我们来创建一个例子。</p>
+<p><img src="https://cdn.syst.top/12-14.png" alt="12-14"></p>
+<p>我们创建了一个缓冲区为7的<code>channel</code>。<code>buffer</code>就是用来存储缓冲元素的，它实际上是一个环形数组。为什么是环形的？因为这样就可以达到复用空间的效果。</p>
+<p>此时没有发送接收动作，所以<code>qcount</code>为0，发送(<code>sendx</code>)和接收(<code>recvx</code>)的位置都为0。</p>
+<p>我们来看上面的第一种情况。缓冲区未满，</p>
+<p><img src="https://cdn.syst.top/12-27.png" alt="12-15"></p>
+<p>这块代码就比较简单了。如果缓冲区未满，那就把当前要发送的数据拷贝到缓冲区的发送位置，然后发送位置<code>sendx+1</code>，然后当然<code>channel</code>个数<code>qcount+1</code>，整个流程就结束了。</p>
+<p>如果缓冲满的情况下，封装当前<code>g</code>成<code>sudog</code>，把这个<code>sudog</code>入队等待发送队列，最后调用<code>gopark</code>挂起当前<code>g</code>，上面无缓冲的时候有提到。</p>
+<p>最后一种情况，发送的时候正好有等待接收消息者，那么就从<code>recvq</code>中拿出最早开始等待的接受者，然后把发送的数据直接拷贝给他。</p>
+<p><img src="https://cdn.syst.top/12-28.png" alt="image-20211015002454895"></p>
+<p><img src="https://cdn.syst.top/12-29.png" alt="image-20211014224054936"></p>
+<p><code>send</code>整体有两个动作：拷贝数据&mdash;&ndash;&gt;唤醒等待的<code>recvq</code>。</p>
+<p>那么对于接收操作呢？</p>
+<ul>
+<li>快递柜里有我的快递，那我直接拿就行了。(对应缓冲区有数据，根据读<code>recvx</code>的位置拿数据)</li>
+<li>快递柜还没我的快递，但是快递哥打电话说快到了，那我现在楼下转转。(对应缓冲区无数据，把当前<code>g</code>封装成<code>sudog</code>,然后放入到等待接收消息队列<code>recvq</code>中)。</li>
+<li>去拿一个快递的时候，正好一个快递员放我另一个快递的时候因为快递柜满了，在那等着。(对应缓冲区满了，且还有等待发送者。此时先到缓冲区获取当前读<code>recvx</code>位置的数据，然后再从等待发送者队列中取出最早等待的发送者，把他要发送的数据拷贝拷贝到当前我读取数据的位置(保证先入先出的顺序)，最后更新发送位置和更新位置即可)。</li>
+</ul>
+<p>第一种情况就简单了。直接通过当前读位置<code>recvx</code>读取<code>buffer</code>对应的值，这里还需要通过判断是否忽略返回值，而决定需不需要往当前接收操作拷贝数据。然后移动<code>recvx</code>位置，元素个数<code>qcount--</code> ，最后解锁即可。</p>
+<p><img src="https://cdn.syst.top/12-30.png" alt="image-20211014224602030"></p>
+<p>第二种情况，封装当前<code>g</code>成<code>sudog</code>，把这个<code>sudog</code>入队等待接收队列，最后调用<code>gopark</code>挂起当前<code>g</code>。上面无缓冲的时候画过这个逻辑。</p>
+<p>第三种情况有点复杂。</p>
+<p><img src="https://cdn.syst.top/12-31.png" alt="image-20211014230147629"></p>
+<p>这种情况下，当获取到一个等待发送者，对于接收者来说，如果我们直接拿它的发送数据返回会发生什么？举个例子</p>
+<p><img src="https://cdn.syst.top/12-32.png" alt="image-20211014230147629"></p>
+<p>上图，<code>channel</code>满了，且<code>sendq</code>有一个等待发送者(假设是<code>G8</code>，发送数据为<code>800</code>)，此时执行接收操作，也就出现上述第三种情况。</p>
+<p>如果此时我们直接拿<code>G8</code>的数据，那么数据就不能保证先入先出了。</p>
+<p>所以正确的操作是，读取当前<code>recvx</code>位置(0)<code>buffer</code>值<code>100</code>，然后把<code>G8</code>的数据800拷贝到0的位置，最后把<code>recvq</code>的位置向前移动，同步发送位置<code>sendx</code>等于<code>recvq</code>。这里，可以思考下为啥？</p>
+<p>到这里缓冲<code>channel</code>的核心流程就说完了。如图，</p>
+<p><img src="https://cdn.syst.top/12-33.jpg" alt="image-20211014230147629"></p>
+<p>另外后台回复<code>channel</code>有我准备的一个小<code>ppt</code>，可以跟着一起看。</p>
+
+			</div>
+			<div class="content"><br><img src="https://image.syst.top/image/wechat-qr.png"></div>
+			<hr class="post-end">
+			<footer class="post-info">
+				<p>
+					<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-tag meta-icon"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"></path><line x1="7" y1="7" x2="7" y2="7"></line></svg><span class="tag"><a href="https://www.syst.top/tags/go">go</a></span><span class="tag"><a href="https://www.syst.top/tags/channel">channel</a></span>
+				</p>
+				<p><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-file-text"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>57 Words</p>
+				<p><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-calendar"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>2021-10-10 21:25 &#43;0800</p>
+			</footer>
+		</article>
+		<aside id="toc" class="show-toc">
+			<div class="toc-title">Table of Contents</div>
+			<nav id="TableOfContents"></nav>
+		</aside>
+		<div class="post-nav thin">
+			<a class="prev-post" href="https://www.syst.top/posts/go/channel2/">
+				<span class="post-nav-label">Older&nbsp;<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-arrow-right"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg></span><br><span>channel原理解析(二)</span>
+			</a>
+		</div>
+		<div id="comments" class="thin">
+			<script src="https://utteranc.es/client.js"
+        repo="wuqinqiang/blog"
+        issue-term="pathname"
+        theme="github-light"
+        crossorigin="anonymous"
+        async>
+</script>
+		</div>
+	</main>
+
+	<footer id="site-footer" class="section-inner thin animated fadeIn faster">
+		<p>&copy; 2018 - 2021 <a href="https://www.syst.top">Remember</a> &#183; <a href="http://beian.miit.gov.cn/">浙ICP备18028603号-2</a></p>
+		<p>
+			Made with <a href="https://gohugo.io/" target="_blank" rel="noopener">Hugo</a> &#183; Theme <a href="https://github.com/Track3/hermit" target="_blank" rel="noopener">Hermit</a> &#183; <a href="https://www.syst.top/post/index.xml" target="_blank" title="rss"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-rss"><path d="M4 11a9 9 0 0 1 9 9"></path><path d="M4 4a16 16 0 0 1 16 16"></path><circle cx="5" cy="19" r="1"></circle></svg></a>
+		</p>
+	</footer>
+
+
+	<script src="https://www.syst.top/js/main.min.784417f5847151f848c339cf0acb13a06cbb648b1483435a28ed4556c4ead69b.js"></script>
+<script type="application/javascript">
+var doNotTrack = false;
+if (!doNotTrack) {
+	window.ga=window.ga||function(){(ga.q=ga.q||[]).push(arguments)};ga.l=+new Date;
+	ga('create', 'UA-166045776-1', 'auto');
+	
+	ga('send', 'pageview');
+}
+</script>
+<script async src='https://www.google-analytics.com/analytics.js'></script>
+
+
+</body>
+
+</html>
