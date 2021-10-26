@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="zh-hans">
+
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<meta http-equiv="X-UA-Compatible" content="ie=edge">
+	<meta name="theme-color" content="#494f5c">
+	<meta name="msapplication-TileColor" content="#494f5c">
+<meta itemprop="name" content="对CAP理论的理解">
+<meta itemprop="description" content="介绍 最近经常看到有人发一个Go实现的分布式事务管理器，看到star增的挺猛的，索性看看代码实现，毕竟工作中部分场景也用的上。
+在写源码分析之前，我们来简单了解一些概念型的东西。
+CAP 分布式系统中很大的一个难点在于各个节点之间的状态如何同步，CAP就是分布式系统领域一条已经被证明的定律。
+其中各个字母的含义如下，
+ Consistency(一致性) Availability(可用性) Partition tolerance(分区容忍性)  下面我们用一些简单的例子来说明。
+假设我们的系统是由两个服务组成的:G1和G2。
+G1和G2维护了同一条记录V0。G1和G2可以相互通信，外部客户端(Client)可以调用任意一个服务。
+当一个客户端对任意一个服务发起读|写请求，那么被请求的那个服务器根据客户端的请求，处理、响应结果。
+比如客户端向G1发起一个读操作，客户端G1响应请求。
+又比如客户端向G1发起一个写操作，把V0修改成V1。
+Consistency(一致性) 这个一致性和事务中ACID中的C还是有区别的。事务中的C更多是指在事务开始之前和事务结束以后，数据库的完整性没有被破坏。这里的完整性包括一些外键约束、键的唯一性等。
+而分布式事务中的C指的是，写操作之后的读操作，必须返回该值，这就等同于所有节点访问的是同一份最新数据的副本。
+下面是一个非一致性的例子。
+客户端成功请求G1服务器写V1。由于网络分区，导致G1数据不能同步到G2，此时客户端从G2读取数据，依旧返回V0。
+来看一个满足一致性的例子。
+在这个系统中，G1收到客户端写V1的操作，G1在修改自身数据的同时，会把V1数据同步到G2。G1在收到G2的响应后，才向客户端响应结果。这样，之后无论客户端从哪个节点读取数据，都能获取到V1值。
+Availability(可用性) 可用性指的是系统中非故障节点接收到的每一个请求都必须响应。
+在一个可用的系统中，如果客户端向服务器发送一个请求，那么服务器必须响应客户端每一个请求，不允许忽略客户端请求。
+Partition Tolerance(分区容忍性) 什么分区？
+ 网络分区。
+ 网络分区咋么理解？
+ 假设有两台服务器A和B，本来他们两是正常通信的，不知道啥原因，他们之间的网络链接断开，导致无法正常通信。此时本来在同一个网络的AB，发生了网络分区。变成了A所在的A网络和B所在的B网络。这就是网络分区。
+ 容忍性是指什么？
+ 当一个服务的多台服务器发生上述网络分区的时候，系统依旧能正常提供服务。
+ 对CAP的误解 网上很多文章都是这么说的：
+ 一个分布式系统最多只能同时满足一致性（Consistency）、可用性（Availability）和分区容错性（Partition tolerance）这三项中的两项，这被称为CAP定律。
+ 似乎CAP被解释成一种三选二的定律。
+看到一篇文章CAP Twelve Years Later: How the &quot;Rules&quot; Have Changed有一段CAP的完整表述：
+ The CAP theorem asserts that any net­worked shared-data system can have only two of three desirable properties。">
+<meta itemprop="datePublished" content="2021-10-10T21:25:52+08:00" />
+<meta itemprop="dateModified" content="2021-10-10T21:25:52+08:00" />
+<meta itemprop="wordCount" content="81">
+
+
+
+<meta itemprop="keywords" content="go,分布式系统,CAP," />
+<meta property="og:title" content="对CAP理论的理解" />
+<meta property="og:description" content="介绍 最近经常看到有人发一个Go实现的分布式事务管理器，看到star增的挺猛的，索性看看代码实现，毕竟工作中部分场景也用的上。
+在写源码分析之前，我们来简单了解一些概念型的东西。
+CAP 分布式系统中很大的一个难点在于各个节点之间的状态如何同步，CAP就是分布式系统领域一条已经被证明的定律。
+其中各个字母的含义如下，
+ Consistency(一致性) Availability(可用性) Partition tolerance(分区容忍性)  下面我们用一些简单的例子来说明。
+假设我们的系统是由两个服务组成的:G1和G2。
+G1和G2维护了同一条记录V0。G1和G2可以相互通信，外部客户端(Client)可以调用任意一个服务。
+当一个客户端对任意一个服务发起读|写请求，那么被请求的那个服务器根据客户端的请求，处理、响应结果。
+比如客户端向G1发起一个读操作，客户端G1响应请求。
+又比如客户端向G1发起一个写操作，把V0修改成V1。
+Consistency(一致性) 这个一致性和事务中ACID中的C还是有区别的。事务中的C更多是指在事务开始之前和事务结束以后，数据库的完整性没有被破坏。这里的完整性包括一些外键约束、键的唯一性等。
+而分布式事务中的C指的是，写操作之后的读操作，必须返回该值，这就等同于所有节点访问的是同一份最新数据的副本。
+下面是一个非一致性的例子。
+客户端成功请求G1服务器写V1。由于网络分区，导致G1数据不能同步到G2，此时客户端从G2读取数据，依旧返回V0。
+来看一个满足一致性的例子。
+在这个系统中，G1收到客户端写V1的操作，G1在修改自身数据的同时，会把V1数据同步到G2。G1在收到G2的响应后，才向客户端响应结果。这样，之后无论客户端从哪个节点读取数据，都能获取到V1值。
+Availability(可用性) 可用性指的是系统中非故障节点接收到的每一个请求都必须响应。
+在一个可用的系统中，如果客户端向服务器发送一个请求，那么服务器必须响应客户端每一个请求，不允许忽略客户端请求。
+Partition Tolerance(分区容忍性) 什么分区？
+ 网络分区。
+ 网络分区咋么理解？
+ 假设有两台服务器A和B，本来他们两是正常通信的，不知道啥原因，他们之间的网络链接断开，导致无法正常通信。此时本来在同一个网络的AB，发生了网络分区。变成了A所在的A网络和B所在的B网络。这就是网络分区。
+ 容忍性是指什么？
+ 当一个服务的多台服务器发生上述网络分区的时候，系统依旧能正常提供服务。
+ 对CAP的误解 网上很多文章都是这么说的：
+ 一个分布式系统最多只能同时满足一致性（Consistency）、可用性（Availability）和分区容错性（Partition tolerance）这三项中的两项，这被称为CAP定律。
+ 似乎CAP被解释成一种三选二的定律。
+看到一篇文章CAP Twelve Years Later: How the &quot;Rules&quot; Have Changed有一段CAP的完整表述：
+ The CAP theorem asserts that any net­worked shared-data system can have only two of three desirable properties。" />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="https://www.syst.top/posts/go/dtm/" />
+<meta property="article:published_time" content="2021-10-10T21:25:52+08:00" />
+<meta property="article:modified_time" content="2021-10-10T21:25:52+08:00" />
+<meta name="twitter:card" content="summary"/>
+<meta name="twitter:title" content="对CAP理论的理解"/>
+<meta name="twitter:description" content="介绍 最近经常看到有人发一个Go实现的分布式事务管理器，看到star增的挺猛的，索性看看代码实现，毕竟工作中部分场景也用的上。
+在写源码分析之前，我们来简单了解一些概念型的东西。
+CAP 分布式系统中很大的一个难点在于各个节点之间的状态如何同步，CAP就是分布式系统领域一条已经被证明的定律。
+其中各个字母的含义如下，
+ Consistency(一致性) Availability(可用性) Partition tolerance(分区容忍性)  下面我们用一些简单的例子来说明。
+假设我们的系统是由两个服务组成的:G1和G2。
+G1和G2维护了同一条记录V0。G1和G2可以相互通信，外部客户端(Client)可以调用任意一个服务。
+当一个客户端对任意一个服务发起读|写请求，那么被请求的那个服务器根据客户端的请求，处理、响应结果。
+比如客户端向G1发起一个读操作，客户端G1响应请求。
+又比如客户端向G1发起一个写操作，把V0修改成V1。
+Consistency(一致性) 这个一致性和事务中ACID中的C还是有区别的。事务中的C更多是指在事务开始之前和事务结束以后，数据库的完整性没有被破坏。这里的完整性包括一些外键约束、键的唯一性等。
+而分布式事务中的C指的是，写操作之后的读操作，必须返回该值，这就等同于所有节点访问的是同一份最新数据的副本。
+下面是一个非一致性的例子。
+客户端成功请求G1服务器写V1。由于网络分区，导致G1数据不能同步到G2，此时客户端从G2读取数据，依旧返回V0。
+来看一个满足一致性的例子。
+在这个系统中，G1收到客户端写V1的操作，G1在修改自身数据的同时，会把V1数据同步到G2。G1在收到G2的响应后，才向客户端响应结果。这样，之后无论客户端从哪个节点读取数据，都能获取到V1值。
+Availability(可用性) 可用性指的是系统中非故障节点接收到的每一个请求都必须响应。
+在一个可用的系统中，如果客户端向服务器发送一个请求，那么服务器必须响应客户端每一个请求，不允许忽略客户端请求。
+Partition Tolerance(分区容忍性) 什么分区？
+ 网络分区。
+ 网络分区咋么理解？
+ 假设有两台服务器A和B，本来他们两是正常通信的，不知道啥原因，他们之间的网络链接断开，导致无法正常通信。此时本来在同一个网络的AB，发生了网络分区。变成了A所在的A网络和B所在的B网络。这就是网络分区。
+ 容忍性是指什么？
+ 当一个服务的多台服务器发生上述网络分区的时候，系统依旧能正常提供服务。
+ 对CAP的误解 网上很多文章都是这么说的：
+ 一个分布式系统最多只能同时满足一致性（Consistency）、可用性（Availability）和分区容错性（Partition tolerance）这三项中的两项，这被称为CAP定律。
+ 似乎CAP被解释成一种三选二的定律。
+看到一篇文章CAP Twelve Years Later: How the &quot;Rules&quot; Have Changed有一段CAP的完整表述：
+ The CAP theorem asserts that any net­worked shared-data system can have only two of three desirable properties。"/>
+
+	<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+	<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+	<link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+	<link rel="manifest" href="/site.webmanifest">
+	<link rel="mask-icon" href="/safari-pinned-tab.svg" color="">
+	<link rel="shortcut icon" href="/favicon.ico">
+
+	<title>对CAP理论的理解</title>
+	<link rel="stylesheet" href="https://www.syst.top/css/style.min.d3141168199607bf3a517216ce3c263814eecdbc8fca72a9a88700799a838219.css">
+	
+</head>
+
+<body id="page">
+	
+	<header id="site-header" class="animated slideInUp faster">
+		<div class="hdr-wrapper section-inner">
+			<div class="hdr-left">
+				<div class="site-branding">
+					<a href="https://www.syst.top">记得</a>
+				</div>
+				<nav class="site-nav hide-in-mobile">
+					<a href="https://www.syst.top/posts/">文章</a>
+					<a href="https://www.syst.top/leetcode/">刷题</a>
+					<a href="https://www.syst.top/lives/">生活</a>
+					<a href="https://www.syst.top/translations/">翻译</a>
+					<a href="https://www.syst.top/friends/">朋友</a>
+					<a href="https://go.aabbccm.com">grpc-shop</a>
+				</nav>
+			</div>
+			<div class="hdr-right hdr-icons">
+				<button id="toc-btn" class="hdr-btn desktop-only-ib" title="Table of Contents"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-list"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3" y2="6"></line><line x1="3" y1="12" x2="3" y2="12"></line><line x1="3" y1="18" x2="3" y2="18"></line></svg></button><span class="hdr-social hide-in-mobile"><a href="https://github.com/wuqinqiang" target="_blank" rel="noopener me" title="Github"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-github"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"></path></svg></a></span><button id="menu-btn" class="hdr-btn" title="Menu"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-menu"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg></button>
+			</div>
+		</div>
+	</header>
+	<div id="mobile-menu" class="animated fast">
+		<ul>
+			<li><a href="https://www.syst.top/posts/">文章</a></li>
+			<li><a href="https://www.syst.top/tags/">标签</a></li>
+			<li><a href="https://www.syst.top/about/">关于</a></li>
+		</ul>
+	</div>
+
+
+	<main class="site-main section-inner animated fadeIn faster">
+		<article class="thin">
+			<header class="post-header">
+				<div class="post-meta"><span>Oct 10, 2021</span></div>
+				<h1>对CAP理论的理解</h1>
+			</header>
+			<div class="content">
+				<h3 id="介绍">介绍<a href="#介绍" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h3>
+<p>最近经常看到有人发一个Go实现的分布式事务管理器，看到star增的挺猛的，索性看看代码实现，毕竟工作中部分场景也用的上。</p>
+<p>在写源码分析之前，我们来简单了解一些概念型的东西。</p>
+<h3 id="cap">CAP<a href="#cap" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h3>
+<p>分布式系统中很大的一个难点在于各个节点之间的状态如何同步，CAP就是分布式系统领域一条已经被证明的定律。</p>
+<p>其中各个字母的含义如下，</p>
+<ul>
+<li><strong>C</strong>onsistency(一致性)</li>
+<li><strong>A</strong>vailability(可用性)</li>
+<li><strong>P</strong>artition tolerance(分区容忍性)</li>
+</ul>
+<p>下面我们用一些简单的例子来说明。</p>
+<p><img src="https://cdn.syst.top/dtm01.svg" alt="dtm01"></p>
+<p>假设我们的系统是由两个服务组成的:G1和G2。</p>
+<p>G1和G2维护了同一条记录V0。G1和G2可以相互通信，外部客户端(Client)可以调用任意一个服务。</p>
+<p>当一个客户端对任意一个服务发起读|写请求，那么被请求的那个服务器根据客户端的请求，处理、响应结果。</p>
+<p>比如客户端向G1发起一个读操作，客户端G1响应请求。</p>
+<p><img src="https://cdn.syst.top/dtm02.png" alt="dtm01"></p>
+<p>又比如客户端向G1发起一个写操作，把V0修改成V1。</p>
+<p><img src="https://cdn.syst.top/dtm03.png" alt="dtm01"></p>
+<h4 id="consistency一致性">Consistency(一致性)<a href="#consistency一致性" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h4>
+<p>这个一致性和事务中ACID中的C还是有区别的。事务中的C更多是指在事务开始之前和事务结束以后，数据库的完整性没有被破坏。这里的完整性包括一些外键约束、键的唯一性等。</p>
+<p>而分布式事务中的C指的是，写操作之后的读操作，必须返回该值，这就等同于所有节点访问的是同一份最新数据的副本。</p>
+<p>下面是一个非一致性的例子。</p>
+<p><img src="https://cdn.syst.top/dtm04.png" alt="dtm01"></p>
+<p>客户端成功请求G1服务器写V1。由于网络分区，导致G1数据不能同步到G2，此时客户端从G2读取数据，依旧返回V0。</p>
+<p>来看一个满足一致性的例子。</p>
+<p><img src="https://cdn.syst.top/dtm05.png" alt="dtm01"></p>
+<p>在这个系统中，G1收到客户端写V1的操作，G1在修改自身数据的同时，会把V1数据同步到G2。G1在收到G2的响应后，才向客户端响应结果。这样，之后无论客户端从哪个节点读取数据，都能获取到V1值。</p>
+<h4 id="availability可用性">Availability(可用性)<a href="#availability可用性" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h4>
+<p>可用性指的是系统中非故障节点接收到的每一个请求都必须响应。</p>
+<p>在一个可用的系统中，如果客户端向服务器发送一个请求，那么服务器必须响应客户端每一个请求，不允许忽略客户端请求。</p>
+<h4 id="partition-tolerance分区容忍性">Partition Tolerance(分区容忍性)<a href="#partition-tolerance分区容忍性" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h4>
+<p>什么分区？</p>
+<blockquote>
+<p>网络分区。</p>
+</blockquote>
+<p>网络分区咋么理解？</p>
+<blockquote>
+<p>假设有两台服务器A和B，本来他们两是正常通信的，不知道啥原因，他们之间的网络链接断开，导致无法正常通信。此时本来在同一个网络的AB，发生了网络分区。变成了A所在的A网络和B所在的B网络。这就是网络分区。</p>
+</blockquote>
+<p>容忍性是指什么？</p>
+<blockquote>
+<p>当一个服务的多台服务器发生上述网络分区的时候，系统依旧能正常提供服务。</p>
+</blockquote>
+<h3 id="对cap的误解">对CAP的误解<a href="#对cap的误解" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h3>
+<p>网上很多文章都是这么说的：</p>
+<blockquote>
+<p>一个分布式系统最多只能同时满足一致性（Consistency）、可用性（Availability）和分区容错性（Partition tolerance）这三项中的两项，这被称为CAP定律。</p>
+</blockquote>
+<p>似乎CAP被解释成一种三选二的定律。</p>
+<p>看到一篇文章<code>CAP Twelve Years Later: How the &quot;Rules&quot; Have Changed</code>有一段CAP的完整表述：</p>
+<blockquote>
+<p>The CAP theorem asserts that any net­worked shared-data system can have only two of three desirable properties。</p>
+</blockquote>
+<p>按照表述，发现网上这句话存在一定的误导性。</p>
+<p>CAP定律的前提是P(网络分区)，出现P之后才会有CA的选择。</p>
+<p>当P发生的时候，而我们的系统直接不服务了，那就不存在选择什么CA了。</p>
+<p>因此CAP的正常理解应该是：当P(网络分区)发生的时候，如果我们要继续提供服务，那么C(强一致性)和A(可用性)只能2选1了。</p>
+<h3 id="consistency和availability的矛盾">Consistency和Availability的矛盾<a href="#consistency和availability的矛盾" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h3>
+<p>为什么当P发生时，CA只能二选一？</p>
+<p>还是之前那个简单的例子。</p>
+<p>假设此时G1和G2发生了网络分区。</p>
+<p><img src="https://cdn.syst.top/dtm01.svg" alt="dtm01"></p>
+<p>接下来我们的客户端请求G1写V1数据。由于分区，G1不能同步数据到G2。</p>
+<p><img src="https://cdn.syst.top/dtm06.png" alt="dtm01"></p>
+<p><img src="https://cdn.syst.top/dtm07.png" alt=""></p>
+<p>如果我们保证G2的可用性，那么当客户端请求G2数据的时候，G2能正常响应V0数据，数据不一致。</p>
+<p>如果我们保证G2的一致性，那么在G1写操作的时候，需要锁定G2的读写操作，此时G2不可用。</p>
+<p>因此，Consistency和Availability存在矛盾。</p>
+<h3 id="参考">参考<a href="#参考" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h3>
+<ul>
+<li>
+<p><a href="https://www.infoq.com/articles/cap-twelve-years-later-how-the-rules-have-changed/">https://www.infoq.com/articles/cap-twelve-years-later-how-the-rules-have-changed/</a></p>
+</li>
+<li>
+<p><a href="https://mwhittaker.github.io/blog/an_illustrated_proof_of_the_cap_theorem/">https://mwhittaker.github.io/blog/an_illustrated_proof_of_the_cap_theorem/</a></p>
+</li>
+<li>
+<p><a href="https://www.zhihu.com/question/64778723">https://www.zhihu.com/question/64778723</a></p>
+</li>
+</ul>
+
+			</div>
+			<div class="content"><br><img src="https://image.syst.top/image/wechat-qr.png"></div>
+			<hr class="post-end">
+			<footer class="post-info">
+				<p>
+					<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-tag meta-icon"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"></path><line x1="7" y1="7" x2="7" y2="7"></line></svg><span class="tag"><a href="https://www.syst.top/tags/go">go</a></span><span class="tag"><a href="https://www.syst.top/tags/%E5%88%86%E5%B8%83%E5%BC%8F%E7%B3%BB%E7%BB%9F">分布式系统</a></span><span class="tag"><a href="https://www.syst.top/tags/cap">CAP</a></span>
+				</p>
+				<p><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-file-text"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>81 Words</p>
+				<p><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-calendar"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>2021-10-10 21:25 &#43;0800</p>
+			</footer>
+		</article>
+		<aside id="toc" class="show-toc">
+			<div class="toc-title">Table of Contents</div>
+			<nav id="TableOfContents">
+  <ul>
+    <li>
+      <ul>
+        <li><a href="#介绍">介绍</a></li>
+        <li><a href="#cap">CAP</a></li>
+        <li><a href="#对cap的误解">对CAP的误解</a></li>
+        <li><a href="#consistency和availability的矛盾">Consistency和Availability的矛盾</a></li>
+        <li><a href="#参考">参考</a></li>
+      </ul>
+    </li>
+  </ul>
+</nav>
+		</aside>
+		<div class="post-nav thin">
+			<a class="next-post" href="https://www.syst.top/posts/go/channel2/">
+				<span class="post-nav-label"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-arrow-left"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>&nbsp;Newer</span><br><span>channel原理解析(二)</span>
+			</a>
+			<a class="prev-post" href="https://www.syst.top/posts/go/grpc/">
+				<span class="post-nav-label">Older&nbsp;<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-arrow-right"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg></span><br><span>超实用的 gRPC 客户端调试工具</span>
+			</a>
+		</div>
+		<div id="comments" class="thin">
+			<script src="https://utteranc.es/client.js"
+        repo="wuqinqiang/blog"
+        issue-term="pathname"
+        theme="github-light"
+        crossorigin="anonymous"
+        async>
+</script>
+		</div>
+	</main>
+
+	<footer id="site-footer" class="section-inner thin animated fadeIn faster">
+		<p>&copy; 2018 - 2021 <a href="https://www.syst.top">Remember</a> &#183; <a href="http://beian.miit.gov.cn/">浙ICP备18028603号-2</a></p>
+		<p>
+			Made with <a href="https://gohugo.io/" target="_blank" rel="noopener">Hugo</a> &#183; Theme <a href="https://github.com/Track3/hermit" target="_blank" rel="noopener">Hermit</a> &#183; <a href="https://www.syst.top/post/index.xml" target="_blank" title="rss"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-rss"><path d="M4 11a9 9 0 0 1 9 9"></path><path d="M4 4a16 16 0 0 1 16 16"></path><circle cx="5" cy="19" r="1"></circle></svg></a>
+		</p>
+	</footer>
+
+
+	<script src="https://www.syst.top/js/main.min.784417f5847151f848c339cf0acb13a06cbb648b1483435a28ed4556c4ead69b.js"></script>
+<script type="application/javascript">
+var doNotTrack = false;
+if (!doNotTrack) {
+	window.ga=window.ga||function(){(ga.q=ga.q||[]).push(arguments)};ga.l=+new Date;
+	ga('create', 'UA-166045776-1', 'auto');
+	
+	ga('send', 'pageview');
+}
+</script>
+<script async src='https://www.google-analytics.com/analytics.js'></script>
+
+
+</body>
+
+</html>

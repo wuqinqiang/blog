@@ -95,6 +95,43 @@ B会说:是我。我记得我上一个是A，目前我没有下一个，所以�
     </item>
     
     <item>
+      <title>对CAP理论的理解</title>
+      <link>https://www.syst.top/posts/go/dtm/</link>
+      <pubDate>Sun, 10 Oct 2021 21:25:52 +0800</pubDate>
+      
+      <guid>https://www.syst.top/posts/go/dtm/</guid>
+      <description>介绍 最近经常看到有人发一个Go实现的分布式事务管理器，看到star增的挺猛的，索性看看代码实现，毕竟工作中部分场景也用的上。
+在写源码分析之前，我们来简单了解一些概念型的东西。
+CAP 分布式系统中很大的一个难点在于各个节点之间的状态如何同步，CAP就是分布式系统领域一条已经被证明的定律。
+其中各个字母的含义如下，
+ Consistency(一致性) Availability(可用性) Partition tolerance(分区容忍性)  下面我们用一些简单的例子来说明。
+假设我们的系统是由两个服务组成的:G1和G2。
+G1和G2维护了同一条记录V0。G1和G2可以相互通信，外部客户端(Client)可以调用任意一个服务。
+当一个客户端对任意一个服务发起读|写请求，那么被请求的那个服务器根据客户端的请求，处理、响应结果。
+比如客户端向G1发起一个读操作，客户端G1响应请求。
+又比如客户端向G1发起一个写操作，把V0修改成V1。
+Consistency(一致性) 这个一致性和事务中ACID中的C还是有区别的。事务中的C更多是指在事务开始之前和事务结束以后，数据库的完整性没有被破坏。这里的完整性包括一些外键约束、键的唯一性等。
+而分布式事务中的C指的是，写操作之后的读操作，必须返回该值，这就等同于所有节点访问的是同一份最新数据的副本。
+下面是一个非一致性的例子。
+客户端成功请求G1服务器写V1。由于网络分区，导致G1数据不能同步到G2，此时客户端从G2读取数据，依旧返回V0。
+来看一个满足一致性的例子。
+在这个系统中，G1收到客户端写V1的操作，G1在修改自身数据的同时，会把V1数据同步到G2。G1在收到G2的响应后，才向客户端响应结果。这样，之后无论客户端从哪个节点读取数据，都能获取到V1值。
+Availability(可用性) 可用性指的是系统中非故障节点接收到的每一个请求都必须响应。
+在一个可用的系统中，如果客户端向服务器发送一个请求，那么服务器必须响应客户端每一个请求，不允许忽略客户端请求。
+Partition Tolerance(分区容忍性) 什么分区？
+ 网络分区。
+ 网络分区咋么理解？
+ 假设有两台服务器A和B，本来他们两是正常通信的，不知道啥原因，他们之间的网络链接断开，导致无法正常通信。此时本来在同一个网络的AB，发生了网络分区。变成了A所在的A网络和B所在的B网络。这就是网络分区。
+ 容忍性是指什么？
+ 当一个服务的多台服务器发生上述网络分区的时候，系统依旧能正常提供服务。
+ 对CAP的误解 网上很多文章都是这么说的：
+ 一个分布式系统最多只能同时满足一致性（Consistency）、可用性（Availability）和分区容错性（Partition tolerance）这三项中的两项，这被称为CAP定律。
+ 似乎CAP被解释成一种三选二的定律。
+看到一篇文章CAP Twelve Years Later: How the &amp;quot;Rules&amp;quot; Have Changed有一段CAP的完整表述：
+ The CAP theorem asserts that any net­worked shared-data system can have only two of three desirable properties。</description>
+    </item>
+    
+    <item>
       <title>超实用的 gRPC 客户端调试工具</title>
       <link>https://www.syst.top/posts/go/grpc/</link>
       <pubDate>Tue, 27 Jul 2021 10:01:52 +0800</pubDate>
@@ -233,22 +270,6 @@ type call struct { wg sync.WaitGroup val interface{} err error forgotten bool //
 代码并不复杂。
 自定义singleflight 我们也可以实现一个简易版本的。
 package main import ( &amp;#34;fmt&amp;#34; &amp;#34;sync&amp;#34; &amp;#34;time&amp;#34; ) type CacheEntry struct { data []byte err error wait chan struct{} } type OrderSever struct { cache map[string]*CacheEntry mutex sync.</description>
-    </item>
-    
-    <item>
-      <title>推荐两款go开发中提高效率工具</title>
-      <link>https://www.syst.top/posts/go/go-tool/</link>
-      <pubDate>Sun, 25 Apr 2021 22:25:52 +0800</pubDate>
-      
-      <guid>https://www.syst.top/posts/go/go-tool/</guid>
-      <description>介绍 推荐两款 go 开发中用的还行的工具。
-为什么推荐工具？是为了让评论区的大佬介绍其他更好用的工具，解放我的双手。
-顺便问问，有没有只说话就能自动打完代码的工具？
-JSON-To-Stuct 这个工具可以把 json 格式的数据转换成 go 的 struct。比如你在对接第三方的时候，就不需要根据对方的接口一个个定义 struct 字段。下面示例复制的微信小商店商品 json 数据到网站的左框即可，当然自己还是需要做一些局部的调整。
-其实这个功能 21 版的 goland 也支持了。在 goland 中你只需要这样,
-Table-To-Stuct 被业务缠身的同学每天免不了 CURD。CURD 之前总得建表吧。建表之后总得在代码中定义模型吧。总不能又一个个字段定义，那么下面这个工具可能管用。
-假设你有一个库 dream，库里有一个表 category，结构如下，
-CREATE TABLE `category` ( `id` int(11) unsigned NOT NULL AUTO_INCREMENT, `name` varchar(20) NOT NULL DEFAULT &amp;#39;&amp;#39;, `parent_id` int(11) unsigned NOT NULL DEFAULT &amp;#39;0&amp;#39;, `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP, `updated_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP, PRIMARY KEY (`id`), UNIQUE KEY `name` (`name`) ) ENGINE=InnoDB AUTO_INCREMENT=23 DEFAULT CHARSET=utf8mb4; 你只需引入包 github.</description>
     </item>
     
   </channel>
