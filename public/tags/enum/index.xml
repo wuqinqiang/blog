@@ -45,17 +45,6 @@ B会说:是我。我记得我上一个是A，目前我没有下一个，所以�
     </item>
     
     <item>
-      <title></title>
-      <link>https://www.syst.top/posts/go/enum/</link>
-      <pubDate>Sun, 25 Apr 2021 22:25:52 +0800</pubDate>
-      
-      <guid>https://www.syst.top/posts/go/enum/</guid>
-      <description>介绍 Go 语言实际上没有直接支持枚举的关键字。一般我们都是通过 const + iota 实现枚举的能力。
-有人要问了，为什么一定要使用枚举呢？stackoverflow 上有一个高赞的回答，如下:
-You should always use enums when a variable (especially a method parameter) can only take one out of a small set of possible values. Examples would be things like type constants (contract status: &amp;quot;permanent&amp;quot;, &amp;quot;temp&amp;quot;, &amp;quot;apprentice&amp;quot;), or flags (&amp;quot;execute now&amp;quot;, &amp;quot;defer execution&amp;quot;). If you use enums instead of integers (or String codes), you increase compile-time checking and avoid errors from passing in invalid constants, and you document which values are legal to use.</description>
-    </item>
-    
-    <item>
       <title>channel原理解析</title>
       <link>https://www.syst.top/posts/go/channel/</link>
       <pubDate>Sun, 25 Apr 2021 22:25:52 +0800</pubDate>
@@ -93,6 +82,26 @@ runtime.hchan结构。
 可以看到创建的时候有一段switch分支代码，那么什么情况下会走对应的case呢?
 根据上面的信息，我们可以得出，
  如果创建一个无缓冲channel ，那么只需要为runtime.hchan本身分配一段内存空间即可。 如果创建的缓冲channel 存储的类型不是指针类型，会为当前 channel 和存储类型元素的缓冲区，分配一块连续的内存空间。 在默认情况下(缓冲channel存储类型包含指针)，会单独为runtime.hchan和缓冲区分配内存。  总结 这篇我们主要介绍了如何获取go程序的汇编代码，通过汇编代码知道创建channel的具体函数runtime.makechan，同时我们还知道不同的创建姿势会导致走向不同的内存空间分配。最后通过创建函数我们知道channel在程序运行时使用runtime.hchan来表示。</description>
+    </item>
+    
+    <item>
+      <title>Go中分布式框架对比</title>
+      <link>https://www.syst.top/posts/go/go%E4%B8%AD%E5%88%86%E5%B8%83%E5%BC%8F%E4%BA%8B%E5%8A%A1%E6%A1%86%E6%9E%B6%E5%AF%B9%E6%AF%94/</link>
+      <pubDate>Sun, 25 Apr 2021 22:25:52 +0800</pubDate>
+      
+      <guid>https://www.syst.top/posts/go/go%E4%B8%AD%E5%88%86%E5%B8%83%E5%BC%8F%E4%BA%8B%E5%8A%A1%E6%A1%86%E6%9E%B6%E5%AF%B9%E6%AF%94/</guid>
+      <description>介绍 牌子先贴在这.</description>
+    </item>
+    
+    <item>
+      <title>iota 在 Go 中的使用 </title>
+      <link>https://www.syst.top/posts/go/enum/</link>
+      <pubDate>Sun, 25 Apr 2021 22:25:52 +0800</pubDate>
+      
+      <guid>https://www.syst.top/posts/go/enum/</guid>
+      <description>介绍 Go 语言实际上没有直接支持枚举的关键字。一般我们都是通过 const + iota 实现枚举的能力。
+有人要问了，为什么一定要使用枚举呢？stackoverflow 上有一个高赞的回答，如下:
+You should always use enums when a variable (especially a method parameter) can only take one out of a small set of possible values. Examples would be things like type constants (contract status: &amp;quot;permanent&amp;quot;, &amp;quot;temp&amp;quot;, &amp;quot;apprentice&amp;quot;), or flags (&amp;quot;execute now&amp;quot;, &amp;quot;defer execution&amp;quot;). If you use enums instead of integers (or String codes), you increase compile-time checking and avoid errors from passing in invalid constants, and you document which values are legal to use.</description>
     </item>
     
     <item>
