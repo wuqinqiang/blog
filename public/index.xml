@@ -7,7 +7,7 @@
     <generator>Hugo -- gohugo.io</generator>
     <language>zh-hans</language>
     <copyright>This work is licensed under a Creative Commons Attribution-NonCommercial 4.0 International License.</copyright>
-    <lastBuildDate>Sun, 10 Oct 2021 21:25:52 +0800</lastBuildDate><atom:link href="https://www.syst.top/index.xml" rel="self" type="application/rss+xml" />
+    <lastBuildDate>Sun, 07 Nov 2021 21:12:52 +0800</lastBuildDate><atom:link href="https://www.syst.top/index.xml" rel="self" type="application/rss+xml" />
     <item>
       <title>Myfriends</title>
       <link>https://www.syst.top/friends/friends/</link>
@@ -15,6 +15,19 @@
       
       <guid>https://www.syst.top/friends/friends/</guid>
       <description></description>
+    </item>
+    
+    <item>
+      <title>&lt;&lt;不老奇事&gt;&gt;观后感</title>
+      <link>https://www.syst.top/lives/bulaoqishi/</link>
+      <pubDate>Sun, 07 Nov 2021 21:12:52 +0800</pubDate>
+      
+      <guid>https://www.syst.top/lives/bulaoqishi/</guid>
+      <description>今天刚好没事，看到了王传君的这部电影，过段买票去看了。
+去之前以为这部片主题依旧是 “亲梅竹马”、“少时分离”、&amp;ldquo;长大偶遇&amp;rdquo;、&amp;ldquo;再续前缘&amp;rdquo;、“历经坎坷”、“最后遗憾”等等带有印象中各种标签的爱情片？
+开头也确实和想象中相差无几。不过，中间画风突转太快。更多的是在探索生命的意义？电影中好多台词单独拿出来都是一条伤感唯美非主流的朋友圈。
+其实电影的后半部分，对我来说，还是挺丧的。给我的总结是，在死亡面前，所有东西都毫无意义。
+你不需要虚荣，不需要讨好他人，不需要带着一副面具伪装自己。</description>
     </item>
     
     <item>
@@ -225,19 +238,6 @@ package wpool import ( &amp;#34;context&amp;#34; ) type JobID string type jobTyp
 现代的信息流在消磨着我。还有我自己也在自我内耗中。
  一天要看多少次手机？ 认真工作的时候被手机打断或者自己工作两分钟时不时拿出手机？ 每天被多少垃圾信息推送？看到消息都忍不住点一下？ 完全没有自己的思考，只剩下无情的消息接受者。宛如行尸走肉 焦虑、沉不住气，每一个都想学，也每一种都没精。列出计划。  针对以上问题,
  杜绝工作时看手机，或者给每日处理手机的时间段，消息的处理也一样。 拒绝强迫症，不要点开消息。 对待问题，除了解决，海西要思考背后原理。 淡定淡定。一步一个脚印，多看别人源码。  </description>
-    </item>
-    
-    <item>
-      <title>leetcode 337 House Robber III</title>
-      <link>https://www.syst.top/leetcode/337-house-robbe-riil/</link>
-      <pubDate>Mon, 31 May 2021 00:36:26 +0800</pubDate>
-      
-      <guid>https://www.syst.top/leetcode/337-house-robbe-riil/</guid>
-      <description>题目介绍 这是 House Robber III。
-这道题和之前两个版本最大不同在于引入了二叉树。 树的每个节点(具体的房子)都有对应的值(金额)。每个节点有两种状态，偷或者不偷。 规则是不能同时偷父子节点， 比如上图，如果选择偷 A 节点，那么 B 和 C 就不能偷，既然 B 和 C 不能偷，那么 DEFG 就可以偷的。 因为 DEFG 和 A 是子孙关系，而不是父子关系。
-这样的背景下，求小偷能偷的最大金额?
-暴力递归 我们还是用上图的那个例子。我们可以直接求出最大金额,伪代码如下
-/** * Definition for a binary tree node. * type TreeNode struct { * Val int * Left *TreeNode * Right *TreeNode * } */ // 求当前A节点能偷的最大金额res // 伪代码 item := node.Val + node.Left.Left.Val + node.Left.Right.Val + node.Right.Left.Val + node.Right.Right.Val res := max(item, node.</description>
     </item>
     
   </channel>
