@@ -85,15 +85,6 @@ runtime.hchan结构。
     </item>
     
     <item>
-      <title>Go中分布式框架对比</title>
-      <link>https://www.syst.top/posts/go/go%E4%B8%AD%E5%88%86%E5%B8%83%E5%BC%8F%E4%BA%8B%E5%8A%A1%E6%A1%86%E6%9E%B6%E5%AF%B9%E6%AF%94/</link>
-      <pubDate>Sun, 25 Apr 2021 22:25:52 +0800</pubDate>
-      
-      <guid>https://www.syst.top/posts/go/go%E4%B8%AD%E5%88%86%E5%B8%83%E5%BC%8F%E4%BA%8B%E5%8A%A1%E6%A1%86%E6%9E%B6%E5%AF%B9%E6%AF%94/</guid>
-      <description>介绍 牌子先贴在这.</description>
-    </item>
-    
-    <item>
       <title>iota 在 Go 中的使用 </title>
       <link>https://www.syst.top/posts/go/enum/</link>
       <pubDate>Sun, 25 Apr 2021 22:25:52 +0800</pubDate>
