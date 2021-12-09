@@ -1,0 +1,634 @@
+<!DOCTYPE html>
+<html lang="zh-hans">
+
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<meta http-equiv="X-UA-Compatible" content="ie=edge">
+	<meta name="theme-color" content="#494f5c">
+	<meta name="msapplication-TileColor" content="#494f5c">
+<meta itemprop="name" content="那些用Go实现的分布式事务框架">
+<meta itemprop="description" content="开篇 不知不觉竟然一个月没更新了，人一旦懒下来只会越来越懒。
+最近对分布式事务产生了一些兴趣，查阅了一些文章以及论文。这篇文章主要介绍我看的两个项目，不涉及一些理论知识。
+ 阿里开源版本的Seata，主要看了Go实现的seata-golang(落后java版) 以及前段时间很多公众号都发的dtm。  Seata简介 Seata是由阿里开源的分布式事务服务，目前为用户提供了AT、TCC、SAGA、XA的事务模式，整体采用的是两阶段提交协议。Go版的seata-golang 目前好像只实现了mysql的AT、TCC模式，作者现在不咋更新了。
+Seata 有几个核心角色：
+ TC(Transaction Coordinator) -事务协调者。(维护全局和分支事务的状态，驱动全局事务提交或回滚) TM(Transaction Manager)-事务管理器。(定义全局事务的范围：开始全局事务、提交或回滚全局事务。) RM(Resource Manager)-资源管理器。(管理分支事务处理的资源，与TC交谈以注册分支事务和报告分支事务的状态，并驱动分支事务提交或回滚)  当然这样看，可能还不是很理解，我拿一张官网的图加以解释。
+从上图中可以看出，这三个角色所负责的工作如下，
+TC
+ 维护全局和分支事务状态，需要进行存储。 当一个分布式事务处理结束，需要通知到每个RM是commit还是rollback。  TM
+ 向TC请求开启一个分布式事务，得到一个全局唯一的分布式id。 根据每个参与分布式事务的RM一阶段的反馈，决定二阶段向TC请求此次分布式事务是commit还是rollback(绝大部分场景下，一阶段任一RM失败，本次分布式事务失败)  RM
+说的白一点就是管理参与分布式事务的各个服务(比如经典下单场景中涉及到的:订单服务、库存服务、营销服务等)
+ps:个人感觉，这里的RM有点类似微服务中的中间处理层(专业术语他们管这叫bff-&gt;backend for fronted)。
+  一阶段 prepare 行为(主动)：每个RM调用 自定义 的 prepare 逻辑。
+  二阶段 commit 行为(被动触发)：如果本次分布式事务第一阶段全部RM成功，TC处理完自身状态变更后，调用各个RM自定义 的 commit 逻辑。(一阶段RM全部成功)
+  二阶段 rollback 行为(被动触发)：如果本次分布式事务第一阶段任一RM失败，TC处理完自身状态变更后，调用各个RM自定义 的 rollback 逻辑。(一阶段任意RM失败)
+  好了。下面可以看看seata-golang 实现的一些细节了，seata-golang 底层采用gRPC进行通信。
+seata-golang 我们先看RM部分结构。">
+<meta itemprop="datePublished" content="2021-12-08T22:25:52+08:00" />
+<meta itemprop="dateModified" content="2021-12-08T22:25:52+08:00" />
+<meta itemprop="wordCount" content="1023">
+
+
+
+<meta itemprop="keywords" content="go,enum," />
+<meta property="og:title" content="那些用Go实现的分布式事务框架" />
+<meta property="og:description" content="开篇 不知不觉竟然一个月没更新了，人一旦懒下来只会越来越懒。
+最近对分布式事务产生了一些兴趣，查阅了一些文章以及论文。这篇文章主要介绍我看的两个项目，不涉及一些理论知识。
+ 阿里开源版本的Seata，主要看了Go实现的seata-golang(落后java版) 以及前段时间很多公众号都发的dtm。  Seata简介 Seata是由阿里开源的分布式事务服务，目前为用户提供了AT、TCC、SAGA、XA的事务模式，整体采用的是两阶段提交协议。Go版的seata-golang 目前好像只实现了mysql的AT、TCC模式，作者现在不咋更新了。
+Seata 有几个核心角色：
+ TC(Transaction Coordinator) -事务协调者。(维护全局和分支事务的状态，驱动全局事务提交或回滚) TM(Transaction Manager)-事务管理器。(定义全局事务的范围：开始全局事务、提交或回滚全局事务。) RM(Resource Manager)-资源管理器。(管理分支事务处理的资源，与TC交谈以注册分支事务和报告分支事务的状态，并驱动分支事务提交或回滚)  当然这样看，可能还不是很理解，我拿一张官网的图加以解释。
+从上图中可以看出，这三个角色所负责的工作如下，
+TC
+ 维护全局和分支事务状态，需要进行存储。 当一个分布式事务处理结束，需要通知到每个RM是commit还是rollback。  TM
+ 向TC请求开启一个分布式事务，得到一个全局唯一的分布式id。 根据每个参与分布式事务的RM一阶段的反馈，决定二阶段向TC请求此次分布式事务是commit还是rollback(绝大部分场景下，一阶段任一RM失败，本次分布式事务失败)  RM
+说的白一点就是管理参与分布式事务的各个服务(比如经典下单场景中涉及到的:订单服务、库存服务、营销服务等)
+ps:个人感觉，这里的RM有点类似微服务中的中间处理层(专业术语他们管这叫bff-&gt;backend for fronted)。
+  一阶段 prepare 行为(主动)：每个RM调用 自定义 的 prepare 逻辑。
+  二阶段 commit 行为(被动触发)：如果本次分布式事务第一阶段全部RM成功，TC处理完自身状态变更后，调用各个RM自定义 的 commit 逻辑。(一阶段RM全部成功)
+  二阶段 rollback 行为(被动触发)：如果本次分布式事务第一阶段任一RM失败，TC处理完自身状态变更后，调用各个RM自定义 的 rollback 逻辑。(一阶段任意RM失败)
+  好了。下面可以看看seata-golang 实现的一些细节了，seata-golang 底层采用gRPC进行通信。
+seata-golang 我们先看RM部分结构。" />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="https://www.syst.top/posts/go/transaction/" />
+<meta property="article:published_time" content="2021-12-08T22:25:52+08:00" />
+<meta property="article:modified_time" content="2021-12-08T22:25:52+08:00" />
+<meta name="twitter:card" content="summary"/>
+<meta name="twitter:title" content="那些用Go实现的分布式事务框架"/>
+<meta name="twitter:description" content="开篇 不知不觉竟然一个月没更新了，人一旦懒下来只会越来越懒。
+最近对分布式事务产生了一些兴趣，查阅了一些文章以及论文。这篇文章主要介绍我看的两个项目，不涉及一些理论知识。
+ 阿里开源版本的Seata，主要看了Go实现的seata-golang(落后java版) 以及前段时间很多公众号都发的dtm。  Seata简介 Seata是由阿里开源的分布式事务服务，目前为用户提供了AT、TCC、SAGA、XA的事务模式，整体采用的是两阶段提交协议。Go版的seata-golang 目前好像只实现了mysql的AT、TCC模式，作者现在不咋更新了。
+Seata 有几个核心角色：
+ TC(Transaction Coordinator) -事务协调者。(维护全局和分支事务的状态，驱动全局事务提交或回滚) TM(Transaction Manager)-事务管理器。(定义全局事务的范围：开始全局事务、提交或回滚全局事务。) RM(Resource Manager)-资源管理器。(管理分支事务处理的资源，与TC交谈以注册分支事务和报告分支事务的状态，并驱动分支事务提交或回滚)  当然这样看，可能还不是很理解，我拿一张官网的图加以解释。
+从上图中可以看出，这三个角色所负责的工作如下，
+TC
+ 维护全局和分支事务状态，需要进行存储。 当一个分布式事务处理结束，需要通知到每个RM是commit还是rollback。  TM
+ 向TC请求开启一个分布式事务，得到一个全局唯一的分布式id。 根据每个参与分布式事务的RM一阶段的反馈，决定二阶段向TC请求此次分布式事务是commit还是rollback(绝大部分场景下，一阶段任一RM失败，本次分布式事务失败)  RM
+说的白一点就是管理参与分布式事务的各个服务(比如经典下单场景中涉及到的:订单服务、库存服务、营销服务等)
+ps:个人感觉，这里的RM有点类似微服务中的中间处理层(专业术语他们管这叫bff-&gt;backend for fronted)。
+  一阶段 prepare 行为(主动)：每个RM调用 自定义 的 prepare 逻辑。
+  二阶段 commit 行为(被动触发)：如果本次分布式事务第一阶段全部RM成功，TC处理完自身状态变更后，调用各个RM自定义 的 commit 逻辑。(一阶段RM全部成功)
+  二阶段 rollback 行为(被动触发)：如果本次分布式事务第一阶段任一RM失败，TC处理完自身状态变更后，调用各个RM自定义 的 rollback 逻辑。(一阶段任意RM失败)
+  好了。下面可以看看seata-golang 实现的一些细节了，seata-golang 底层采用gRPC进行通信。
+seata-golang 我们先看RM部分结构。"/>
+
+	<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+	<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+	<link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+	<link rel="manifest" href="/site.webmanifest">
+	<link rel="mask-icon" href="/safari-pinned-tab.svg" color="">
+	<link rel="shortcut icon" href="/favicon.ico">
+
+	<title>那些用Go实现的分布式事务框架</title>
+	<link rel="stylesheet" href="https://www.syst.top/css/style.min.d3141168199607bf3a517216ce3c263814eecdbc8fca72a9a88700799a838219.css">
+	
+</head>
+
+<body id="page">
+	
+	<header id="site-header" class="animated slideInUp faster">
+		<div class="hdr-wrapper section-inner">
+			<div class="hdr-left">
+				<div class="site-branding">
+					<a href="https://www.syst.top">记得</a>
+				</div>
+				<nav class="site-nav hide-in-mobile">
+					<a href="https://www.syst.top/posts/">文章</a>
+					<a href="https://www.syst.top/leetcode/">刷题</a>
+					<a href="https://www.syst.top/lives/">生活</a>
+					<a href="https://www.syst.top/translations/">翻译</a>
+					<a href="https://www.syst.top/friends/">朋友</a>
+					<a href="https://go.aabbccm.com">grpc-shop</a>
+				</nav>
+			</div>
+			<div class="hdr-right hdr-icons">
+				<button id="toc-btn" class="hdr-btn desktop-only-ib" title="Table of Contents"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-list"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3" y2="6"></line><line x1="3" y1="12" x2="3" y2="12"></line><line x1="3" y1="18" x2="3" y2="18"></line></svg></button><span class="hdr-social hide-in-mobile"><a href="https://github.com/wuqinqiang" target="_blank" rel="noopener me" title="Github"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-github"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"></path></svg></a></span><button id="menu-btn" class="hdr-btn" title="Menu"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-menu"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg></button>
+			</div>
+		</div>
+	</header>
+	<div id="mobile-menu" class="animated fast">
+		<ul>
+			<li><a href="https://www.syst.top/posts/">文章</a></li>
+			<li><a href="https://www.syst.top/tags/">标签</a></li>
+			<li><a href="https://www.syst.top/about/">关于</a></li>
+		</ul>
+	</div>
+
+
+	<main class="site-main section-inner animated fadeIn faster">
+		<article class="thin">
+			<header class="post-header">
+				<div class="post-meta"><span>Dec 8, 2021</span></div>
+				<h1>那些用Go实现的分布式事务框架</h1>
+			</header>
+			<div class="content">
+				<h3 id="开篇">开篇<a href="#开篇" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h3>
+<p>不知不觉竟然一个月没更新了，人一旦懒下来只会越来越懒。</p>
+<p>最近对分布式事务产生了一些兴趣，查阅了一些文章以及论文。这篇文章主要介绍我看的两个项目，不涉及一些理论知识。</p>
+<ul>
+<li>阿里开源版本的Seata，主要看了Go实现的seata-golang(落后java版)</li>
+<li>以及前段时间很多公众号都发的dtm。</li>
+</ul>
+<h3 id="seata简介">Seata简介<a href="#seata简介" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h3>
+<p>Seata是由阿里开源的分布式事务服务，目前为用户提供了AT、TCC、SAGA、XA的事务模式，整体采用的是两阶段提交协议。Go版的seata-golang 目前好像只实现了mysql的AT、TCC模式，作者现在不咋更新了。</p>
+<p>Seata 有几个核心角色：</p>
+<ul>
+<li>TC(Transaction Coordinator) -事务协调者。(维护全局和分支事务的状态，驱动全局事务提交或回滚)</li>
+<li>TM(Transaction Manager)-事务管理器。(定义全局事务的范围：开始全局事务、提交或回滚全局事务。)</li>
+<li>RM(Resource Manager)-资源管理器。(管理分支事务处理的资源，与TC交谈以注册分支事务和报告分支事务的状态，并驱动分支事务提交或回滚)</li>
+</ul>
+<p>当然这样看，可能还不是很理解，我拿一张官网的图加以解释。</p>
+<p><img src="https://cdn.syst.top/transaction.png" alt="seata_tcc-1"></p>
+<p>从上图中可以看出，这三个角色所负责的工作如下，</p>
+<p>TC</p>
+<ul>
+<li>维护全局和分支事务状态，需要进行存储。</li>
+<li>当一个分布式事务处理结束，需要通知到每个RM是commit还是rollback。</li>
+</ul>
+<p>TM</p>
+<ul>
+<li>向TC请求开启一个分布式事务，得到一个全局唯一的分布式id。</li>
+<li>根据每个参与分布式事务的RM一阶段的反馈，决定二阶段向TC请求此次分布式事务是commit还是rollback(绝大部分场景下，一阶段任一RM失败，本次分布式事务失败)</li>
+</ul>
+<p>RM</p>
+<p>说的白一点就是管理参与分布式事务的各个服务(比如经典下单场景中涉及到的:订单服务、库存服务、营销服务等)</p>
+<p>ps:个人感觉，这里的RM有点类似微服务中的中间处理层(专业术语他们管这叫bff-&gt;backend for fronted)。</p>
+<ul>
+<li>
+<p>一阶段 prepare 行为(主动)：每个RM调用 <strong>自定义</strong> 的 prepare 逻辑。</p>
+</li>
+<li>
+<p>二阶段 commit 行为(被动触发)：如果本次分布式事务第一阶段全部RM成功，TC处理完自身状态变更后，调用各个RM<strong>自定义</strong> 的 commit 逻辑。(一阶段RM全部成功)</p>
+</li>
+<li>
+<p>二阶段 rollback 行为(被动触发)：如果本次分布式事务第一阶段任一RM失败，TC处理完自身状态变更后，调用各个RM<strong>自定义</strong> 的 rollback 逻辑。(一阶段任意RM失败)</p>
+</li>
+</ul>
+<p>好了。下面可以看看seata-golang 实现的一些细节了，seata-golang 底层采用gRPC进行通信。</p>
+<h3 id="seata-golang">seata-golang<a href="#seata-golang" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h3>
+<p>我们先看RM部分结构。</p>
+<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kd">type</span> <span class="nx">ResourceManager</span> <span class="kd">struct</span> <span class="p">{</span>
+	<span class="nx">addressing</span>     <span class="kt">string</span> <span class="c1">//rm地址
+</span><span class="c1"></span>	<span class="nx">rpcClient</span>      <span class="nx">apis</span><span class="p">.</span><span class="nx">ResourceManagerServiceClient</span> <span class="c1">//rm rpc客户端
+</span><span class="c1"></span>  <span class="nx">managers</span>       <span class="kd">map</span><span class="p">[</span><span class="nx">apis</span><span class="p">.</span><span class="nx">BranchSession_BranchType</span><span class="p">]</span><span class="nx">ResourceManagerInterface</span> <span class="c1">//存储rm事务模式（比如TCC、AT等）
+</span><span class="c1"></span>	<span class="nx">branchMessages</span> <span class="kd">chan</span> <span class="o">*</span><span class="nx">apis</span><span class="p">.</span><span class="nx">BranchMessage</span> <span class="c1">//存储将要向TC响应的消息
+</span><span class="c1"></span><span class="p">}</span>
+</code></pre></div><div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kd">type</span> <span class="nx">ResourceManagerServiceClient</span> <span class="kd">interface</span> <span class="p">{</span>
+  <span class="c1">// 和 TC 流数据交互接口
+</span><span class="c1"></span>   <span class="nf">BranchCommunicate</span><span class="p">(</span><span class="nx">ctx</span> <span class="nx">context</span><span class="p">.</span><span class="nx">Context</span><span class="p">,</span> <span class="nx">opts</span> <span class="o">...</span><span class="nx">grpc</span><span class="p">.</span><span class="nx">CallOption</span><span class="p">)</span> <span class="p">(</span><span class="nx">ResourceManagerService_BranchCommunicateClient</span><span class="p">,</span> <span class="kt">error</span><span class="p">)</span>
+  <span class="c1">// 向TC 注册分支
+</span><span class="c1"></span>   <span class="nf">BranchRegister</span><span class="p">(</span><span class="nx">ctx</span> <span class="nx">context</span><span class="p">.</span><span class="nx">Context</span><span class="p">,</span> <span class="nx">in</span> <span class="o">*</span><span class="nx">BranchRegisterRequest</span><span class="p">,</span> <span class="nx">opts</span> <span class="o">...</span><span class="nx">grpc</span><span class="p">.</span><span class="nx">CallOption</span><span class="p">)</span> <span class="p">(</span><span class="o">*</span><span class="nx">BranchRegisterResponse</span><span class="p">,</span> <span class="kt">error</span><span class="p">)</span>
+  <span class="c1">//.....
+</span><span class="c1"></span><span class="p">}</span>
+</code></pre></div><p>至于managers，保存支持的各大事务模式(TCC等)，每个模式只需要实现此接口即可。</p>
+<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kd">type</span> <span class="nx">ResourceManagerInterface</span> <span class="kd">interface</span> <span class="p">{</span>
+  <span class="c1">// 分支提交
+</span><span class="c1"></span>	<span class="nf">BranchCommit</span><span class="p">(</span><span class="nx">ctx</span> <span class="nx">context</span><span class="p">.</span><span class="nx">Context</span><span class="p">,</span> <span class="nx">request</span> <span class="o">*</span><span class="nx">apis</span><span class="p">.</span><span class="nx">BranchCommitRequest</span><span class="p">)</span> <span class="p">(</span><span class="o">*</span><span class="nx">apis</span><span class="p">.</span><span class="nx">BranchCommitResponse</span><span class="p">,</span> <span class="kt">error</span><span class="p">)</span>
+ <span class="c1">// 分支回退
+</span><span class="c1"></span>	<span class="nf">BranchRollback</span><span class="p">(</span><span class="nx">ctx</span> <span class="nx">context</span><span class="p">.</span><span class="nx">Context</span><span class="p">,</span> <span class="nx">request</span> <span class="o">*</span><span class="nx">apis</span><span class="p">.</span><span class="nx">BranchRollbackRequest</span><span class="p">)</span> <span class="p">(</span><span class="o">*</span><span class="nx">apis</span><span class="p">.</span><span class="nx">BranchRollbackResponse</span><span class="p">,</span> <span class="kt">error</span><span class="p">)</span>
+  <span class="c1">// ......
+</span><span class="c1"></span><span class="p">}</span>
+</code></pre></div><p>再看TC部分结构(只保留会涉及的字段，其他细节可以自行查阅)。</p>
+<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kd">type</span> <span class="nx">TransactionCoordinator</span> <span class="kd">struct</span> <span class="p">{</span>
+  <span class="c1">// ....
+</span><span class="c1"></span>	<span class="nx">holder</span>             <span class="o">*</span><span class="nx">holder</span><span class="p">.</span><span class="nx">SessionHolder</span> <span class="c1">//数据存储
+</span><span class="c1"></span>  <span class="c1">// ......
+</span><span class="c1"></span>  <span class="nx">futures</span>            <span class="o">*</span><span class="nx">sync</span><span class="p">.</span><span class="nx">Map</span> <span class="c1">//临时存储RM响应数据，有g在接受处理
+</span><span class="c1"></span>  <span class="c1">// ......
+</span><span class="c1"></span>	<span class="nx">callBackMessages</span>   <span class="o">*</span><span class="nx">sync</span><span class="p">.</span><span class="nx">Map</span> <span class="c1">//临时存储TC即将向RM发送的消息,有格外g在发送数据
+</span><span class="c1"></span><span class="p">}</span>
+
+
+<span class="kd">type</span> <span class="nx">SessionHolder</span> <span class="kd">struct</span> <span class="p">{</span>
+	<span class="nx">manager</span> <span class="nx">storage</span><span class="p">.</span><span class="nx">SessionManager</span>
+<span class="p">}</span>
+
+
+<span class="c1">// SessionManager stored the globalTransactions and branchTransactions.
+</span><span class="c1"></span><span class="kd">type</span> <span class="nx">SessionManager</span> <span class="kd">interface</span> <span class="p">{</span>
+	<span class="c1">// Add global session.
+</span><span class="c1"></span>	<span class="nf">AddGlobalSession</span><span class="p">(</span><span class="nx">session</span> <span class="o">*</span><span class="nx">apis</span><span class="p">.</span><span class="nx">GlobalSession</span><span class="p">)</span> <span class="kt">error</span>
+
+	<span class="c1">// Find global session.
+</span><span class="c1"></span>	<span class="nf">FindGlobalSession</span><span class="p">(</span><span class="nx">xid</span> <span class="kt">string</span><span class="p">)</span> <span class="o">*</span><span class="nx">apis</span><span class="p">.</span><span class="nx">GlobalSession</span>
+
+	<span class="c1">// Find global sessions list.
+</span><span class="c1"></span>	<span class="nf">FindGlobalSessions</span><span class="p">(</span><span class="nx">statuses</span> <span class="p">[]</span><span class="nx">apis</span><span class="p">.</span><span class="nx">GlobalSession_GlobalStatus</span><span class="p">)</span> <span class="p">[]</span><span class="o">*</span><span class="nx">apis</span><span class="p">.</span><span class="nx">GlobalSession</span>
+<span class="p">}</span>
+
+
+
+</code></pre></div><p>TC对数据的存储目前支持mysql和pgsql，即实现SessionManager接口，然后注入到SessionHolder的manager。</p>
+<p>介绍完这两个基本结构，还记得我们上面说过他们之间的关系吗？</p>
+<p>二阶段TC会根据当前事务状态去通知RM是commit还是rollback。</p>
+<p>在初始化ResourceManager 的时候，</p>
+<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kd">func</span> <span class="nf">InitResourceManager</span><span class="p">(</span><span class="nx">addressing</span> <span class="kt">string</span><span class="p">,</span> <span class="nx">client</span> <span class="nx">apis</span><span class="p">.</span><span class="nx">ResourceManagerServiceClient</span><span class="p">)</span> <span class="p">{</span>
+	<span class="nx">defaultResourceManager</span> <span class="p">=</span> <span class="o">&amp;</span><span class="nx">ResourceManager</span><span class="p">{</span>
+		<span class="nx">addressing</span><span class="p">:</span>     <span class="nx">addressing</span><span class="p">,</span>
+		<span class="nx">rpcClient</span><span class="p">:</span>      <span class="nx">client</span><span class="p">,</span>
+		<span class="nx">managers</span><span class="p">:</span>       <span class="nb">make</span><span class="p">(</span><span class="kd">map</span><span class="p">[</span><span class="nx">apis</span><span class="p">.</span><span class="nx">BranchSession_BranchType</span><span class="p">]</span><span class="nx">ResourceManagerInterface</span><span class="p">),</span>
+		<span class="nx">branchMessages</span><span class="p">:</span> <span class="nb">make</span><span class="p">(</span><span class="kd">chan</span> <span class="o">*</span><span class="nx">apis</span><span class="p">.</span><span class="nx">BranchMessage</span><span class="p">),</span>
+	<span class="p">}</span>
+	<span class="nx">runtime</span><span class="p">.</span><span class="nf">GoWithRecover</span><span class="p">(</span><span class="kd">func</span><span class="p">()</span> <span class="p">{</span>
+    <span class="c1">// 会单独开启一个g调用
+</span><span class="c1"></span>		<span class="nx">defaultResourceManager</span><span class="p">.</span><span class="nf">branchCommunicate</span><span class="p">()</span>
+	<span class="p">},</span> <span class="kc">nil</span><span class="p">)</span>
+<span class="p">}</span>
+</code></pre></div><div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kd">func</span> <span class="p">(</span><span class="nx">manager</span> <span class="o">*</span><span class="nx">ResourceManager</span><span class="p">)</span> <span class="nf">branchCommunicate</span><span class="p">()</span> <span class="p">{</span>
+     <span class="c1">//省略代码。。。。。。。
+</span><span class="c1"></span>      <span class="nx">stream</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">manager</span><span class="p">.</span><span class="nx">rpcClient</span><span class="p">.</span><span class="nf">BranchCommunicate</span><span class="p">(</span><span class="nx">ctx</span><span class="p">)</span>
+      <span class="c1">// 省略代码
+</span><span class="c1"></span><span class="p">}</span>
+</code></pre></div><p>我们看到最终会调用TC一个 grpc 接口branchCommunicate。</p>
+<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go">	<span class="nf">BranchCommunicate</span><span class="p">(</span><span class="nx">ctx</span> <span class="nx">context</span><span class="p">.</span><span class="nx">Context</span><span class="p">,</span> <span class="nx">opts</span> <span class="o">...</span><span class="nx">grpc</span><span class="p">.</span><span class="nx">CallOption</span><span class="p">)</span> <span class="p">(</span><span class="nx">ResourceManagerService_BranchCommunicateClient</span><span class="p">,</span> <span class="kt">error</span><span class="p">)</span>
+</code></pre></div><div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kd">type</span> <span class="nx">ResourceManagerService_BranchCommunicateClient</span> <span class="kd">interface</span> <span class="p">{</span>
+	<span class="nf">Send</span><span class="p">(</span><span class="o">*</span><span class="nx">BranchMessage</span><span class="p">)</span> <span class="kt">error</span>
+	<span class="nf">Recv</span><span class="p">()</span> <span class="p">(</span><span class="o">*</span><span class="nx">BranchMessage</span><span class="p">,</span> <span class="kt">error</span><span class="p">)</span>
+	<span class="nx">grpc</span><span class="p">.</span><span class="nx">ClientStream</span>
+<span class="p">}</span>
+</code></pre></div><p>对应到服务端。</p>
+<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="nx">rpc</span> <span class="nf">BranchCommunicate</span><span class="p">(</span><span class="nx">stream</span> <span class="nx">BranchMessage</span><span class="p">)</span> <span class="nf">returns</span> <span class="p">(</span><span class="nx">stream</span> <span class="nx">BranchMessage</span><span class="p">);</span>
+</code></pre></div><div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kd">type</span> <span class="nx">ResourceManagerService_BranchCommunicateServer</span> <span class="kd">interface</span> <span class="p">{</span>
+	<span class="nf">Send</span><span class="p">(</span><span class="o">*</span><span class="nx">BranchMessage</span><span class="p">)</span> <span class="kt">error</span>
+	<span class="nf">Recv</span><span class="p">()</span> <span class="p">(</span><span class="o">*</span><span class="nx">BranchMessage</span><span class="p">,</span> <span class="kt">error</span><span class="p">)</span>
+	<span class="nx">grpc</span><span class="p">.</span><span class="nx">ServerStream</span>
+<span class="p">}</span>
+</code></pre></div><p>我们知道gRPC有四种基础的通信模式。</p>
+<ul>
+<li>一元模式（Unary RPC）</li>
+<li>服务器端流RPC（Server Sreaming RPC）</li>
+<li>客户端流RPC（Client Streaming RPC）</li>
+<li>双向流RPC（Bidirectional Streaming RPC）</li>
+</ul>
+<p>想要流的形式也很简单，只需要在proto方法定义中将对应的请求|响应 参数前加上stream标记，那么这个接口就是流式传送了。至于是哪种流，取决于你把stream加在哪边，如果请求和响应都加，那么就是双向流了。</p>
+<p>客户端和服务端都可以通过stream.Send 发送请求，通过stream.Recv 读取响应。</p>
+<p>当RM调用BranchCommunicate时，</p>
+<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kd">func</span> <span class="p">(</span><span class="nx">manager</span> <span class="o">*</span><span class="nx">ResourceManager</span><span class="p">)</span> <span class="nf">branchCommunicate</span><span class="p">()</span> <span class="p">{</span>
+   <span class="k">for</span> <span class="p">{</span>
+      <span class="nx">ctx</span> <span class="o">:=</span> <span class="nx">metadata</span><span class="p">.</span><span class="nf">AppendToOutgoingContext</span><span class="p">(</span><span class="nx">context</span><span class="p">.</span><span class="nf">Background</span><span class="p">(),</span> <span class="s">&#34;addressing&#34;</span><span class="p">,</span> <span class="nx">manager</span><span class="p">.</span><span class="nx">addressing</span><span class="p">)</span>
+      <span class="c1">// 得到steam
+</span><span class="c1"></span>      <span class="nx">stream</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">manager</span><span class="p">.</span><span class="nx">rpcClient</span><span class="p">.</span><span class="nf">BranchCommunicate</span><span class="p">(</span><span class="nx">ctx</span><span class="p">)</span>
+      <span class="c1">// 即-&gt;
+</span><span class="c1">//      type ResourceManagerService_BranchCommunicateClient interface {
+</span><span class="c1">//       	Send(*BranchMessage) error
+</span><span class="c1">//	      Recv() (*BranchMessage, error)
+</span><span class="c1">//      	grpc.ClientStream
+</span><span class="c1">//       }
+</span><span class="c1"></span>
+      <span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+         <span class="nx">time</span><span class="p">.</span><span class="nf">Sleep</span><span class="p">(</span><span class="nx">time</span><span class="p">.</span><span class="nx">Second</span><span class="p">)</span>
+         <span class="k">continue</span>
+      <span class="p">}</span>
+
+      <span class="nx">done</span> <span class="o">:=</span> <span class="nb">make</span><span class="p">(</span><span class="kd">chan</span> <span class="kt">bool</span><span class="p">)</span>
+      <span class="c1">// 另开一个g用来响应消息给TC
+</span><span class="c1"></span>      <span class="nx">runtime</span><span class="p">.</span><span class="nf">GoWithRecover</span><span class="p">(</span><span class="kd">func</span><span class="p">()</span> <span class="p">{</span>
+      <span class="c1">// 死循环
+</span><span class="c1"></span>         <span class="k">for</span> <span class="p">{</span>
+            <span class="k">select</span> <span class="p">{</span>
+            <span class="k">case</span> <span class="nx">_</span><span class="p">,</span> <span class="nx">ok</span> <span class="o">:=</span> <span class="o">&lt;-</span><span class="nx">done</span><span class="p">:</span>
+               <span class="k">if</span> <span class="p">!</span><span class="nx">ok</span> <span class="p">{</span>
+                  <span class="k">return</span>
+               <span class="p">}</span>
+               <span class="c1">// 如果branchMessages 有数据，说明是处理完tc的响应数据，通过send响应给tc
+</span><span class="c1"></span>            <span class="k">case</span> <span class="nx">msg</span> <span class="o">:=</span> <span class="o">&lt;-</span><span class="nx">manager</span><span class="p">.</span><span class="nx">branchMessages</span><span class="p">:</span>
+               <span class="nx">err</span> <span class="o">:=</span> <span class="nx">stream</span><span class="p">.</span><span class="nf">Send</span><span class="p">(</span><span class="nx">msg</span><span class="p">)</span>
+               <span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+                  <span class="k">return</span>
+               <span class="p">}</span>
+            <span class="p">}</span>
+         <span class="p">}</span>
+      <span class="p">},</span> <span class="kc">nil</span><span class="p">)</span>
+
+
+<span class="c1">// 另一个死循环是用来接受从tc发送过来的数据
+</span><span class="c1"></span>      <span class="k">for</span> <span class="p">{</span>
+      <span class="c1">// 接受数据
+</span><span class="c1"></span>         <span class="nx">msg</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">stream</span><span class="p">.</span><span class="nf">Recv</span><span class="p">()</span>
+         <span class="k">if</span> <span class="nx">err</span> <span class="o">==</span> <span class="nx">io</span><span class="p">.</span><span class="nx">EOF</span> <span class="p">{</span>
+            <span class="nb">close</span><span class="p">(</span><span class="nx">done</span><span class="p">)</span>
+            <span class="k">break</span>
+         <span class="p">}</span>
+         <span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+            <span class="nb">close</span><span class="p">(</span><span class="nx">done</span><span class="p">)</span>
+            <span class="k">break</span>
+         <span class="p">}</span>
+         <span class="c1">// 判断tc发送数据的类型，是提交分支事务类型还是回滚类型
+</span><span class="c1"></span>         <span class="k">switch</span> <span class="nx">msg</span><span class="p">.</span><span class="nx">BranchMessageType</span> <span class="p">{</span>
+         <span class="c1">// 如果是分支提交的消息
+</span><span class="c1"></span>         <span class="k">case</span> <span class="nx">apis</span><span class="p">.</span><span class="nx">TypeBranchCommit</span><span class="p">:</span>
+            <span class="nx">request</span> <span class="o">:=</span> <span class="o">&amp;</span><span class="nx">apis</span><span class="p">.</span><span class="nx">BranchCommitRequest</span><span class="p">{}</span>
+            <span class="nx">data</span> <span class="o">:=</span> <span class="nx">msg</span><span class="p">.</span><span class="nf">GetMessage</span><span class="p">().</span><span class="nf">GetValue</span><span class="p">()</span>
+            <span class="nx">err</span> <span class="o">:=</span> <span class="nx">request</span><span class="p">.</span><span class="nf">Unmarshal</span><span class="p">(</span><span class="nx">data</span><span class="p">)</span>
+            <span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+               <span class="nx">log</span><span class="p">.</span><span class="nf">Error</span><span class="p">(</span><span class="nx">err</span><span class="p">)</span>
+               <span class="k">continue</span>
+            <span class="p">}</span>
+            <span class="c1">// 处理分支提交，得到处理结果
+</span><span class="c1"></span>            <span class="nx">response</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">manager</span><span class="p">.</span><span class="nf">BranchCommit</span><span class="p">(</span><span class="nx">context</span><span class="p">.</span><span class="nf">Background</span><span class="p">(),</span> <span class="nx">request</span><span class="p">)</span>
+            <span class="k">if</span> <span class="nx">err</span> <span class="o">==</span> <span class="kc">nil</span> <span class="p">{</span>
+               <span class="nx">content</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">types</span><span class="p">.</span><span class="nf">MarshalAny</span><span class="p">(</span><span class="nx">response</span><span class="p">)</span>
+               <span class="k">if</span> <span class="nx">err</span> <span class="o">==</span> <span class="kc">nil</span> <span class="p">{</span>
+               <span class="c1">// 再把处理完的结果包装一下塞到branchMessages等待发送出去
+</span><span class="c1"></span>                  <span class="nx">manager</span><span class="p">.</span><span class="nx">branchMessages</span> <span class="o">&lt;-</span> <span class="o">&amp;</span><span class="nx">apis</span><span class="p">.</span><span class="nx">BranchMessage</span><span class="p">{</span>
+                     <span class="nx">ID</span><span class="p">:</span>                <span class="nx">msg</span><span class="p">.</span><span class="nx">ID</span><span class="p">,</span>
+                     <span class="nx">BranchMessageType</span><span class="p">:</span> <span class="nx">apis</span><span class="p">.</span><span class="nx">TypeBranchCommitResult</span><span class="p">,</span>
+                     <span class="nx">Message</span><span class="p">:</span>           <span class="nx">content</span><span class="p">,</span>
+                  <span class="p">}</span>
+               <span class="p">}</span>
+            <span class="p">}</span>
+            
+            <span class="c1">// 如果是回滚的消息，本质上流程差不多
+</span><span class="c1"></span>         <span class="k">case</span> <span class="nx">apis</span><span class="p">.</span><span class="nx">TypeBranchRollback</span><span class="p">:</span>
+            <span class="nx">request</span> <span class="o">:=</span> <span class="o">&amp;</span><span class="nx">apis</span><span class="p">.</span><span class="nx">BranchRollbackRequest</span><span class="p">{}</span>
+            <span class="nx">data</span> <span class="o">:=</span> <span class="nx">msg</span><span class="p">.</span><span class="nf">GetMessage</span><span class="p">().</span><span class="nf">GetValue</span><span class="p">()</span>
+            <span class="nx">err</span> <span class="o">:=</span> <span class="nx">request</span><span class="p">.</span><span class="nf">Unmarshal</span><span class="p">(</span><span class="nx">data</span><span class="p">)</span>
+            <span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+               <span class="nx">log</span><span class="p">.</span><span class="nf">Error</span><span class="p">(</span><span class="nx">err</span><span class="p">)</span>
+               <span class="k">continue</span>
+            <span class="p">}</span>
+            <span class="nx">response</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">manager</span><span class="p">.</span><span class="nf">BranchRollback</span><span class="p">(</span><span class="nx">context</span><span class="p">.</span><span class="nf">Background</span><span class="p">(),</span> <span class="nx">request</span><span class="p">)</span>
+            <span class="k">if</span> <span class="nx">err</span> <span class="o">==</span> <span class="kc">nil</span> <span class="p">{</span>
+               <span class="nx">content</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">types</span><span class="p">.</span><span class="nf">MarshalAny</span><span class="p">(</span><span class="nx">response</span><span class="p">)</span>
+               <span class="k">if</span> <span class="nx">err</span> <span class="o">==</span> <span class="kc">nil</span> <span class="p">{</span>
+                  <span class="nx">manager</span><span class="p">.</span><span class="nx">branchMessages</span> <span class="o">&lt;-</span> <span class="o">&amp;</span><span class="nx">apis</span><span class="p">.</span><span class="nx">BranchMessage</span><span class="p">{</span>
+                     <span class="nx">ID</span><span class="p">:</span>                <span class="nx">msg</span><span class="p">.</span><span class="nx">ID</span><span class="p">,</span>
+                     <span class="nx">BranchMessageType</span><span class="p">:</span> <span class="nx">apis</span><span class="p">.</span><span class="nx">TypeBranchRollBackResult</span><span class="p">,</span>
+                     <span class="nx">Message</span><span class="p">:</span>           <span class="nx">content</span><span class="p">,</span>
+                  <span class="p">}</span>
+               <span class="p">}</span>
+            <span class="p">}</span>
+         <span class="p">}</span>
+      <span class="p">}</span>
+      <span class="c1">// 关闭流
+</span><span class="c1"></span>      <span class="nx">err</span> <span class="p">=</span> <span class="nx">stream</span><span class="p">.</span><span class="nf">CloseSend</span><span class="p">()</span>
+      <span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+         <span class="nx">log</span><span class="p">.</span><span class="nf">Error</span><span class="p">(</span><span class="nx">err</span><span class="p">)</span>
+      <span class="p">}</span>
+   <span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div><p>最终处理分支事务调用manager.BranchCommit，</p>
+<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kd">func</span> <span class="p">(</span><span class="nx">manager</span> <span class="nx">ResourceManager</span><span class="p">)</span> <span class="nf">BranchCommit</span><span class="p">(</span><span class="nx">ctx</span> <span class="nx">context</span><span class="p">.</span><span class="nx">Context</span><span class="p">,</span> <span class="nx">request</span> <span class="o">*</span><span class="nx">apis</span><span class="p">.</span><span class="nx">BranchCommitRequest</span><span class="p">)</span> <span class="p">(</span><span class="o">*</span><span class="nx">apis</span><span class="p">.</span><span class="nx">BranchCommitResponse</span><span class="p">,</span> <span class="kt">error</span><span class="p">)</span> <span class="p">{</span>
+<span class="c1">// 根据事务模式调用对应的处理
+</span><span class="c1"></span>	<span class="nx">rm</span><span class="p">,</span> <span class="nx">ok</span> <span class="o">:=</span> <span class="nx">manager</span><span class="p">.</span><span class="nx">managers</span><span class="p">[</span><span class="nx">request</span><span class="p">.</span><span class="nx">BranchType</span><span class="p">]</span>
+	<span class="k">if</span> <span class="nx">ok</span> <span class="p">{</span>
+		<span class="k">return</span> <span class="nx">rm</span><span class="p">.</span><span class="nf">BranchCommit</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span> <span class="nx">request</span><span class="p">)</span>
+	<span class="p">}</span>
+	<span class="k">return</span> <span class="o">&amp;</span><span class="nx">apis</span><span class="p">.</span><span class="nx">BranchCommitResponse</span><span class="p">{</span>
+		<span class="nx">ResultCode</span><span class="p">:</span> <span class="nx">apis</span><span class="p">.</span><span class="nx">ResultCodeFailed</span><span class="p">,</span>
+		<span class="nx">Message</span><span class="p">:</span>    <span class="nx">fmt</span><span class="p">.</span><span class="nf">Sprintf</span><span class="p">(</span><span class="s">&#34;there is no resource manager for %s&#34;</span><span class="p">,</span> <span class="nx">request</span><span class="p">.</span><span class="nx">BranchType</span><span class="p">.</span><span class="nf">String</span><span class="p">()),</span>
+	<span class="p">},</span> <span class="kc">nil</span>
+<span class="p">}</span>
+</code></pre></div><p>相应的，当TC被RM调用BranchCommunicate 后，</p>
+<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kd">func</span> <span class="p">(</span><span class="nx">tc</span> <span class="o">*</span><span class="nx">TransactionCoordinator</span><span class="p">)</span> <span class="nf">BranchCommunicate</span><span class="p">(</span><span class="nx">stream</span> <span class="nx">apis</span><span class="p">.</span><span class="nx">ResourceManagerService_BranchCommunicateServer</span><span class="p">)</span> <span class="kt">error</span> <span class="p">{</span>
+	<span class="kd">var</span> <span class="nx">addressing</span> <span class="kt">string</span>
+	<span class="nx">done</span> <span class="o">:=</span> <span class="nb">make</span><span class="p">(</span><span class="kd">chan</span> <span class="kt">bool</span><span class="p">)</span>
+
+	<span class="nx">ctx</span> <span class="o">:=</span> <span class="nx">stream</span><span class="p">.</span><span class="nf">Context</span><span class="p">()</span>
+	<span class="nx">md</span><span class="p">,</span> <span class="nx">ok</span> <span class="o">:=</span> <span class="nx">metadata</span><span class="p">.</span><span class="nf">FromIncomingContext</span><span class="p">(</span><span class="nx">ctx</span><span class="p">)</span>
+  
+  <span class="c1">//省略一些无关代码
+</span><span class="c1"></span>  <span class="c1">//............
+</span><span class="c1"></span>	<span class="nx">addressing</span> <span class="p">=</span> <span class="nx">md</span><span class="p">.</span><span class="nf">Get</span><span class="p">(</span><span class="s">&#34;addressing&#34;</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+
+ <span class="c1">//这里很好懂吧
+</span><span class="c1"></span>	<span class="nx">queue</span><span class="p">,</span> <span class="nx">_</span> <span class="o">:=</span> <span class="nx">tc</span><span class="p">.</span><span class="nx">callBackMessages</span><span class="p">.</span><span class="nf">LoadOrStore</span><span class="p">(</span><span class="nx">addressing</span><span class="p">,</span> <span class="nb">make</span><span class="p">(</span><span class="kd">chan</span> <span class="o">*</span><span class="nx">apis</span><span class="p">.</span><span class="nx">BranchMessage</span><span class="p">))</span>
+	<span class="nx">q</span> <span class="o">:=</span> <span class="nx">queue</span><span class="p">.(</span><span class="kd">chan</span> <span class="o">*</span><span class="nx">apis</span><span class="p">.</span><span class="nx">BranchMessage</span><span class="p">)</span>
+
+  
+  <span class="c1">// 单独一个g 运行
+</span><span class="c1"></span>  <span class="c1">// 用来从callBackMessages中取数据发送给客户端
+</span><span class="c1"></span>	<span class="nx">runtime</span><span class="p">.</span><span class="nf">GoWithRecover</span><span class="p">(</span><span class="kd">func</span><span class="p">()</span> <span class="p">{</span>
+    <span class="c1">// 死循环
+</span><span class="c1"></span>		<span class="k">for</span> <span class="p">{</span>
+			<span class="k">select</span> <span class="p">{</span>
+			<span class="k">case</span> <span class="nx">_</span><span class="p">,</span> <span class="nx">ok</span> <span class="o">:=</span> <span class="o">&lt;-</span><span class="nx">done</span><span class="p">:</span>
+				<span class="k">if</span> <span class="p">!</span><span class="nx">ok</span> <span class="p">{</span>
+					<span class="k">return</span>
+				<span class="p">}</span>
+        <span class="c1">// 如果能拿到数据，说明有数据需要发送给客户端
+</span><span class="c1"></span>			<span class="k">case</span> <span class="nx">msg</span> <span class="o">:=</span> <span class="o">&lt;-</span> <span class="nx">q</span><span class="p">:</span>
+				<span class="nx">err</span> <span class="o">:=</span> <span class="nx">stream</span><span class="p">.</span><span class="nf">Send</span><span class="p">(</span><span class="nx">msg</span><span class="p">)</span>
+				<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+					<span class="k">return</span>
+				<span class="p">}</span>
+			<span class="p">}</span>
+		<span class="p">}</span>
+	<span class="p">},</span> <span class="kc">nil</span><span class="p">)</span>
+
+  <span class="c1">// 下面的死循环逻辑主要是从stearm 接受客户端响应数据，然后塞入到future中，根据唯一的branch_message_Id
+</span><span class="c1"></span>	<span class="k">for</span> <span class="p">{</span>
+		<span class="k">select</span> <span class="p">{</span>
+		<span class="k">case</span> <span class="o">&lt;-</span><span class="nx">ctx</span><span class="p">.</span><span class="nf">Done</span><span class="p">():</span>
+			<span class="nb">close</span><span class="p">(</span><span class="nx">done</span><span class="p">)</span>
+			<span class="k">return</span> <span class="nx">ctx</span><span class="p">.</span><span class="nf">Err</span><span class="p">()</span>
+		<span class="k">default</span><span class="p">:</span>
+      <span class="c1">//有数据
+</span><span class="c1"></span>			<span class="nx">branchMessage</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">stream</span><span class="p">.</span><span class="nf">Recv</span><span class="p">()</span>
+			<span class="k">if</span> <span class="nx">err</span> <span class="o">==</span> <span class="nx">io</span><span class="p">.</span><span class="nx">EOF</span> <span class="p">{</span>
+				<span class="nb">close</span><span class="p">(</span><span class="nx">done</span><span class="p">)</span>
+				<span class="k">return</span> <span class="kc">nil</span>
+			<span class="p">}</span>
+			<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+				<span class="nb">close</span><span class="p">(</span><span class="nx">done</span><span class="p">)</span>
+				<span class="k">return</span> <span class="nx">err</span>
+			<span class="p">}</span>
+      <span class="c1">// 要区分是什么响应
+</span><span class="c1"></span>      <span class="c1">// 根据是 事务commit的响应，还是对rollback的响应,交给不同逻辑处理。
+</span><span class="c1"></span>			<span class="k">switch</span> <span class="nx">branchMessage</span><span class="p">.</span><span class="nf">GetBranchMessageType</span><span class="p">()</span> <span class="p">{</span>
+        <span class="c1">// 分支事务提交的响应
+</span><span class="c1"></span>			<span class="k">case</span> <span class="nx">apis</span><span class="p">.</span><span class="nx">TypeBranchCommitResult</span><span class="p">:</span>
+				<span class="nx">response</span> <span class="o">:=</span> <span class="o">&amp;</span><span class="nx">apis</span><span class="p">.</span><span class="nx">BranchCommitResponse</span><span class="p">{}</span>
+				<span class="nx">data</span> <span class="o">:=</span> <span class="nx">branchMessage</span><span class="p">.</span><span class="nf">GetMessage</span><span class="p">().</span><span class="nf">GetValue</span><span class="p">()</span>
+        <span class="c1">// 解析数据
+</span><span class="c1"></span>				<span class="nx">err</span> <span class="o">:=</span> <span class="nx">response</span><span class="p">.</span><span class="nf">Unmarshal</span><span class="p">(</span><span class="nx">data</span><span class="p">)</span>
+				<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+					<span class="nx">log</span><span class="p">.</span><span class="nf">Error</span><span class="p">(</span><span class="nx">err</span><span class="p">)</span>
+					<span class="k">continue</span>
+				<span class="p">}</span>
+        
+        <span class="c1">// 说明发送commit的动作在等待响应
+</span><span class="c1"></span>				<span class="nx">resp</span><span class="p">,</span> <span class="nx">loaded</span> <span class="o">:=</span> <span class="nx">tc</span><span class="p">.</span><span class="nx">futures</span><span class="p">.</span><span class="nf">Load</span><span class="p">(</span><span class="nx">branchMessage</span><span class="p">.</span><span class="nx">ID</span><span class="p">)</span>
+				<span class="k">if</span> <span class="nx">loaded</span> <span class="p">{</span>
+          <span class="c1">// 赋值响应数据
+</span><span class="c1"></span>					<span class="nx">future</span> <span class="o">:=</span> <span class="nx">resp</span><span class="p">.(</span><span class="o">*</span><span class="nx">common2</span><span class="p">.</span><span class="nx">MessageFuture</span><span class="p">)</span>
+					<span class="nx">future</span><span class="p">.</span><span class="nx">Response</span> <span class="p">=</span> <span class="nx">response</span>
+          <span class="c1">// 通知数据到了
+</span><span class="c1"></span>					<span class="nx">future</span><span class="p">.</span><span class="nx">Done</span> <span class="o">&lt;-</span> <span class="kc">true</span>
+					<span class="nx">tc</span><span class="p">.</span><span class="nx">futures</span><span class="p">.</span><span class="nf">Delete</span><span class="p">(</span><span class="nx">branchMessage</span><span class="p">.</span><span class="nx">ID</span><span class="p">)</span>
+				<span class="p">}</span>
+        <span class="c1">// 和上面差不多逻辑除了响应数据不同
+</span><span class="c1"></span>			<span class="k">case</span> <span class="nx">apis</span><span class="p">.</span><span class="nx">TypeBranchRollBackResult</span><span class="p">:</span>
+				<span class="nx">response</span> <span class="o">:=</span> <span class="o">&amp;</span><span class="nx">apis</span><span class="p">.</span><span class="nx">BranchRollbackResponse</span><span class="p">{}</span>
+				<span class="nx">data</span> <span class="o">:=</span> <span class="nx">branchMessage</span><span class="p">.</span><span class="nf">GetMessage</span><span class="p">().</span><span class="nf">GetValue</span><span class="p">()</span>
+				<span class="nx">err</span> <span class="o">:=</span> <span class="nx">response</span><span class="p">.</span><span class="nf">Unmarshal</span><span class="p">(</span><span class="nx">data</span><span class="p">)</span>
+				<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+					<span class="nx">log</span><span class="p">.</span><span class="nf">Error</span><span class="p">(</span><span class="nx">err</span><span class="p">)</span>
+					<span class="k">continue</span>
+				<span class="p">}</span>
+				<span class="nx">resp</span><span class="p">,</span> <span class="nx">loaded</span> <span class="o">:=</span> <span class="nx">tc</span><span class="p">.</span><span class="nx">futures</span><span class="p">.</span><span class="nf">Load</span><span class="p">(</span><span class="nx">branchMessage</span><span class="p">.</span><span class="nx">ID</span><span class="p">)</span>
+				<span class="k">if</span> <span class="nx">loaded</span> <span class="p">{</span>
+					<span class="nx">future</span> <span class="o">:=</span> <span class="nx">resp</span><span class="p">.(</span><span class="o">*</span><span class="nx">common2</span><span class="p">.</span><span class="nx">MessageFuture</span><span class="p">)</span>
+					<span class="nx">future</span><span class="p">.</span><span class="nx">Response</span> <span class="p">=</span> <span class="nx">response</span>
+					<span class="nx">future</span><span class="p">.</span><span class="nx">Done</span> <span class="o">&lt;-</span> <span class="kc">true</span>
+					<span class="nx">tc</span><span class="p">.</span><span class="nx">futures</span><span class="p">.</span><span class="nf">Delete</span><span class="p">(</span><span class="nx">branchMessage</span><span class="p">.</span><span class="nx">ID</span><span class="p">)</span>
+				<span class="p">}</span>
+			<span class="p">}</span>
+		<span class="p">}</span>
+	<span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div><p>上面要发送给RM 通知commit 或者 rollback 数据是咋么来的呢？</p>
+<p>当TC要通知RM进行分支commit 的时候，</p>
+<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kd">func</span> <span class="p">(</span><span class="nx">tc</span> <span class="o">*</span><span class="nx">TransactionCoordinator</span><span class="p">)</span> <span class="nf">branchCommit</span><span class="p">(</span><span class="nx">bs</span> <span class="o">*</span><span class="nx">apis</span><span class="p">.</span><span class="nx">BranchSession</span><span class="p">)</span> <span class="p">(</span><span class="nx">apis</span><span class="p">.</span><span class="nx">BranchSession_BranchStatus</span><span class="p">,</span> <span class="kt">error</span><span class="p">)</span> <span class="p">{</span>
+   <span class="nx">request</span> <span class="o">:=</span> <span class="o">&amp;</span><span class="nx">apis</span><span class="p">.</span><span class="nx">BranchCommitRequest</span><span class="p">{</span>
+      <span class="nx">XID</span><span class="p">:</span>             <span class="nx">bs</span><span class="p">.</span><span class="nx">XID</span><span class="p">,</span>
+      <span class="nx">BranchID</span><span class="p">:</span>        <span class="nx">bs</span><span class="p">.</span><span class="nx">BranchID</span><span class="p">,</span>
+      <span class="nx">ResourceID</span><span class="p">:</span>      <span class="nx">bs</span><span class="p">.</span><span class="nx">ResourceID</span><span class="p">,</span>
+      <span class="nx">LockKey</span><span class="p">:</span>         <span class="nx">bs</span><span class="p">.</span><span class="nx">LockKey</span><span class="p">,</span>
+      <span class="nx">BranchType</span><span class="p">:</span>      <span class="nx">bs</span><span class="p">.</span><span class="nx">Type</span><span class="p">,</span>
+      <span class="nx">ApplicationData</span><span class="p">:</span> <span class="nx">bs</span><span class="p">.</span><span class="nx">ApplicationData</span><span class="p">,</span>
+   <span class="p">}</span>
+
+   <span class="nx">content</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">types</span><span class="p">.</span><span class="nf">MarshalAny</span><span class="p">(</span><span class="nx">request</span><span class="p">)</span>
+   <span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+      <span class="k">return</span> <span class="nx">bs</span><span class="p">.</span><span class="nx">Status</span><span class="p">,</span> <span class="nx">err</span>
+   <span class="p">}</span>
+   <span class="nx">message</span> <span class="o">:=</span> <span class="o">&amp;</span><span class="nx">apis</span><span class="p">.</span><span class="nx">BranchMessage</span><span class="p">{</span>
+      <span class="nx">ID</span><span class="p">:</span>                <span class="nb">int64</span><span class="p">(</span><span class="nx">tc</span><span class="p">.</span><span class="nx">idGenerator</span><span class="p">.</span><span class="nf">Inc</span><span class="p">()),</span>
+      <span class="nx">BranchMessageType</span><span class="p">:</span> <span class="nx">apis</span><span class="p">.</span><span class="nx">TypeBranchCommit</span><span class="p">,</span>
+      <span class="nx">Message</span><span class="p">:</span>           <span class="nx">content</span><span class="p">,</span>
+   <span class="p">}</span>
+  
+    <span class="c1">//上面是封装数据
+</span><span class="c1"></span>   <span class="nx">queue</span><span class="p">,</span> <span class="nx">_</span> <span class="o">:=</span> <span class="nx">tc</span><span class="p">.</span><span class="nx">callBackMessages</span><span class="p">.</span><span class="nf">LoadOrStore</span><span class="p">(</span><span class="nx">bs</span><span class="p">.</span><span class="nx">Addressing</span><span class="p">,</span> <span class="nb">make</span><span class="p">(</span><span class="kd">chan</span> <span class="o">*</span><span class="nx">apis</span><span class="p">.</span><span class="nx">BranchMessage</span><span class="p">))</span>
+   <span class="nx">q</span> <span class="o">:=</span> <span class="nx">queue</span><span class="p">.(</span><span class="kd">chan</span> <span class="o">*</span><span class="nx">apis</span><span class="p">.</span><span class="nx">BranchMessage</span><span class="p">)</span>
+   <span class="k">select</span> <span class="p">{</span>
+     <span class="c1">// 在这把数据塞到callBackMessages
+</span><span class="c1"></span>   <span class="k">case</span> <span class="nx">q</span> <span class="o">&lt;-</span> <span class="nx">message</span><span class="p">:</span>
+   <span class="k">default</span><span class="p">:</span>
+      <span class="k">return</span> <span class="nx">bs</span><span class="p">.</span><span class="nx">Status</span><span class="p">,</span> <span class="nx">err</span>
+   <span class="p">}</span>
+
+  <span class="c1">// 这里创建了RM响应格式，根据 messageid，塞入到结果futures(sync.map中)，
+</span><span class="c1"></span>   <span class="nx">resp</span> <span class="o">:=</span> <span class="nx">common2</span><span class="p">.</span><span class="nf">NewMessageFuture</span><span class="p">(</span><span class="nx">message</span><span class="p">)</span>
+   <span class="nx">tc</span><span class="p">.</span><span class="nx">futures</span><span class="p">.</span><span class="nf">Store</span><span class="p">(</span><span class="nx">message</span><span class="p">.</span><span class="nx">ID</span><span class="p">,</span> <span class="nx">resp</span><span class="p">)</span>
+
+   <span class="nx">timer</span> <span class="o">:=</span> <span class="nx">time</span><span class="p">.</span><span class="nf">NewTimer</span><span class="p">(</span><span class="nx">tc</span><span class="p">.</span><span class="nx">streamMessageTimeout</span><span class="p">)</span>
+   <span class="k">select</span> <span class="p">{</span>
+     <span class="c1">// RM响应超时了，GG
+</span><span class="c1"></span>   <span class="k">case</span> <span class="o">&lt;-</span><span class="nx">timer</span><span class="p">.</span><span class="nx">C</span><span class="p">:</span>
+      <span class="nx">tc</span><span class="p">.</span><span class="nx">futures</span><span class="p">.</span><span class="nf">Delete</span><span class="p">(</span><span class="nx">resp</span><span class="p">.</span><span class="nx">ID</span><span class="p">)</span>
+      <span class="k">return</span> <span class="nx">bs</span><span class="p">.</span><span class="nx">Status</span><span class="p">,</span> <span class="nx">fmt</span><span class="p">.</span><span class="nf">Errorf</span><span class="p">(</span><span class="s">&#34;wait branch commit response timeout&#34;</span><span class="p">)</span>
+   <span class="k">case</span> <span class="o">&lt;-</span><span class="nx">resp</span><span class="p">.</span><span class="nx">Done</span><span class="p">:</span>
+      <span class="nx">timer</span><span class="p">.</span><span class="nf">Stop</span><span class="p">()</span>
+   <span class="p">}</span>
+
+  <span class="c1">// 响应成功，解析数据处理。
+</span><span class="c1"></span>   <span class="nx">response</span><span class="p">,</span> <span class="nx">ok</span> <span class="o">:=</span> <span class="nx">resp</span><span class="p">.</span><span class="nx">Response</span><span class="p">.(</span><span class="o">*</span><span class="nx">apis</span><span class="p">.</span><span class="nx">BranchCommitResponse</span><span class="p">)</span>
+   <span class="k">if</span> <span class="p">!</span><span class="nx">ok</span> <span class="p">{</span>
+      <span class="nx">log</span><span class="p">.</span><span class="nf">Infof</span><span class="p">(</span><span class="s">&#34;rollback response: %v&#34;</span><span class="p">,</span> <span class="nx">resp</span><span class="p">.</span><span class="nx">Response</span><span class="p">)</span>
+      <span class="k">return</span> <span class="nx">bs</span><span class="p">.</span><span class="nx">Status</span><span class="p">,</span> <span class="nx">fmt</span><span class="p">.</span><span class="nf">Errorf</span><span class="p">(</span><span class="s">&#34;response type not right&#34;</span><span class="p">)</span>
+   <span class="p">}</span>
+   <span class="k">if</span> <span class="nx">response</span><span class="p">.</span><span class="nx">ResultCode</span> <span class="o">==</span> <span class="nx">apis</span><span class="p">.</span><span class="nx">ResultCodeSuccess</span> <span class="p">{</span>
+      <span class="k">return</span> <span class="nx">response</span><span class="p">.</span><span class="nx">BranchStatus</span><span class="p">,</span> <span class="kc">nil</span>
+   <span class="p">}</span>
+   <span class="k">return</span> <span class="nx">bs</span><span class="p">.</span><span class="nx">Status</span><span class="p">,</span> <span class="nx">fmt</span><span class="p">.</span><span class="nf">Errorf</span><span class="p">(</span><span class="nx">response</span><span class="p">.</span><span class="nx">Message</span><span class="p">)</span>
+<span class="p">}</span>
+</code></pre></div><p>最后一个就是TM，没啥理解难度。</p>
+<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="c1">// tm request to  tc
+</span><span class="c1"></span><span class="kd">type</span> <span class="nx">TransactionManagerInterface</span> <span class="kd">interface</span> <span class="p">{</span>
+	<span class="c1">// GlobalStatus_Begin a new global transaction.
+</span><span class="c1"></span>	<span class="nf">Begin</span><span class="p">(</span><span class="nx">ctx</span> <span class="nx">context</span><span class="p">.</span><span class="nx">Context</span><span class="p">,</span> <span class="nx">name</span> <span class="kt">string</span><span class="p">,</span> <span class="nx">timeout</span> <span class="kt">int32</span><span class="p">)</span> <span class="p">(</span><span class="kt">string</span><span class="p">,</span> <span class="kt">error</span><span class="p">)</span>
+
+	<span class="c1">// Global commit.
+</span><span class="c1"></span>	<span class="nf">Commit</span><span class="p">(</span><span class="nx">ctx</span> <span class="nx">context</span><span class="p">.</span><span class="nx">Context</span><span class="p">,</span> <span class="nx">xid</span> <span class="kt">string</span><span class="p">)</span> <span class="p">(</span><span class="nx">apis</span><span class="p">.</span><span class="nx">GlobalSession_GlobalStatus</span><span class="p">,</span> <span class="kt">error</span><span class="p">)</span>
+
+	<span class="c1">// Global rollback.
+</span><span class="c1"></span>	<span class="nf">Rollback</span><span class="p">(</span><span class="nx">ctx</span> <span class="nx">context</span><span class="p">.</span><span class="nx">Context</span><span class="p">,</span> <span class="nx">xid</span> <span class="kt">string</span><span class="p">)</span> <span class="p">(</span><span class="nx">apis</span><span class="p">.</span><span class="nx">GlobalSession_GlobalStatus</span><span class="p">,</span> <span class="kt">error</span><span class="p">)</span>
+
+	<span class="c1">// Get current status of the give transaction.
+</span><span class="c1"></span>	<span class="nf">GetStatus</span><span class="p">(</span><span class="nx">ctx</span> <span class="nx">context</span><span class="p">.</span><span class="nx">Context</span><span class="p">,</span> <span class="nx">xid</span> <span class="kt">string</span><span class="p">)</span> <span class="p">(</span><span class="nx">apis</span><span class="p">.</span><span class="nx">GlobalSession_GlobalStatus</span><span class="p">,</span> <span class="kt">error</span><span class="p">)</span>
+
+	<span class="c1">// Global report.
+</span><span class="c1"></span>	<span class="nf">GlobalReport</span><span class="p">(</span><span class="nx">ctx</span> <span class="nx">context</span><span class="p">.</span><span class="nx">Context</span><span class="p">,</span> <span class="nx">xid</span> <span class="kt">string</span><span class="p">,</span> <span class="nx">globalStatus</span> <span class="nx">apis</span><span class="p">.</span><span class="nx">GlobalSession_GlobalStatus</span><span class="p">)</span> <span class="p">(</span><span class="nx">apis</span><span class="p">.</span><span class="nx">GlobalSession_GlobalStatus</span><span class="p">,</span> <span class="kt">error</span><span class="p">)</span>
+<span class="p">}</span>
+
+<span class="kd">type</span> <span class="nx">TransactionManager</span> <span class="kd">struct</span> <span class="p">{</span>
+	<span class="nx">addressing</span> <span class="kt">string</span>
+	<span class="nx">rpcClient</span>  <span class="nx">apis</span><span class="p">.</span><span class="nx">TransactionManagerServiceClient</span>
+<span class="p">}</span>
+
+<span class="kd">func</span> <span class="nf">InitTransactionManager</span><span class="p">(</span><span class="nx">addressing</span> <span class="kt">string</span><span class="p">,</span> <span class="nx">client</span> <span class="nx">apis</span><span class="p">.</span><span class="nx">TransactionManagerServiceClient</span><span class="p">)</span> <span class="p">{</span>
+	<span class="nx">defaultTransactionManager</span> <span class="p">=</span> <span class="o">&amp;</span><span class="nx">TransactionManager</span><span class="p">{</span>
+		<span class="nx">addressing</span><span class="p">:</span> <span class="nx">addressing</span><span class="p">,</span>
+		<span class="nx">rpcClient</span><span class="p">:</span>  <span class="nx">client</span><span class="p">,</span>
+	<span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div><p>其实seat-golang还有别的可以提一提的。</p>
+<p>比如说，它里面通过go反射实现的动态代理功能(虽然我觉得完全没必要?)，我懒得写了。</p>
+<p>这篇文章再写就更长了，不继续写dtm了，感兴趣的留个言，我看看要不要写一篇dtm。</p>
+
+			</div>
+			<div class="content"><br><img src="https://image.syst.top/image/wechat-qr.png"></div>
+			<hr class="post-end">
+			<footer class="post-info">
+				<p>
+					<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-tag meta-icon"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"></path><line x1="7" y1="7" x2="7" y2="7"></line></svg><span class="tag"><a href="https://www.syst.top/tags/go">go</a></span><span class="tag"><a href="https://www.syst.top/tags/enum">enum</a></span>
+				</p>
+				<p><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-file-text"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>1023 Words</p>
+				<p><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-calendar"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>2021-12-08 22:25 &#43;0800</p>
+			</footer>
+		</article>
+		<aside id="toc" class="show-toc">
+			<div class="toc-title">Table of Contents</div>
+			<nav id="TableOfContents">
+  <ul>
+    <li>
+      <ul>
+        <li><a href="#开篇">开篇</a></li>
+        <li><a href="#seata简介">Seata简介</a></li>
+        <li><a href="#seata-golang">seata-golang</a></li>
+      </ul>
+    </li>
+  </ul>
+</nav>
+		</aside>
+		<div class="post-nav thin">
+			<a class="prev-post" href="https://www.syst.top/posts/go/channel3/">
+				<span class="post-nav-label">Older&nbsp;<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-arrow-right"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg></span><br><span>channel原理解析(三)</span>
+			</a>
+		</div>
+		<div id="comments" class="thin">
+			<script src="https://utteranc.es/client.js"
+        repo="wuqinqiang/blog"
+        issue-term="pathname"
+        theme="github-light"
+        crossorigin="anonymous"
+        async>
+</script>
+		</div>
+	</main>
+
+	<footer id="site-footer" class="section-inner thin animated fadeIn faster">
+		<p>&copy; 2018 - 2021 <a href="https://www.syst.top">Remember</a> &#183; <a href="http://beian.miit.gov.cn/">浙ICP备18028603号-2</a></p>
+		<p>
+			Made with <a href="https://gohugo.io/" target="_blank" rel="noopener">Hugo</a> &#183; Theme <a href="https://github.com/Track3/hermit" target="_blank" rel="noopener">Hermit</a> &#183; <a href="https://www.syst.top/post/index.xml" target="_blank" title="rss"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-rss"><path d="M4 11a9 9 0 0 1 9 9"></path><path d="M4 4a16 16 0 0 1 16 16"></path><circle cx="5" cy="19" r="1"></circle></svg></a>
+		</p>
+	</footer>
+
+
+	<script src="https://www.syst.top/js/main.min.784417f5847151f848c339cf0acb13a06cbb648b1483435a28ed4556c4ead69b.js"></script>
+<script type="application/javascript">
+var doNotTrack = false;
+if (!doNotTrack) {
+	window.ga=window.ga||function(){(ga.q=ga.q||[]).push(arguments)};ga.l=+new Date;
+	ga('create', 'UA-166045776-1', 'auto');
+	
+	ga('send', 'pageview');
+}
+</script>
+<script async src='https://www.google-analytics.com/analytics.js'></script>
+
+
+</body>
+
+</html>
