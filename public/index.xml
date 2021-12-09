@@ -7,7 +7,7 @@
     <generator>Hugo -- gohugo.io</generator>
     <language>zh-hans</language>
     <copyright>This work is licensed under a Creative Commons Attribution-NonCommercial 4.0 International License.</copyright>
-    <lastBuildDate>Sun, 07 Nov 2021 21:12:52 +0800</lastBuildDate><atom:link href="https://www.syst.top/index.xml" rel="self" type="application/rss+xml" />
+    <lastBuildDate>Wed, 08 Dec 2021 22:25:52 +0800</lastBuildDate><atom:link href="https://www.syst.top/index.xml" rel="self" type="application/rss+xml" />
     <item>
       <title>Myfriends</title>
       <link>https://www.syst.top/friends/friends/</link>
@@ -15,6 +15,30 @@
       
       <guid>https://www.syst.top/friends/friends/</guid>
       <description></description>
+    </item>
+    
+    <item>
+      <title>那些用Go实现的分布式事务框架</title>
+      <link>https://www.syst.top/posts/go/transaction/</link>
+      <pubDate>Wed, 08 Dec 2021 22:25:52 +0800</pubDate>
+      
+      <guid>https://www.syst.top/posts/go/transaction/</guid>
+      <description>开篇 不知不觉竟然一个月没更新了，人一旦懒下来只会越来越懒。
+最近对分布式事务产生了一些兴趣，查阅了一些文章以及论文。这篇文章主要介绍我看的两个项目，不涉及一些理论知识。
+ 阿里开源版本的Seata，主要看了Go实现的seata-golang(落后java版) 以及前段时间很多公众号都发的dtm。  Seata简介 Seata是由阿里开源的分布式事务服务，目前为用户提供了AT、TCC、SAGA、XA的事务模式，整体采用的是两阶段提交协议。Go版的seata-golang 目前好像只实现了mysql的AT、TCC模式，作者现在不咋更新了。
+Seata 有几个核心角色：
+ TC(Transaction Coordinator) -事务协调者。(维护全局和分支事务的状态，驱动全局事务提交或回滚) TM(Transaction Manager)-事务管理器。(定义全局事务的范围：开始全局事务、提交或回滚全局事务。) RM(Resource Manager)-资源管理器。(管理分支事务处理的资源，与TC交谈以注册分支事务和报告分支事务的状态，并驱动分支事务提交或回滚)  当然这样看，可能还不是很理解，我拿一张官网的图加以解释。
+从上图中可以看出，这三个角色所负责的工作如下，
+TC
+ 维护全局和分支事务状态，需要进行存储。 当一个分布式事务处理结束，需要通知到每个RM是commit还是rollback。  TM
+ 向TC请求开启一个分布式事务，得到一个全局唯一的分布式id。 根据每个参与分布式事务的RM一阶段的反馈，决定二阶段向TC请求此次分布式事务是commit还是rollback(绝大部分场景下，一阶段任一RM失败，本次分布式事务失败)  RM
+说的白一点就是管理参与分布式事务的各个服务(比如经典下单场景中涉及到的:订单服务、库存服务、营销服务等)
+ps:个人感觉，这里的RM有点类似微服务中的中间处理层(专业术语他们管这叫bff-&amp;gt;backend for fronted)。
+  一阶段 prepare 行为(主动)：每个RM调用 自定义 的 prepare 逻辑。
+  二阶段 commit 行为(被动触发)：如果本次分布式事务第一阶段全部RM成功，TC处理完自身状态变更后，调用各个RM自定义 的 commit 逻辑。(一阶段RM全部成功)
+  二阶段 rollback 行为(被动触发)：如果本次分布式事务第一阶段任一RM失败，TC处理完自身状态变更后，调用各个RM自定义 的 rollback 逻辑。(一阶段任意RM失败)
+  好了。下面可以看看seata-golang 实现的一些细节了，seata-golang 底层采用gRPC进行通信。
+seata-golang 我们先看RM部分结构。</description>
     </item>
     
     <item>
@@ -226,18 +250,6 @@ $ brew tap ktr0731/evans $ brew install evans 我们来操作一下 REPL 模式�
 下图能清晰表达整体流程了。 顺便说一句，这篇文章实现的代码比 Handling 1 Million Requests per Minute with Go 的代码简单多了。
 首先看 job。
 package wpool import ( &amp;#34;context&amp;#34; ) type JobID string type jobType string type jobMetadata map[string]interface{} type ExecutionFn func(ctx context.Context, args interface{}) (interface{}, error) type JobDescriptor struct { ID JobID JType jobType Metadata map[string]interface{} } type Result struct { Value interface{} Err error Descriptor JobDescriptor } type Job struct { Descriptor JobDescriptor ExecFn ExecutionFn Args interface{} } // 处理 job 逻辑,处理结果包装成 Result 结果 func (j Job) execute(ctx context.</description>
-    </item>
-    
-    <item>
-      <title>傻瓜式的我们</title>
-      <link>https://www.syst.top/lives/about-everything/</link>
-      <pubDate>Sun, 06 Jun 2021 23:49:52 +0800</pubDate>
-      
-      <guid>https://www.syst.top/lives/about-everything/</guid>
-      <description>为什么写这篇文章。
-现代的信息流在消磨着我。还有我自己也在自我内耗中。
- 一天要看多少次手机？ 认真工作的时候被手机打断或者自己工作两分钟时不时拿出手机？ 每天被多少垃圾信息推送？看到消息都忍不住点一下？ 完全没有自己的思考，只剩下无情的消息接受者。宛如行尸走肉 焦虑、沉不住气，每一个都想学，也每一种都没精。列出计划。  针对以上问题,
- 杜绝工作时看手机，或者给每日处理手机的时间段，消息的处理也一样。 拒绝强迫症，不要点开消息。 对待问题，除了解决，海西要思考背后原理。 淡定淡定。一步一个脚印，多看别人源码。  </description>
     </item>
     
   </channel>

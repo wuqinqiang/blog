@@ -7,7 +7,31 @@
     <generator>Hugo -- gohugo.io</generator>
     <language>zh-hans</language>
     <copyright>This work is licensed under a Creative Commons Attribution-NonCommercial 4.0 International License.</copyright>
-    <lastBuildDate>Sun, 10 Oct 2021 21:25:52 +0800</lastBuildDate><atom:link href="https://www.syst.top/tags/go/index.xml" rel="self" type="application/rss+xml" />
+    <lastBuildDate>Wed, 08 Dec 2021 22:25:52 +0800</lastBuildDate><atom:link href="https://www.syst.top/tags/go/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>那些用Go实现的分布式事务框架</title>
+      <link>https://www.syst.top/posts/go/transaction/</link>
+      <pubDate>Wed, 08 Dec 2021 22:25:52 +0800</pubDate>
+      
+      <guid>https://www.syst.top/posts/go/transaction/</guid>
+      <description>开篇 不知不觉竟然一个月没更新了，人一旦懒下来只会越来越懒。
+最近对分布式事务产生了一些兴趣，查阅了一些文章以及论文。这篇文章主要介绍我看的两个项目，不涉及一些理论知识。
+ 阿里开源版本的Seata，主要看了Go实现的seata-golang(落后java版) 以及前段时间很多公众号都发的dtm。  Seata简介 Seata是由阿里开源的分布式事务服务，目前为用户提供了AT、TCC、SAGA、XA的事务模式，整体采用的是两阶段提交协议。Go版的seata-golang 目前好像只实现了mysql的AT、TCC模式，作者现在不咋更新了。
+Seata 有几个核心角色：
+ TC(Transaction Coordinator) -事务协调者。(维护全局和分支事务的状态，驱动全局事务提交或回滚) TM(Transaction Manager)-事务管理器。(定义全局事务的范围：开始全局事务、提交或回滚全局事务。) RM(Resource Manager)-资源管理器。(管理分支事务处理的资源，与TC交谈以注册分支事务和报告分支事务的状态，并驱动分支事务提交或回滚)  当然这样看，可能还不是很理解，我拿一张官网的图加以解释。
+从上图中可以看出，这三个角色所负责的工作如下，
+TC
+ 维护全局和分支事务状态，需要进行存储。 当一个分布式事务处理结束，需要通知到每个RM是commit还是rollback。  TM
+ 向TC请求开启一个分布式事务，得到一个全局唯一的分布式id。 根据每个参与分布式事务的RM一阶段的反馈，决定二阶段向TC请求此次分布式事务是commit还是rollback(绝大部分场景下，一阶段任一RM失败，本次分布式事务失败)  RM
+说的白一点就是管理参与分布式事务的各个服务(比如经典下单场景中涉及到的:订单服务、库存服务、营销服务等)
+ps:个人感觉，这里的RM有点类似微服务中的中间处理层(专业术语他们管这叫bff-&amp;gt;backend for fronted)。
+  一阶段 prepare 行为(主动)：每个RM调用 自定义 的 prepare 逻辑。
+  二阶段 commit 行为(被动触发)：如果本次分布式事务第一阶段全部RM成功，TC处理完自身状态变更后，调用各个RM自定义 的 commit 逻辑。(一阶段RM全部成功)
+  二阶段 rollback 行为(被动触发)：如果本次分布式事务第一阶段任一RM失败，TC处理完自身状态变更后，调用各个RM自定义 的 rollback 逻辑。(一阶段任意RM失败)
+  好了。下面可以看看seata-golang 实现的一些细节了，seata-golang 底层采用gRPC进行通信。
+seata-golang 我们先看RM部分结构。</description>
+    </item>
+    
     <item>
       <title>channel原理解析(三)</title>
       <link>https://www.syst.top/posts/go/channel3/</link>
@@ -245,31 +269,6 @@ runtime.hchan结构。
       <description>介绍 Go 语言实际上没有直接支持枚举的关键字。一般我们都是通过 const + iota 实现枚举的能力。
 有人要问了，为什么一定要使用枚举呢？stackoverflow 上有一个高赞的回答，如下:
 You should always use enums when a variable (especially a method parameter) can only take one out of a small set of possible values. Examples would be things like type constants (contract status: &amp;quot;permanent&amp;quot;, &amp;quot;temp&amp;quot;, &amp;quot;apprentice&amp;quot;), or flags (&amp;quot;execute now&amp;quot;, &amp;quot;defer execution&amp;quot;). If you use enums instead of integers (or String codes), you increase compile-time checking and avoid errors from passing in invalid constants, and you document which values are legal to use.</description>
-    </item>
-    
-    <item>
-      <title>原来sync.Once还能这么用</title>
-      <link>https://www.syst.top/posts/go/synconce/</link>
-      <pubDate>Sun, 25 Apr 2021 22:25:52 +0800</pubDate>
-      
-      <guid>https://www.syst.top/posts/go/synconce/</guid>
-      <description>介绍 sync.Once估计大家都不陌生，官方介绍中，
- Once is an object that will perform exactly one action
- 正是因为这个特性，Once常常被用于单例对象的初始化场景。
-也正是因为这个特性，其实它还能做一些其他的事情。
-缓存击穿 日常背诵八股文，我相信你们对缓存击穿这个词特别熟悉。
-缓存击穿一般待指热点key缓存失效(到期|删了)，同一时刻大量对热点key的并发请求。缓存找不到数据，所有请求都打入到DB层。此时，身为开发的你，明天和意外就不知道哪个先到了。
-为了防止这种情况发生，针对相同key的请求，只需要一个请求(A)到达DB层取数据，其他请求等待A通知就行了。
-就像这样，
-​ 图片来源:caching
-singleflight Go里有很多防缓存击穿的工具，比如singleflight库。
-type call struct { wg sync.WaitGroup val interface{} err error forgotten bool //.....省略部分字段 } type Group struct { mu sync.Mutex m map[string]*call } 通过上面简单的代码大概能看出，其实就是对key做了缓存。
-把一个key对应call结构存储在map中。保证只有一个key真正执行fn()服务 ，其他请求则通过sync.waitGroup的wait等待结果。
-至于g.docall(c,key,fn)，
-当带着全村人希望的那个请求，获取到数据，给对应key的call赋值，最终执行done，通知等待这个key全村的村民获取数据。
-代码并不复杂。
-自定义singleflight 我们也可以实现一个简易版本的。
-package main import ( &amp;#34;fmt&amp;#34; &amp;#34;sync&amp;#34; &amp;#34;time&amp;#34; ) type CacheEntry struct { data []byte err error wait chan struct{} } type OrderSever struct { cache map[string]*CacheEntry mutex sync.</description>
     </item>
     
   </channel>
