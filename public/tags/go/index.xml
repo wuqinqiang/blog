@@ -33,6 +33,28 @@ seata-golang 我们先看RM部分结构。</description>
     </item>
     
     <item>
+      <title>那些用Go实现的分布式事务框架(2)</title>
+      <link>https://www.syst.top/posts/go/transaction2/</link>
+      <pubDate>Wed, 08 Dec 2021 22:25:52 +0800</pubDate>
+      
+      <guid>https://www.syst.top/posts/go/transaction2/</guid>
+      <description>开篇 上一篇我们主要介绍的是seata-golang。一个对标seata的go语言实现，当然版本还是落后Java版很多的。
+这次我们来介绍一下另一个go实现的分布式事务:dtm。
+首先来看下dtm整体架构图(来源官网)。
+再来看之前的seata架构图。
+从架构上来看，大差不差。
+seata中的TC对标dam的TM。
+RM两边意思一致。
+seata中的TM对标dtm事务SDK。作用都是一样:第一阶段开启一个全局事务,执行各RM分支事务，第二阶段根据RM第一阶段执行结果，决定调用TC(seata)|TM(dtm) commit或者rollback。
+架构上，个人感觉只是因为模块名称以及图画不一样的差别。
+当然在实现细节上还是有很大差别的。
+我们先简单介绍下DTM各个模块。
+TM TM 层在代码中是没有具体的主体结构的，开始都是函数之前的调用。
+启动TM实际上开启了两个服务，http以及grpc这两个服务。
+// StartSvr StartSvr func StartSvr() { app := common.GetGinApp() app = httpMetrics(app) addRoute(app) dtmimp.Logf(&amp;#34;dtmsvr listen at: %d&amp;#34;, common.DtmHttpPort) go app.Run(fmt.Sprintf(&amp;#34;:%d&amp;#34;, common.DtmHttpPort)) lis, err := net.Listen(&amp;#34;tcp&amp;#34;, fmt.Sprintf(&amp;#34;:%d&amp;#34;, common.DtmGrpcPort)) dtmimp.FatalIfError(err) s := grpc.NewServer( grpc.UnaryInterceptor(grpc_middleware.ChainUnaryServer( grpc.UnaryServerInterceptor(grpcMetrics), grpc.UnaryServerInterceptor(dtmgimp.GrpcServerLog)), )) dtmgimp.RegisterDtmServer(s, &amp;amp;dtmServer{}) dtmimp.Logf(&amp;#34;grpc listening at %v&amp;#34;, lis.Addr()) go func() { err := s.Serve(lis) dtmimp.FatalIfError(err) }() go updateBranchAsync() // 省略代码 } http路由，</description>
+    </item>
+    
+    <item>
       <title>channel原理解析(三)</title>
       <link>https://www.syst.top/posts/go/channel3/</link>
       <pubDate>Sun, 10 Oct 2021 21:25:52 +0800</pubDate>
@@ -258,17 +280,6 @@ runtime.hchan结构。
 可以看到创建的时候有一段switch分支代码，那么什么情况下会走对应的case呢?
 根据上面的信息，我们可以得出，
  如果创建一个无缓冲channel ，那么只需要为runtime.hchan本身分配一段内存空间即可。 如果创建的缓冲channel 存储的类型不是指针类型，会为当前 channel 和存储类型元素的缓冲区，分配一块连续的内存空间。 在默认情况下(缓冲channel存储类型包含指针)，会单独为runtime.hchan和缓冲区分配内存。  总结 这篇我们主要介绍了如何获取go程序的汇编代码，通过汇编代码知道创建channel的具体函数runtime.makechan，同时我们还知道不同的创建姿势会导致走向不同的内存空间分配。最后通过创建函数我们知道channel在程序运行时使用runtime.hchan来表示。</description>
-    </item>
-    
-    <item>
-      <title>iota 在 Go 中的使用 </title>
-      <link>https://www.syst.top/posts/go/enum/</link>
-      <pubDate>Sun, 25 Apr 2021 22:25:52 +0800</pubDate>
-      
-      <guid>https://www.syst.top/posts/go/enum/</guid>
-      <description>介绍 Go 语言实际上没有直接支持枚举的关键字。一般我们都是通过 const + iota 实现枚举的能力。
-有人要问了，为什么一定要使用枚举呢？stackoverflow 上有一个高赞的回答，如下:
-You should always use enums when a variable (especially a method parameter) can only take one out of a small set of possible values. Examples would be things like type constants (contract status: &amp;quot;permanent&amp;quot;, &amp;quot;temp&amp;quot;, &amp;quot;apprentice&amp;quot;), or flags (&amp;quot;execute now&amp;quot;, &amp;quot;defer execution&amp;quot;). If you use enums instead of integers (or String codes), you increase compile-time checking and avoid errors from passing in invalid constants, and you document which values are legal to use.</description>
     </item>
     
   </channel>

@@ -1,0 +1,565 @@
+<!DOCTYPE html>
+<html lang="zh-hans">
+
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<meta http-equiv="X-UA-Compatible" content="ie=edge">
+	<meta name="theme-color" content="#494f5c">
+	<meta name="msapplication-TileColor" content="#494f5c">
+<meta itemprop="name" content="那些用Go实现的分布式事务框架(2)">
+<meta itemprop="description" content="开篇 上一篇我们主要介绍的是seata-golang。一个对标seata的go语言实现，当然版本还是落后Java版很多的。
+这次我们来介绍一下另一个go实现的分布式事务:dtm。
+首先来看下dtm整体架构图(来源官网)。
+再来看之前的seata架构图。
+从架构上来看，大差不差。
+seata中的TC对标dam的TM。
+RM两边意思一致。
+seata中的TM对标dtm事务SDK。作用都是一样:第一阶段开启一个全局事务,执行各RM分支事务，第二阶段根据RM第一阶段执行结果，决定调用TC(seata)|TM(dtm) commit或者rollback。
+架构上，个人感觉只是因为模块名称以及图画不一样的差别。
+当然在实现细节上还是有很大差别的。
+我们先简单介绍下DTM各个模块。
+TM TM 层在代码中是没有具体的主体结构的，开始都是函数之前的调用。
+启动TM实际上开启了两个服务，http以及grpc这两个服务。
+// StartSvr StartSvr func StartSvr() { app := common.GetGinApp() app = httpMetrics(app) addRoute(app) dtmimp.Logf(&#34;dtmsvr listen at: %d&#34;, common.DtmHttpPort) go app.Run(fmt.Sprintf(&#34;:%d&#34;, common.DtmHttpPort)) lis, err := net.Listen(&#34;tcp&#34;, fmt.Sprintf(&#34;:%d&#34;, common.DtmGrpcPort)) dtmimp.FatalIfError(err) s := grpc.NewServer( grpc.UnaryInterceptor(grpc_middleware.ChainUnaryServer( grpc.UnaryServerInterceptor(grpcMetrics), grpc.UnaryServerInterceptor(dtmgimp.GrpcServerLog)), )) dtmgimp.RegisterDtmServer(s, &amp;dtmServer{}) dtmimp.Logf(&#34;grpc listening at %v&#34;, lis.Addr()) go func() { err := s.Serve(lis) dtmimp.FatalIfError(err) }() go updateBranchAsync() // 省略代码 } http路由，">
+<meta itemprop="datePublished" content="2021-12-08T22:25:52+08:00" />
+<meta itemprop="dateModified" content="2021-12-08T22:25:52+08:00" />
+<meta itemprop="wordCount" content="1087">
+
+
+
+<meta itemprop="keywords" content="go,enum," />
+<meta property="og:title" content="那些用Go实现的分布式事务框架(2)" />
+<meta property="og:description" content="开篇 上一篇我们主要介绍的是seata-golang。一个对标seata的go语言实现，当然版本还是落后Java版很多的。
+这次我们来介绍一下另一个go实现的分布式事务:dtm。
+首先来看下dtm整体架构图(来源官网)。
+再来看之前的seata架构图。
+从架构上来看，大差不差。
+seata中的TC对标dam的TM。
+RM两边意思一致。
+seata中的TM对标dtm事务SDK。作用都是一样:第一阶段开启一个全局事务,执行各RM分支事务，第二阶段根据RM第一阶段执行结果，决定调用TC(seata)|TM(dtm) commit或者rollback。
+架构上，个人感觉只是因为模块名称以及图画不一样的差别。
+当然在实现细节上还是有很大差别的。
+我们先简单介绍下DTM各个模块。
+TM TM 层在代码中是没有具体的主体结构的，开始都是函数之前的调用。
+启动TM实际上开启了两个服务，http以及grpc这两个服务。
+// StartSvr StartSvr func StartSvr() { app := common.GetGinApp() app = httpMetrics(app) addRoute(app) dtmimp.Logf(&#34;dtmsvr listen at: %d&#34;, common.DtmHttpPort) go app.Run(fmt.Sprintf(&#34;:%d&#34;, common.DtmHttpPort)) lis, err := net.Listen(&#34;tcp&#34;, fmt.Sprintf(&#34;:%d&#34;, common.DtmGrpcPort)) dtmimp.FatalIfError(err) s := grpc.NewServer( grpc.UnaryInterceptor(grpc_middleware.ChainUnaryServer( grpc.UnaryServerInterceptor(grpcMetrics), grpc.UnaryServerInterceptor(dtmgimp.GrpcServerLog)), )) dtmgimp.RegisterDtmServer(s, &amp;dtmServer{}) dtmimp.Logf(&#34;grpc listening at %v&#34;, lis.Addr()) go func() { err := s.Serve(lis) dtmimp.FatalIfError(err) }() go updateBranchAsync() // 省略代码 } http路由，" />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="https://www.syst.top/posts/go/transaction2/" />
+<meta property="article:published_time" content="2021-12-08T22:25:52+08:00" />
+<meta property="article:modified_time" content="2021-12-08T22:25:52+08:00" />
+<meta name="twitter:card" content="summary"/>
+<meta name="twitter:title" content="那些用Go实现的分布式事务框架(2)"/>
+<meta name="twitter:description" content="开篇 上一篇我们主要介绍的是seata-golang。一个对标seata的go语言实现，当然版本还是落后Java版很多的。
+这次我们来介绍一下另一个go实现的分布式事务:dtm。
+首先来看下dtm整体架构图(来源官网)。
+再来看之前的seata架构图。
+从架构上来看，大差不差。
+seata中的TC对标dam的TM。
+RM两边意思一致。
+seata中的TM对标dtm事务SDK。作用都是一样:第一阶段开启一个全局事务,执行各RM分支事务，第二阶段根据RM第一阶段执行结果，决定调用TC(seata)|TM(dtm) commit或者rollback。
+架构上，个人感觉只是因为模块名称以及图画不一样的差别。
+当然在实现细节上还是有很大差别的。
+我们先简单介绍下DTM各个模块。
+TM TM 层在代码中是没有具体的主体结构的，开始都是函数之前的调用。
+启动TM实际上开启了两个服务，http以及grpc这两个服务。
+// StartSvr StartSvr func StartSvr() { app := common.GetGinApp() app = httpMetrics(app) addRoute(app) dtmimp.Logf(&#34;dtmsvr listen at: %d&#34;, common.DtmHttpPort) go app.Run(fmt.Sprintf(&#34;:%d&#34;, common.DtmHttpPort)) lis, err := net.Listen(&#34;tcp&#34;, fmt.Sprintf(&#34;:%d&#34;, common.DtmGrpcPort)) dtmimp.FatalIfError(err) s := grpc.NewServer( grpc.UnaryInterceptor(grpc_middleware.ChainUnaryServer( grpc.UnaryServerInterceptor(grpcMetrics), grpc.UnaryServerInterceptor(dtmgimp.GrpcServerLog)), )) dtmgimp.RegisterDtmServer(s, &amp;dtmServer{}) dtmimp.Logf(&#34;grpc listening at %v&#34;, lis.Addr()) go func() { err := s.Serve(lis) dtmimp.FatalIfError(err) }() go updateBranchAsync() // 省略代码 } http路由，"/>
+
+	<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+	<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+	<link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+	<link rel="manifest" href="/site.webmanifest">
+	<link rel="mask-icon" href="/safari-pinned-tab.svg" color="">
+	<link rel="shortcut icon" href="/favicon.ico">
+
+	<title>那些用Go实现的分布式事务框架(2)</title>
+	<link rel="stylesheet" href="https://www.syst.top/css/style.min.d3141168199607bf3a517216ce3c263814eecdbc8fca72a9a88700799a838219.css">
+	
+</head>
+
+<body id="page">
+	
+	<header id="site-header" class="animated slideInUp faster">
+		<div class="hdr-wrapper section-inner">
+			<div class="hdr-left">
+				<div class="site-branding">
+					<a href="https://www.syst.top">记得</a>
+				</div>
+				<nav class="site-nav hide-in-mobile">
+					<a href="https://www.syst.top/posts/">文章</a>
+					<a href="https://www.syst.top/leetcode/">刷题</a>
+					<a href="https://www.syst.top/lives/">生活</a>
+					<a href="https://www.syst.top/translations/">翻译</a>
+					<a href="https://www.syst.top/friends/">朋友</a>
+					<a href="https://go.aabbccm.com">grpc-shop</a>
+				</nav>
+			</div>
+			<div class="hdr-right hdr-icons">
+				<button id="toc-btn" class="hdr-btn desktop-only-ib" title="Table of Contents"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-list"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3" y2="6"></line><line x1="3" y1="12" x2="3" y2="12"></line><line x1="3" y1="18" x2="3" y2="18"></line></svg></button><span class="hdr-social hide-in-mobile"><a href="https://github.com/wuqinqiang" target="_blank" rel="noopener me" title="Github"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-github"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"></path></svg></a></span><button id="menu-btn" class="hdr-btn" title="Menu"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-menu"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg></button>
+			</div>
+		</div>
+	</header>
+	<div id="mobile-menu" class="animated fast">
+		<ul>
+			<li><a href="https://www.syst.top/posts/">文章</a></li>
+			<li><a href="https://www.syst.top/tags/">标签</a></li>
+			<li><a href="https://www.syst.top/about/">关于</a></li>
+		</ul>
+	</div>
+
+
+	<main class="site-main section-inner animated fadeIn faster">
+		<article class="thin">
+			<header class="post-header">
+				<div class="post-meta"><span>Dec 8, 2021</span></div>
+				<h1>那些用Go实现的分布式事务框架(2)</h1>
+			</header>
+			<div class="content">
+				<h3 id="开篇">开篇<a href="#开篇" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h3>
+<p>上一篇我们主要介绍的是seata-golang。一个对标seata的go语言实现，当然版本还是落后Java版很多的。</p>
+<p>这次我们来介绍一下另一个go实现的分布式事务:dtm。</p>
+<p>首先来看下dtm整体架构图(来源官网)。</p>
+<p><img src="https://cdn.syst.top/arch.8ecd5239.jpg" alt="arch.8ecd5239"></p>
+<p>再来看之前的seata架构图。</p>
+<p><img src="https://cdn.syst.top/transaction.png" alt="seata_tcc-1"></p>
+<p>从架构上来看，大差不差。</p>
+<p>seata中的TC对标dam的TM。</p>
+<p>RM两边意思一致。</p>
+<p>seata中的TM对标dtm事务SDK。作用都是一样:第一阶段开启一个全局事务,执行各RM分支事务，第二阶段根据RM第一阶段执行结果，决定调用TC(seata)|TM(dtm) commit或者rollback。</p>
+<p>架构上，个人感觉只是因为模块名称以及图画不一样的差别。</p>
+<p>当然在实现细节上还是有很大差别的。</p>
+<p>我们先简单介绍下DTM各个模块。</p>
+<h3 id="tm">TM<a href="#tm" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h3>
+<p>TM 层在代码中是没有具体的主体结构的，开始都是函数之前的调用。</p>
+<p>启动TM实际上开启了两个服务，http以及grpc这两个服务。</p>
+<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="c1">// StartSvr StartSvr
+</span><span class="c1"></span><span class="kd">func</span> <span class="nf">StartSvr</span><span class="p">()</span> <span class="p">{</span>
+  
+	<span class="nx">app</span> <span class="o">:=</span> <span class="nx">common</span><span class="p">.</span><span class="nf">GetGinApp</span><span class="p">()</span>
+	<span class="nx">app</span> <span class="p">=</span> <span class="nf">httpMetrics</span><span class="p">(</span><span class="nx">app</span><span class="p">)</span>
+	<span class="nf">addRoute</span><span class="p">(</span><span class="nx">app</span><span class="p">)</span>
+	<span class="nx">dtmimp</span><span class="p">.</span><span class="nf">Logf</span><span class="p">(</span><span class="s">&#34;dtmsvr listen at: %d&#34;</span><span class="p">,</span> <span class="nx">common</span><span class="p">.</span><span class="nx">DtmHttpPort</span><span class="p">)</span>
+	<span class="k">go</span> <span class="nx">app</span><span class="p">.</span><span class="nf">Run</span><span class="p">(</span><span class="nx">fmt</span><span class="p">.</span><span class="nf">Sprintf</span><span class="p">(</span><span class="s">&#34;:%d&#34;</span><span class="p">,</span> <span class="nx">common</span><span class="p">.</span><span class="nx">DtmHttpPort</span><span class="p">))</span>
+
+  
+	<span class="nx">lis</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">net</span><span class="p">.</span><span class="nf">Listen</span><span class="p">(</span><span class="s">&#34;tcp&#34;</span><span class="p">,</span> <span class="nx">fmt</span><span class="p">.</span><span class="nf">Sprintf</span><span class="p">(</span><span class="s">&#34;:%d&#34;</span><span class="p">,</span> <span class="nx">common</span><span class="p">.</span><span class="nx">DtmGrpcPort</span><span class="p">))</span>
+	<span class="nx">dtmimp</span><span class="p">.</span><span class="nf">FatalIfError</span><span class="p">(</span><span class="nx">err</span><span class="p">)</span>
+	<span class="nx">s</span> <span class="o">:=</span> <span class="nx">grpc</span><span class="p">.</span><span class="nf">NewServer</span><span class="p">(</span>
+		<span class="nx">grpc</span><span class="p">.</span><span class="nf">UnaryInterceptor</span><span class="p">(</span><span class="nx">grpc_middleware</span><span class="p">.</span><span class="nf">ChainUnaryServer</span><span class="p">(</span>
+			<span class="nx">grpc</span><span class="p">.</span><span class="nf">UnaryServerInterceptor</span><span class="p">(</span><span class="nx">grpcMetrics</span><span class="p">),</span> <span class="nx">grpc</span><span class="p">.</span><span class="nf">UnaryServerInterceptor</span><span class="p">(</span><span class="nx">dtmgimp</span><span class="p">.</span><span class="nx">GrpcServerLog</span><span class="p">)),</span>
+		<span class="p">))</span>
+	<span class="nx">dtmgimp</span><span class="p">.</span><span class="nf">RegisterDtmServer</span><span class="p">(</span><span class="nx">s</span><span class="p">,</span> <span class="o">&amp;</span><span class="nx">dtmServer</span><span class="p">{})</span>
+	<span class="nx">dtmimp</span><span class="p">.</span><span class="nf">Logf</span><span class="p">(</span><span class="s">&#34;grpc listening at %v&#34;</span><span class="p">,</span> <span class="nx">lis</span><span class="p">.</span><span class="nf">Addr</span><span class="p">())</span>
+	<span class="k">go</span> <span class="kd">func</span><span class="p">()</span> <span class="p">{</span>
+		<span class="nx">err</span> <span class="o">:=</span> <span class="nx">s</span><span class="p">.</span><span class="nf">Serve</span><span class="p">(</span><span class="nx">lis</span><span class="p">)</span>
+		<span class="nx">dtmimp</span><span class="p">.</span><span class="nf">FatalIfError</span><span class="p">(</span><span class="nx">err</span><span class="p">)</span>
+	<span class="p">}()</span>
+	<span class="k">go</span> <span class="nf">updateBranchAsync</span><span class="p">()</span>
+  
+  <span class="c1">// 省略代码
+</span><span class="c1"></span><span class="p">}</span>
+</code></pre></div><p>http路由，</p>
+<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kd">func</span> <span class="nf">addRoute</span><span class="p">(</span><span class="nx">engine</span> <span class="o">*</span><span class="nx">gin</span><span class="p">.</span><span class="nx">Engine</span><span class="p">)</span> <span class="p">{</span>
+	<span class="nx">engine</span><span class="p">.</span><span class="nf">GET</span><span class="p">(</span><span class="s">&#34;/api/dtmsvr/newGid&#34;</span><span class="p">,</span> <span class="nx">common</span><span class="p">.</span><span class="nf">WrapHandler</span><span class="p">(</span><span class="nx">newGid</span><span class="p">))</span> <span class="c1">//开启一个分布式事务，得到分布式事务唯一id
+</span><span class="c1"></span>	<span class="nx">engine</span><span class="p">.</span><span class="nf">POST</span><span class="p">(</span><span class="s">&#34;/api/dtmsvr/prepare&#34;</span><span class="p">,</span> <span class="nx">common</span><span class="p">.</span><span class="nf">WrapHandler</span><span class="p">(</span><span class="nx">prepare</span><span class="p">))</span> 
+	<span class="nx">engine</span><span class="p">.</span><span class="nf">POST</span><span class="p">(</span><span class="s">&#34;/api/dtmsvr/submit&#34;</span><span class="p">,</span> <span class="nx">common</span><span class="p">.</span><span class="nf">WrapHandler</span><span class="p">(</span><span class="nx">submit</span><span class="p">))</span> 
+	<span class="nx">engine</span><span class="p">.</span><span class="nf">POST</span><span class="p">(</span><span class="s">&#34;/api/dtmsvr/abort&#34;</span><span class="p">,</span> <span class="nx">common</span><span class="p">.</span><span class="nf">WrapHandler</span><span class="p">(</span><span class="nx">abort</span><span class="p">))</span>
+  <span class="c1">//......
+</span><span class="c1"></span><span class="p">}</span>
+</code></pre></div><p>gRPC接口，</p>
+<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="c1">// dtmServer is used to implement dtmgimp.DtmServer.
+</span><span class="c1"></span><span class="kd">type</span> <span class="nx">dtmServer</span> <span class="kd">struct</span> <span class="p">{</span>
+	<span class="nx">pb</span><span class="p">.</span><span class="nx">UnimplementedDtmServer</span>
+<span class="p">}</span>
+
+<span class="kd">func</span> <span class="p">(</span><span class="nx">s</span> <span class="o">*</span><span class="nx">dtmServer</span><span class="p">)</span> <span class="nf">NewGid</span><span class="p">(</span><span class="nx">ctx</span> <span class="nx">context</span><span class="p">.</span><span class="nx">Context</span><span class="p">,</span> <span class="nx">in</span> <span class="o">*</span><span class="nx">emptypb</span><span class="p">.</span><span class="nx">Empty</span><span class="p">)</span> <span class="p">(</span><span class="o">*</span><span class="nx">dtmgimp</span><span class="p">.</span><span class="nx">DtmGidReply</span><span class="p">,</span> <span class="kt">error</span><span class="p">)</span> <span class="p">{</span>
+	<span class="k">return</span> <span class="o">&amp;</span><span class="nx">dtmgimp</span><span class="p">.</span><span class="nx">DtmGidReply</span><span class="p">{</span><span class="nx">Gid</span><span class="p">:</span> <span class="nf">GenGid</span><span class="p">()},</span> <span class="kc">nil</span>
+<span class="p">}</span>
+
+<span class="kd">func</span> <span class="p">(</span><span class="nx">s</span> <span class="o">*</span><span class="nx">dtmServer</span><span class="p">)</span> <span class="nf">Submit</span><span class="p">(</span><span class="nx">ctx</span> <span class="nx">context</span><span class="p">.</span><span class="nx">Context</span><span class="p">,</span> <span class="nx">in</span> <span class="o">*</span><span class="nx">pb</span><span class="p">.</span><span class="nx">DtmRequest</span><span class="p">)</span> <span class="p">(</span><span class="o">*</span><span class="nx">emptypb</span><span class="p">.</span><span class="nx">Empty</span><span class="p">,</span> <span class="kt">error</span><span class="p">)</span> <span class="p">{</span>
+	<span class="nx">r</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nf">svcSubmit</span><span class="p">(</span><span class="nf">TransFromDtmRequest</span><span class="p">(</span><span class="nx">in</span><span class="p">))</span>
+	<span class="k">return</span> <span class="o">&amp;</span><span class="nx">emptypb</span><span class="p">.</span><span class="nx">Empty</span><span class="p">{},</span> <span class="nx">dtmgimp</span><span class="p">.</span><span class="nf">Result2Error</span><span class="p">(</span><span class="nx">r</span><span class="p">,</span> <span class="nx">err</span><span class="p">)</span>
+<span class="p">}</span>
+
+<span class="kd">func</span> <span class="p">(</span><span class="nx">s</span> <span class="o">*</span><span class="nx">dtmServer</span><span class="p">)</span> <span class="nf">Prepare</span><span class="p">(</span><span class="nx">ctx</span> <span class="nx">context</span><span class="p">.</span><span class="nx">Context</span><span class="p">,</span> <span class="nx">in</span> <span class="o">*</span><span class="nx">pb</span><span class="p">.</span><span class="nx">DtmRequest</span><span class="p">)</span> <span class="p">(</span><span class="o">*</span><span class="nx">emptypb</span><span class="p">.</span><span class="nx">Empty</span><span class="p">,</span> <span class="kt">error</span><span class="p">)</span> <span class="p">{</span>
+	<span class="nx">r</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nf">svcPrepare</span><span class="p">(</span><span class="nf">TransFromDtmRequest</span><span class="p">(</span><span class="nx">in</span><span class="p">))</span>
+	<span class="k">return</span> <span class="o">&amp;</span><span class="nx">emptypb</span><span class="p">.</span><span class="nx">Empty</span><span class="p">{},</span> <span class="nx">dtmgimp</span><span class="p">.</span><span class="nf">Result2Error</span><span class="p">(</span><span class="nx">r</span><span class="p">,</span> <span class="nx">err</span><span class="p">)</span>
+<span class="p">}</span>
+
+<span class="kd">func</span> <span class="p">(</span><span class="nx">s</span> <span class="o">*</span><span class="nx">dtmServer</span><span class="p">)</span> <span class="nf">Abort</span><span class="p">(</span><span class="nx">ctx</span> <span class="nx">context</span><span class="p">.</span><span class="nx">Context</span><span class="p">,</span> <span class="nx">in</span> <span class="o">*</span><span class="nx">pb</span><span class="p">.</span><span class="nx">DtmRequest</span><span class="p">)</span> <span class="p">(</span><span class="o">*</span><span class="nx">emptypb</span><span class="p">.</span><span class="nx">Empty</span><span class="p">,</span> <span class="kt">error</span><span class="p">)</span> <span class="p">{</span>
+	<span class="nx">r</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nf">svcAbort</span><span class="p">(</span><span class="nf">TransFromDtmRequest</span><span class="p">(</span><span class="nx">in</span><span class="p">))</span>
+	<span class="k">return</span> <span class="o">&amp;</span><span class="nx">emptypb</span><span class="p">.</span><span class="nx">Empty</span><span class="p">{},</span> <span class="nx">dtmgimp</span><span class="p">.</span><span class="nf">Result2Error</span><span class="p">(</span><span class="nx">r</span><span class="p">,</span> <span class="nx">err</span><span class="p">)</span>
+<span class="p">}</span>
+</code></pre></div><p>即然提供了两个服务入口，那理所当然有公共处理核心业务的部分。</p>
+<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="c1">// 提交事务请求操作
+</span><span class="c1"></span><span class="kd">func</span> <span class="nf">svcSubmit</span><span class="p">(</span><span class="nx">t</span> <span class="o">*</span><span class="nx">TransGlobal</span><span class="p">)</span> <span class="p">(</span><span class="kd">interface</span><span class="p">{},</span> <span class="kt">error</span><span class="p">)</span> <span class="p">{</span>
+	<span class="nx">db</span> <span class="o">:=</span> <span class="nf">dbGet</span><span class="p">()</span>
+	<span class="nx">t</span><span class="p">.</span><span class="nx">Status</span> <span class="p">=</span> <span class="nx">dtmcli</span><span class="p">.</span><span class="nx">StatusSubmitted</span>
+	<span class="nx">err</span> <span class="o">:=</span> <span class="nx">t</span><span class="p">.</span><span class="nf">saveNew</span><span class="p">(</span><span class="nx">db</span><span class="p">)</span>
+
+	<span class="k">if</span> <span class="nx">err</span> <span class="o">==</span> <span class="nx">errUniqueConflict</span> <span class="p">{</span>
+		<span class="nx">dbt</span> <span class="o">:=</span> <span class="nf">transFromDb</span><span class="p">(</span><span class="nx">db</span><span class="p">.</span><span class="nx">DB</span><span class="p">,</span> <span class="nx">t</span><span class="p">.</span><span class="nx">Gid</span><span class="p">,</span> <span class="kc">false</span><span class="p">)</span>
+		<span class="k">if</span> <span class="nx">dbt</span><span class="p">.</span><span class="nx">Status</span> <span class="o">==</span> <span class="nx">dtmcli</span><span class="p">.</span><span class="nx">StatusPrepared</span> <span class="p">{</span>
+			<span class="nx">updates</span> <span class="o">:=</span> <span class="nx">t</span><span class="p">.</span><span class="nf">setNextCron</span><span class="p">(</span><span class="nx">cronReset</span><span class="p">)</span>
+			<span class="nx">dbr</span> <span class="o">:=</span> <span class="nx">db</span><span class="p">.</span><span class="nf">Must</span><span class="p">().</span><span class="nf">Model</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">TransGlobal</span><span class="p">{}).</span><span class="nf">Where</span><span class="p">(</span><span class="s">&#34;gid=? and status=?&#34;</span><span class="p">,</span> <span class="nx">t</span><span class="p">.</span><span class="nx">Gid</span><span class="p">,</span> <span class="nx">dtmcli</span><span class="p">.</span><span class="nx">StatusPrepared</span><span class="p">).</span><span class="nf">Select</span><span class="p">(</span><span class="nb">append</span><span class="p">(</span><span class="nx">updates</span><span class="p">,</span> <span class="s">&#34;status&#34;</span><span class="p">)).</span><span class="nf">Updates</span><span class="p">(</span><span class="nx">t</span><span class="p">)</span>
+			<span class="nf">checkAffected</span><span class="p">(</span><span class="nx">dbr</span><span class="p">)</span>
+		<span class="p">}</span> <span class="k">else</span> <span class="k">if</span> <span class="nx">dbt</span><span class="p">.</span><span class="nx">Status</span> <span class="o">!=</span> <span class="nx">dtmcli</span><span class="p">.</span><span class="nx">StatusSubmitted</span> <span class="p">{</span>
+			<span class="k">return</span> <span class="kd">map</span><span class="p">[</span><span class="kt">string</span><span class="p">]</span><span class="kd">interface</span><span class="p">{}{</span><span class="s">&#34;dtm_result&#34;</span><span class="p">:</span> <span class="nx">dtmcli</span><span class="p">.</span><span class="nx">ResultFailure</span><span class="p">,</span> <span class="s">&#34;message&#34;</span><span class="p">:</span> <span class="nx">fmt</span><span class="p">.</span><span class="nf">Sprintf</span><span class="p">(</span><span class="s">&#34;current status &#39;%s&#39;, cannot sumbmit&#34;</span><span class="p">,</span> <span class="nx">dbt</span><span class="p">.</span><span class="nx">Status</span><span class="p">)},</span> <span class="kc">nil</span>
+		<span class="p">}</span>
+	<span class="p">}</span>
+	<span class="k">return</span> <span class="nx">t</span><span class="p">.</span><span class="nf">Process</span><span class="p">(</span><span class="nx">db</span><span class="p">),</span> <span class="kc">nil</span>
+<span class="p">}</span>
+
+<span class="c1">// 准备事务请求
+</span><span class="c1"></span><span class="kd">func</span> <span class="nf">svcPrepare</span><span class="p">(</span><span class="nx">t</span> <span class="o">*</span><span class="nx">TransGlobal</span><span class="p">)</span> <span class="p">(</span><span class="kd">interface</span><span class="p">{},</span> <span class="kt">error</span><span class="p">)</span> <span class="p">{</span>
+	<span class="nx">t</span><span class="p">.</span><span class="nx">Status</span> <span class="p">=</span> <span class="nx">dtmcli</span><span class="p">.</span><span class="nx">StatusPrepared</span>
+	<span class="nx">err</span> <span class="o">:=</span> <span class="nx">t</span><span class="p">.</span><span class="nf">saveNew</span><span class="p">(</span><span class="nf">dbGet</span><span class="p">())</span>
+  <span class="c1">////.........
+</span><span class="c1"></span><span class="p">}</span>
+
+<span class="c1">// 中断事务
+</span><span class="c1"></span><span class="kd">func</span> <span class="nf">svcAbort</span><span class="p">(</span><span class="nx">t</span> <span class="o">*</span><span class="nx">TransGlobal</span><span class="p">)</span> <span class="p">(</span><span class="kd">interface</span><span class="p">{},</span> <span class="kt">error</span><span class="p">)</span> <span class="p">{</span>
+	<span class="nx">db</span> <span class="o">:=</span> <span class="nf">dbGet</span><span class="p">()</span>
+	<span class="nx">dbt</span> <span class="o">:=</span> <span class="nf">transFromDb</span><span class="p">(</span><span class="nx">db</span><span class="p">.</span><span class="nx">DB</span><span class="p">,</span> <span class="nx">t</span><span class="p">.</span><span class="nx">Gid</span><span class="p">,</span> <span class="kc">false</span><span class="p">)</span>
+	<span class="c1">// ......
+</span><span class="c1"></span><span class="p">}</span>
+
+
+<span class="c1">// 注册分支
+</span><span class="c1"></span><span class="kd">func</span> <span class="nf">svcRegisterBranch</span><span class="p">(</span><span class="nx">branch</span> <span class="o">*</span><span class="nx">TransBranch</span><span class="p">,</span> <span class="nx">data</span> <span class="kd">map</span><span class="p">[</span><span class="kt">string</span><span class="p">]</span><span class="kt">string</span><span class="p">)</span> <span class="p">(</span><span class="nx">ret</span> <span class="kd">interface</span><span class="p">{},</span> <span class="nx">rerr</span> <span class="kt">error</span><span class="p">)</span> <span class="p">{</span>
+	<span class="nx">err</span> <span class="o">:=</span> <span class="nf">dbGet</span><span class="p">().</span><span class="nf">Transaction</span><span class="p">(</span><span class="kd">func</span><span class="p">(</span><span class="nx">db</span> <span class="o">*</span><span class="nx">gorm</span><span class="p">.</span><span class="nx">DB</span><span class="p">)</span> <span class="kt">error</span> <span class="p">{</span>
+		<span class="nx">dbt</span> <span class="o">:=</span> <span class="nf">transFromDb</span><span class="p">(</span><span class="nx">db</span><span class="p">,</span> <span class="nx">branch</span><span class="p">.</span><span class="nx">Gid</span><span class="p">,</span> <span class="kc">true</span><span class="p">)</span>
+    <span class="c1">///.......
+</span><span class="c1"></span><span class="p">}</span>
+
+</code></pre></div><p>TM对数据的存储管理并不是依赖于接口，而是依赖于common.DB 结构。根据配置文件中DB.driver 的值决定底层数据库是mysql还是postgres两种。</p>
+<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kd">func</span> <span class="nf">dbGet</span><span class="p">()</span> <span class="o">*</span><span class="nx">common</span><span class="p">.</span><span class="nx">DB</span> <span class="p">{</span>
+   <span class="k">return</span> <span class="nx">common</span><span class="p">.</span><span class="nf">DbGet</span><span class="p">(</span><span class="nx">config</span><span class="p">.</span><span class="nx">DB</span><span class="p">)</span>
+<span class="p">}</span>
+</code></pre></div><div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="c1">// DbGet get db connection for specified conf
+</span><span class="c1"></span><span class="kd">func</span> <span class="nf">DbGet</span><span class="p">(</span><span class="nx">conf</span> <span class="kd">map</span><span class="p">[</span><span class="kt">string</span><span class="p">]</span><span class="kt">string</span><span class="p">)</span> <span class="o">*</span><span class="nx">DB</span> <span class="p">{</span>
+   <span class="nx">dsn</span> <span class="o">:=</span> <span class="nx">dtmimp</span><span class="p">.</span><span class="nf">GetDsn</span><span class="p">(</span><span class="nx">conf</span><span class="p">)</span>
+   <span class="c1">//.....
+</span><span class="c1"></span><span class="p">}</span>
+</code></pre></div><div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="c1">// GetDsn get dsn from map config
+</span><span class="c1"></span><span class="kd">func</span> <span class="nf">GetDsn</span><span class="p">(</span><span class="nx">conf</span> <span class="kd">map</span><span class="p">[</span><span class="kt">string</span><span class="p">]</span><span class="kt">string</span><span class="p">)</span> <span class="kt">string</span> <span class="p">{</span>
+   <span class="nx">host</span> <span class="o">:=</span> <span class="nf">MayReplaceLocalhost</span><span class="p">(</span><span class="nx">conf</span><span class="p">[</span><span class="s">&#34;host&#34;</span><span class="p">])</span>
+   <span class="nx">driver</span> <span class="o">:=</span> <span class="nx">conf</span><span class="p">[</span><span class="s">&#34;driver&#34;</span><span class="p">]</span>
+   <span class="nx">dsn</span> <span class="o">:=</span> <span class="kd">map</span><span class="p">[</span><span class="kt">string</span><span class="p">]</span><span class="kt">string</span><span class="p">{</span>
+      <span class="s">&#34;mysql&#34;</span><span class="p">:</span> <span class="nx">fmt</span><span class="p">.</span><span class="nf">Sprintf</span><span class="p">(</span><span class="s">&#34;%s:%s@tcp(%s:%s)/%s?charset=utf8mb4&amp;parseTime=true&amp;loc=Local&#34;</span><span class="p">,</span>
+         <span class="nx">conf</span><span class="p">[</span><span class="s">&#34;user&#34;</span><span class="p">],</span> <span class="nx">conf</span><span class="p">[</span><span class="s">&#34;password&#34;</span><span class="p">],</span> <span class="nx">host</span><span class="p">,</span> <span class="nx">conf</span><span class="p">[</span><span class="s">&#34;port&#34;</span><span class="p">],</span> <span class="nx">conf</span><span class="p">[</span><span class="s">&#34;database&#34;</span><span class="p">]),</span>
+      <span class="s">&#34;postgres&#34;</span><span class="p">:</span> <span class="nx">fmt</span><span class="p">.</span><span class="nf">Sprintf</span><span class="p">(</span><span class="s">&#34;host=%s user=%s password=%s dbname=&#39;%s&#39; port=%s sslmode=disable&#34;</span><span class="p">,</span>
+         <span class="nx">host</span><span class="p">,</span> <span class="nx">conf</span><span class="p">[</span><span class="s">&#34;user&#34;</span><span class="p">],</span> <span class="nx">conf</span><span class="p">[</span><span class="s">&#34;password&#34;</span><span class="p">],</span> <span class="nx">conf</span><span class="p">[</span><span class="s">&#34;database&#34;</span><span class="p">],</span> <span class="nx">conf</span><span class="p">[</span><span class="s">&#34;port&#34;</span><span class="p">]),</span>
+   <span class="p">}[</span><span class="nx">driver</span><span class="p">]</span>
+   <span class="nf">PanicIf</span><span class="p">(</span><span class="nx">dsn</span> <span class="o">==</span> <span class="s">&#34;&#34;</span><span class="p">,</span> <span class="nx">fmt</span><span class="p">.</span><span class="nf">Errorf</span><span class="p">(</span><span class="s">&#34;unknow driver: %s&#34;</span><span class="p">,</span> <span class="nx">driver</span><span class="p">))</span>
+   <span class="k">return</span> <span class="nx">dsn</span>
+<span class="p">}</span>
+</code></pre></div><p>再看这个DB结构，所以本质上无论底层是哪种数据库，都是直接依赖gorm来对数据进行操作的。</p>
+<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="c1">// DB provide more func over gorm.DB
+</span><span class="c1"></span><span class="kd">type</span> <span class="nx">DB</span> <span class="kd">struct</span> <span class="p">{</span>
+	<span class="o">*</span><span class="nx">gorm</span><span class="p">.</span><span class="nx">DB</span>
+<span class="p">}</span>
+</code></pre></div><p>接着，看下TM是如何通知各个RM进行commit或者rollback的？</p>
+<p>举一个TCC模式的例子。</p>
+<p>TCC的两个阶段。</p>
+<ul>
+<li>阶段一: try。尝试执行，调用各RM自定义的try行为，预留必要的业务资源。</li>
+<li>阶段二:Confirm(阶段一所有参与本次事务的try行为都成功)。调用各分支事务的Confirm方法，真正执行业务，并且只使用try阶段预留的资源。</li>
+<li>阶段二:Cancel(阶段一任一参与本次事务的try行为失败)。调用各分支事务的Cancel方法，释放一阶段try所预留的资源。</li>
+</ul>
+<p>从上面我们可以得知，TCC模式下，TM在第二阶段要么通知各分支事务Confirm要么Cancel。</p>
+<p>在注册各RM事务分支到TM的时候，最终TM会为每一个分布式事务的参与者(RM)生成两条分支信息。</p>
+<p>就像这样，</p>
+<pre><code>gid(分布式事务id)  url(rm请求地址)    data(数据)   op(操作类型比如:confirm｜cancel)
+520xxx           xxx.com/confirm    xxx.          confirm
+520xxx           xxx.com/cancel     xxx           cancel
+</code></pre><p>对，就是把对应的RM资源操作地址直接存入。</p>
+<p>当TM接收到commit或者rollback命令，在处理完自身逻辑(一般就是修改Gloable状态)，就需要开始处理每一个注册进来的分支事务了，说白了就是需要调用各个分支事务对应操作的接口。</p>
+<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kd">func</span> <span class="p">(</span><span class="nx">t</span> <span class="o">*</span><span class="nx">TransGlobal</span><span class="p">)</span> <span class="nf">processInner</span><span class="p">(</span><span class="nx">db</span> <span class="o">*</span><span class="nx">common</span><span class="p">.</span><span class="nx">DB</span><span class="p">)</span> <span class="p">(</span><span class="nx">rerr</span> <span class="kt">error</span><span class="p">)</span> <span class="p">{</span>
+  <span class="c1">//....
+</span><span class="c1"></span>	<span class="nx">branches</span> <span class="o">:=</span> <span class="p">[]</span><span class="nx">TransBranch</span><span class="p">{}</span>
+	<span class="nx">db</span><span class="p">.</span><span class="nf">Must</span><span class="p">().</span><span class="nf">Where</span><span class="p">(</span><span class="s">&#34;gid=?&#34;</span><span class="p">,</span> <span class="nx">t</span><span class="p">.</span><span class="nx">Gid</span><span class="p">).</span><span class="nf">Order</span><span class="p">(</span><span class="s">&#34;id asc&#34;</span><span class="p">).</span><span class="nf">Find</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">branches</span><span class="p">)</span>
+	<span class="nx">t</span><span class="p">.</span><span class="nx">lastTouched</span> <span class="p">=</span> <span class="nx">time</span><span class="p">.</span><span class="nf">Now</span><span class="p">()</span>
+	<span class="nx">rerr</span> <span class="p">=</span> <span class="nx">t</span><span class="p">.</span><span class="nf">getProcessor</span><span class="p">().</span><span class="nf">ProcessOnce</span><span class="p">(</span><span class="nx">db</span><span class="p">,</span> <span class="nx">branches</span><span class="p">)</span>
+	<span class="k">return</span>
+<span class="p">}</span>
+</code></pre></div><p>这里的t.getProcessor() 是需要根据当前事务的类型(TCC、SAGA、XA)获取到对应的处理器来进行逻辑的处理。</p>
+<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kd">func</span> <span class="p">(</span><span class="nx">t</span> <span class="o">*</span><span class="nx">TransGlobal</span><span class="p">)</span> <span class="nf">getProcessor</span><span class="p">()</span> <span class="nx">transProcessor</span> <span class="p">{</span>
+	<span class="k">return</span> <span class="nx">processorFac</span><span class="p">[</span><span class="nx">t</span><span class="p">.</span><span class="nx">TransType</span><span class="p">](</span><span class="nx">t</span><span class="p">)</span>
+<span class="p">}</span>
+</code></pre></div><p>当然，每个事务处理器只需要实现接口，</p>
+<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kd">type</span> <span class="nx">transProcessor</span> <span class="kd">interface</span> <span class="p">{</span>
+	<span class="nf">GenBranches</span><span class="p">()</span> <span class="p">[]</span><span class="nx">TransBranch</span>
+	<span class="nf">ProcessOnce</span><span class="p">(</span><span class="nx">db</span> <span class="o">*</span><span class="nx">common</span><span class="p">.</span><span class="nx">DB</span><span class="p">,</span> <span class="nx">branches</span> <span class="p">[]</span><span class="nx">TransBranch</span><span class="p">)</span> <span class="kt">error</span>
+<span class="p">}</span>
+</code></pre></div><p>真正调用RM资源服务地址的时候，分为http和grpc，这是由开发者决定的。</p>
+<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kd">func</span> <span class="p">(</span><span class="nx">t</span> <span class="o">*</span><span class="nx">TransGlobal</span><span class="p">)</span> <span class="nf">getURLResult</span><span class="p">(</span><span class="nx">url</span> <span class="kt">string</span><span class="p">,</span> <span class="nx">branchID</span><span class="p">,</span> <span class="nx">op</span> <span class="kt">string</span><span class="p">,</span> <span class="nx">branchPayload</span> <span class="p">[]</span><span class="kt">byte</span><span class="p">)</span> <span class="p">(</span><span class="kt">string</span><span class="p">,</span> <span class="kt">error</span><span class="p">)</span> <span class="p">{</span>
+	<span class="k">if</span> <span class="nx">t</span><span class="p">.</span><span class="nx">Protocol</span> <span class="o">==</span> <span class="s">&#34;grpc&#34;</span> <span class="p">{</span>
+		<span class="nx">dtmimp</span><span class="p">.</span><span class="nf">PanicIf</span><span class="p">(</span><span class="nx">strings</span><span class="p">.</span><span class="nf">HasPrefix</span><span class="p">(</span><span class="nx">url</span><span class="p">,</span> <span class="s">&#34;http&#34;</span><span class="p">),</span> <span class="nx">fmt</span><span class="p">.</span><span class="nf">Errorf</span><span class="p">(</span><span class="s">&#34;bad url for grpc: %s&#34;</span><span class="p">,</span> <span class="nx">url</span><span class="p">))</span>
+		<span class="nx">server</span><span class="p">,</span> <span class="nx">method</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">dtmdriver</span><span class="p">.</span><span class="nf">GetDriver</span><span class="p">().</span><span class="nf">ParseServerMethod</span><span class="p">(</span><span class="nx">url</span><span class="p">)</span>
+		<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+			<span class="k">return</span> <span class="s">&#34;&#34;</span><span class="p">,</span> <span class="nx">err</span>
+		<span class="p">}</span>
+		<span class="nx">conn</span> <span class="o">:=</span> <span class="nx">dtmgimp</span><span class="p">.</span><span class="nf">MustGetGrpcConn</span><span class="p">(</span><span class="nx">server</span><span class="p">,</span> <span class="kc">true</span><span class="p">)</span>
+		<span class="nx">ctx</span> <span class="o">:=</span> <span class="nx">dtmgimp</span><span class="p">.</span><span class="nf">TransInfo2Ctx</span><span class="p">(</span><span class="nx">t</span><span class="p">.</span><span class="nx">Gid</span><span class="p">,</span> <span class="nx">t</span><span class="p">.</span><span class="nx">TransType</span><span class="p">,</span> <span class="nx">branchID</span><span class="p">,</span> <span class="nx">op</span><span class="p">,</span> <span class="s">&#34;&#34;</span><span class="p">)</span>
+		<span class="nx">err</span> <span class="p">=</span> <span class="nx">conn</span><span class="p">.</span><span class="nf">Invoke</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span> <span class="nx">method</span><span class="p">,</span> <span class="nx">branchPayload</span><span class="p">,</span> <span class="p">[]</span><span class="kt">byte</span><span class="p">{})</span>
+    <span class="c1">//....
+</span><span class="c1"></span>	<span class="p">}</span>
+	<span class="nx">dtmimp</span><span class="p">.</span><span class="nf">PanicIf</span><span class="p">(!</span><span class="nx">strings</span><span class="p">.</span><span class="nf">HasPrefix</span><span class="p">(</span><span class="nx">url</span><span class="p">,</span> <span class="s">&#34;http&#34;</span><span class="p">),</span> <span class="nx">fmt</span><span class="p">.</span><span class="nf">Errorf</span><span class="p">(</span><span class="s">&#34;bad url for http: %s&#34;</span><span class="p">,</span> <span class="nx">url</span><span class="p">))</span>
+	<span class="nx">resp</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">dtmimp</span><span class="p">.</span><span class="nx">RestyClient</span><span class="p">.</span><span class="nf">R</span><span class="p">().</span><span class="nf">SetBody</span><span class="p">(</span><span class="nb">string</span><span class="p">(</span><span class="nx">branchPayload</span><span class="p">)).</span>
+		<span class="nf">SetQueryParams</span><span class="p">(</span><span class="kd">map</span><span class="p">[</span><span class="kt">string</span><span class="p">]</span><span class="kt">string</span><span class="p">{</span>
+			<span class="s">&#34;gid&#34;</span><span class="p">:</span>        <span class="nx">t</span><span class="p">.</span><span class="nx">Gid</span><span class="p">,</span>
+			<span class="s">&#34;trans_type&#34;</span><span class="p">:</span> <span class="nx">t</span><span class="p">.</span><span class="nx">TransType</span><span class="p">,</span>
+			<span class="s">&#34;branch_id&#34;</span><span class="p">:</span>  <span class="nx">branchID</span><span class="p">,</span>
+			<span class="s">&#34;op&#34;</span><span class="p">:</span>         <span class="nx">op</span><span class="p">,</span>
+		<span class="p">}).</span>
+		<span class="nf">SetHeader</span><span class="p">(</span><span class="s">&#34;Content-type&#34;</span><span class="p">,</span> <span class="s">&#34;application/json&#34;</span><span class="p">).</span>
+		<span class="nf">Execute</span><span class="p">(</span><span class="nx">dtmimp</span><span class="p">.</span><span class="nf">If</span><span class="p">(</span><span class="nx">branchPayload</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="o">||</span> <span class="nx">t</span><span class="p">.</span><span class="nx">TransType</span> <span class="o">==</span> <span class="s">&#34;xa&#34;</span><span class="p">,</span> <span class="s">&#34;POST&#34;</span><span class="p">,</span> <span class="s">&#34;GET&#34;</span><span class="p">).(</span><span class="kt">string</span><span class="p">),</span> <span class="nx">url</span><span class="p">)</span>
+	<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+		<span class="k">return</span> <span class="s">&#34;&#34;</span><span class="p">,</span> <span class="nx">err</span>
+	<span class="p">}</span>
+	<span class="k">return</span> <span class="nx">resp</span><span class="p">.</span><span class="nf">String</span><span class="p">(),</span> <span class="kc">nil</span>
+<span class="p">}</span>
+</code></pre></div><p>在v1.6之前的版本，grpc的请求是很简单粗暴解析地址方法然后连接的。</p>
+<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="c1">//v1.6之前
+</span><span class="c1"></span><span class="kd">func</span> <span class="p">(</span><span class="nx">t</span> <span class="o">*</span><span class="nx">TransGlobal</span><span class="p">)</span> <span class="nf">getURLResult</span><span class="p">(</span><span class="nx">url</span> <span class="kt">string</span><span class="p">,</span> <span class="nx">branchID</span><span class="p">,</span> <span class="nx">op</span> <span class="kt">string</span><span class="p">,</span> <span class="nx">branchPayload</span> <span class="p">[]</span><span class="kt">byte</span><span class="p">)</span> <span class="p">(</span><span class="kt">string</span><span class="p">,</span> <span class="kt">error</span><span class="p">)</span> <span class="p">{</span>
+	<span class="k">if</span> <span class="nx">t</span><span class="p">.</span><span class="nx">Protocol</span> <span class="o">==</span> <span class="s">&#34;grpc&#34;</span> <span class="p">{</span>
+		<span class="nx">dtmimp</span><span class="p">.</span><span class="nf">PanicIf</span><span class="p">(</span><span class="nx">strings</span><span class="p">.</span><span class="nf">HasPrefix</span><span class="p">(</span><span class="nx">url</span><span class="p">,</span> <span class="s">&#34;http&#34;</span><span class="p">),</span> <span class="nx">fmt</span><span class="p">.</span><span class="nf">Errorf</span><span class="p">(</span><span class="s">&#34;bad url for grpc: %s&#34;</span><span class="p">,</span> <span class="nx">url</span><span class="p">))</span>
+		<span class="nx">server</span><span class="p">,</span> <span class="nx">method</span> <span class="o">:=</span> <span class="nx">dtmgimp</span><span class="p">.</span><span class="nf">GetServerAndMethod</span><span class="p">(</span><span class="nx">url</span><span class="p">)</span>
+		<span class="nx">conn</span> <span class="o">:=</span> <span class="nx">dtmgimp</span><span class="p">.</span><span class="nf">MustGetGrpcConn</span><span class="p">(</span><span class="nx">server</span><span class="p">,</span> <span class="kc">true</span><span class="p">)</span>
+		<span class="nx">ctx</span> <span class="o">:=</span> <span class="nx">dtmgimp</span><span class="p">.</span><span class="nf">TransInfo2Ctx</span><span class="p">(</span><span class="nx">t</span><span class="p">.</span><span class="nx">Gid</span><span class="p">,</span> <span class="nx">t</span><span class="p">.</span><span class="nx">TransType</span><span class="p">,</span> <span class="nx">branchID</span><span class="p">,</span> <span class="nx">op</span><span class="p">,</span> <span class="s">&#34;&#34;</span><span class="p">)</span>
+		<span class="nx">err</span> <span class="o">:=</span> <span class="nx">conn</span><span class="p">.</span><span class="nf">Invoke</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span> <span class="nx">method</span><span class="p">,</span> <span class="nx">branchPayload</span><span class="p">,</span> <span class="p">[]</span><span class="kt">byte</span><span class="p">{})</span>
+		<span class="k">if</span> <span class="nx">err</span> <span class="o">==</span> <span class="kc">nil</span> <span class="p">{</span>
+			<span class="k">return</span> <span class="nx">dtmcli</span><span class="p">.</span><span class="nx">ResultSuccess</span><span class="p">,</span> <span class="kc">nil</span>
+		<span class="p">}</span>
+    <span class="c1">//......
+</span><span class="c1"></span>	<span class="p">}</span>
+<span class="p">}</span>
+
+<span class="kd">func</span> <span class="nf">GetServerAndMethod</span><span class="p">(</span><span class="nx">grpcURL</span> <span class="kt">string</span><span class="p">)</span> <span class="p">(</span><span class="kt">string</span><span class="p">,</span> <span class="kt">string</span><span class="p">)</span> <span class="p">{</span>
+	<span class="nx">fs</span> <span class="o">:=</span> <span class="nx">strings</span><span class="p">.</span><span class="nf">Split</span><span class="p">(</span><span class="nx">grpcURL</span><span class="p">,</span> <span class="s">&#34;/&#34;</span><span class="p">)</span>
+	<span class="nx">server</span> <span class="o">:=</span> <span class="nx">fs</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+	<span class="nx">method</span> <span class="o">:=</span> <span class="s">&#34;/&#34;</span> <span class="o">+</span> <span class="nx">strings</span><span class="p">.</span><span class="nf">Join</span><span class="p">(</span><span class="nx">fs</span><span class="p">[</span><span class="mi">1</span><span class="p">:],</span> <span class="s">&#34;/&#34;</span><span class="p">)</span>
+	<span class="k">return</span> <span class="nx">server</span><span class="p">,</span> <span class="nx">method</span>
+<span class="p">}</span>
+</code></pre></div><p>现在为了支持那些采用gRPC Resolver 机制之上的一些微服务框架接入，做了一块抽象。感兴趣可以看下，这里就不介绍了。</p>
+<h3 id="sdk">SDK<a href="#sdk" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h3>
+<p>至于SDK，每一个事务模式都是独立的，本质上是没有关联的。比如下面我们启动一个TCC分布式事务。这个分布式事务是由两个服务组成，简称+30和-30的服务。</p>
+<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="nx">gid</span> <span class="o">:=</span> <span class="nx">dtmcli</span><span class="p">.</span><span class="nf">MustGenGid</span><span class="p">(</span><span class="nx">DtmHttpServer</span><span class="p">)</span>
+<span class="nx">err</span> <span class="o">:=</span> <span class="nx">dtmcli</span><span class="p">.</span><span class="nf">TccGlobalTransaction</span><span class="p">(</span><span class="nx">DtmHttpServer</span><span class="p">,</span> <span class="nx">gid</span><span class="p">,</span> <span class="kd">func</span><span class="p">(</span><span class="nx">tcc</span> <span class="o">*</span><span class="nx">dtmcli</span><span class="p">.</span><span class="nx">Tcc</span><span class="p">)</span> <span class="p">(</span><span class="o">*</span><span class="nx">resty</span><span class="p">.</span><span class="nx">Response</span><span class="p">,</span> <span class="kt">error</span><span class="p">)</span> <span class="p">{</span>
+			<span class="nx">resp</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">tcc</span><span class="p">.</span><span class="nf">CallBranch</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">TransReq</span><span class="p">{</span><span class="nx">Amount</span><span class="p">:</span> <span class="mi">30</span><span class="p">},</span> <span class="nx">Busi</span><span class="o">+</span><span class="s">&#34;/TransOut&#34;</span><span class="p">,</span> <span class="nx">Busi</span><span class="o">+</span><span class="s">&#34;/TransOutConfirm&#34;</span><span class="p">,</span> <span class="nx">Busi</span><span class="o">+</span><span class="s">&#34;/TransOutRevert&#34;</span><span class="p">)</span>
+			<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+				<span class="k">return</span> <span class="nx">resp</span><span class="p">,</span> <span class="nx">err</span>
+			<span class="p">}</span>
+			<span class="k">return</span> <span class="nx">tcc</span><span class="p">.</span><span class="nf">CallBranch</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">TransReq</span><span class="p">{</span><span class="nx">Amount</span><span class="p">:</span> <span class="mi">30</span><span class="p">},</span> <span class="nx">Busi</span><span class="o">+</span><span class="s">&#34;/TransIn&#34;</span><span class="p">,</span> <span class="nx">Busi</span><span class="o">+</span><span class="s">&#34;/TransInConfirm&#34;</span><span class="p">,</span> <span class="nx">Busi</span><span class="o">+</span><span class="s">&#34;/TransInRevert&#34;</span><span class="p">)</span>
+		<span class="p">})</span>
+
+<span class="c1">// dtm dtm服务器地址
+</span><span class="c1">// gid 全局事务id
+</span><span class="c1">// tccFunc tcc事务函数，里面会定义全局事务的分支
+</span><span class="c1"></span><span class="kd">func</span> <span class="nf">TccGlobalTransaction</span><span class="p">(</span><span class="nx">dtm</span> <span class="kt">string</span><span class="p">,</span> <span class="nx">gid</span> <span class="kt">string</span><span class="p">,</span> <span class="nx">tccFunc</span> <span class="nx">TccGlobalFunc</span><span class="p">)</span> <span class="p">(</span><span class="nx">rerr</span> <span class="kt">error</span><span class="p">)</span> <span class="p">{</span>
+	<span class="nx">tcc</span> <span class="o">:=</span> <span class="o">&amp;</span><span class="nx">Tcc</span><span class="p">{</span><span class="nx">TransBase</span><span class="p">:</span> <span class="o">*</span><span class="nx">dtmimp</span><span class="p">.</span><span class="nf">NewTransBase</span><span class="p">(</span><span class="nx">gid</span><span class="p">,</span> <span class="s">&#34;tcc&#34;</span><span class="p">,</span> <span class="nx">dtm</span><span class="p">,</span> <span class="s">&#34;&#34;</span><span class="p">)}</span>
+	<span class="nx">rerr</span> <span class="p">=</span> <span class="nx">dtmimp</span><span class="p">.</span><span class="nf">TransCallDtm</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">tcc</span><span class="p">.</span><span class="nx">TransBase</span><span class="p">,</span> <span class="nx">tcc</span><span class="p">,</span> <span class="s">&#34;prepare&#34;</span><span class="p">)</span>
+	<span class="k">if</span> <span class="nx">rerr</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+		<span class="k">return</span> <span class="nx">rerr</span>
+	<span class="p">}</span>
+	<span class="c1">// 小概率情况下，prepare成功了，但是由于网络状况导致上面Failure，那么不执行下面defer的内容，等待超时后再回滚标记事务失败，也没有问题
+</span><span class="c1"></span>	<span class="k">defer</span> <span class="kd">func</span><span class="p">()</span> <span class="p">{</span>
+		<span class="nx">x</span> <span class="o">:=</span> <span class="nb">recover</span><span class="p">()</span>
+		<span class="nx">operation</span> <span class="o">:=</span> <span class="nx">dtmimp</span><span class="p">.</span><span class="nf">If</span><span class="p">(</span><span class="nx">x</span> <span class="o">==</span> <span class="kc">nil</span> <span class="o">&amp;&amp;</span> <span class="nx">rerr</span> <span class="o">==</span> <span class="kc">nil</span><span class="p">,</span> <span class="s">&#34;submit&#34;</span><span class="p">,</span> <span class="s">&#34;abort&#34;</span><span class="p">).(</span><span class="kt">string</span><span class="p">)</span>
+		<span class="nx">err</span> <span class="o">:=</span> <span class="nx">dtmimp</span><span class="p">.</span><span class="nf">TransCallDtm</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">tcc</span><span class="p">.</span><span class="nx">TransBase</span><span class="p">,</span> <span class="nx">tcc</span><span class="p">,</span> <span class="nx">operation</span><span class="p">)</span>
+		<span class="k">if</span> <span class="nx">rerr</span> <span class="o">==</span> <span class="kc">nil</span> <span class="p">{</span>
+			<span class="nx">rerr</span> <span class="p">=</span> <span class="nx">err</span>
+		<span class="p">}</span>
+		<span class="k">if</span> <span class="nx">x</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+			<span class="nb">panic</span><span class="p">(</span><span class="nx">x</span><span class="p">)</span>
+		<span class="p">}</span>
+	<span class="p">}()</span>
+	<span class="nx">_</span><span class="p">,</span> <span class="nx">rerr</span> <span class="p">=</span> <span class="nf">tccFunc</span><span class="p">(</span><span class="nx">tcc</span><span class="p">)</span>
+	<span class="k">return</span>
+<span class="p">}</span>
+
+
+<span class="c1">// CallBranch call a tcc branch
+</span><span class="c1"></span><span class="kd">func</span> <span class="p">(</span><span class="nx">t</span> <span class="o">*</span><span class="nx">Tcc</span><span class="p">)</span> <span class="nf">CallBranch</span><span class="p">(</span><span class="nx">body</span> <span class="kd">interface</span><span class="p">{},</span> <span class="nx">tryURL</span> <span class="kt">string</span><span class="p">,</span> <span class="nx">confirmURL</span> <span class="kt">string</span><span class="p">,</span> <span class="nx">cancelURL</span> <span class="kt">string</span><span class="p">)</span> <span class="p">(</span><span class="o">*</span><span class="nx">resty</span><span class="p">.</span><span class="nx">Response</span><span class="p">,</span> <span class="kt">error</span><span class="p">)</span> <span class="p">{</span>
+	<span class="nx">branchID</span> <span class="o">:=</span> <span class="nx">t</span><span class="p">.</span><span class="nf">NewSubBranchID</span><span class="p">()</span>
+	<span class="nx">err</span> <span class="o">:=</span> <span class="nx">dtmimp</span><span class="p">.</span><span class="nf">TransRegisterBranch</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">t</span><span class="p">.</span><span class="nx">TransBase</span><span class="p">,</span> <span class="kd">map</span><span class="p">[</span><span class="kt">string</span><span class="p">]</span><span class="kt">string</span><span class="p">{</span>
+		<span class="s">&#34;data&#34;</span><span class="p">:</span>        <span class="nx">dtmimp</span><span class="p">.</span><span class="nf">MustMarshalString</span><span class="p">(</span><span class="nx">body</span><span class="p">),</span>
+		<span class="s">&#34;branch_id&#34;</span><span class="p">:</span>   <span class="nx">branchID</span><span class="p">,</span>
+		<span class="nx">BranchConfirm</span><span class="p">:</span> <span class="nx">confirmURL</span><span class="p">,</span>
+		<span class="nx">BranchCancel</span><span class="p">:</span>  <span class="nx">cancelURL</span><span class="p">,</span>
+	<span class="p">},</span> <span class="s">&#34;registerTccBranch&#34;</span><span class="p">)</span>
+	<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+		<span class="k">return</span> <span class="kc">nil</span><span class="p">,</span> <span class="nx">err</span>
+	<span class="p">}</span>
+	<span class="k">return</span> <span class="nx">dtmimp</span><span class="p">.</span><span class="nf">TransRequestBranch</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">t</span><span class="p">.</span><span class="nx">TransBase</span><span class="p">,</span> <span class="nx">body</span><span class="p">,</span> <span class="nx">branchID</span><span class="p">,</span> <span class="nx">BranchTry</span><span class="p">,</span> <span class="nx">tryURL</span><span class="p">)</span>
+<span class="p">}</span>
+</code></pre></div><p>从上面的调用中我们还是能还原出整体流程。</p>
+<ul>
+<li>调用TM，得到一个分布式id</li>
+<li>调用TccGlobalTransaction函数开启分布式事务。</li>
+<li>调用TM prepare(这步只是为了查看第一步产生的那个分布式事务状态是否处于prepare。这里没看明白，此时还未注册执行分支，全局状态不是应该只会存在初始化状态吗)</li>
+<li>上一步没问题，执行传入的闭包函数，即CallBranch 函数里向TM注册参与事务的TM分支。注册完成后，开始第一阶段调用各分支的try服务。</li>
+<li>各分支try服务调用结束，根据第一阶段结果决定通知TM是submit还是abort。</li>
+</ul>
+<p>代码还是很好懂的。</p>
+<p>另外提一点，分布式事务常见的一些问题:比如空补偿、重挂等问题。</p>
+<p>一般情况下，业务需要自行去处理这种场景，以免造成不可描述的错误。</p>
+<p>dtm里面提供了对应子事务屏障方案。核心就在，</p>
+<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go">  <span class="nx">originAffected</span><span class="p">,</span> <span class="nx">_</span> <span class="o">:=</span> <span class="nf">insertBarrier</span><span class="p">(</span><span class="nx">tx</span><span class="p">,</span> <span class="nx">ti</span><span class="p">.</span><span class="nx">TransType</span><span class="p">,</span> <span class="nx">ti</span><span class="p">.</span><span class="nx">Gid</span><span class="p">,</span> <span class="nx">ti</span><span class="p">.</span><span class="nx">BranchID</span><span class="p">,</span> <span class="nx">originType</span><span class="p">,</span> <span class="nx">bid</span><span class="p">,</span> <span class="nx">ti</span><span class="p">.</span><span class="nx">Op</span><span class="p">)</span>
+	<span class="nx">currentAffected</span><span class="p">,</span> <span class="nx">rerr</span> <span class="o">:=</span> <span class="nf">insertBarrier</span><span class="p">(</span><span class="nx">tx</span><span class="p">,</span> <span class="nx">ti</span><span class="p">.</span><span class="nx">TransType</span><span class="p">,</span> <span class="nx">ti</span><span class="p">.</span><span class="nx">Gid</span><span class="p">,</span> <span class="nx">ti</span><span class="p">.</span><span class="nx">BranchID</span><span class="p">,</span> <span class="nx">ti</span><span class="p">.</span><span class="nx">Op</span><span class="p">,</span> <span class="nx">bid</span><span class="p">,</span> <span class="nx">ti</span><span class="p">.</span><span class="nx">Op</span><span class="p">)</span>
+	<span class="nx">dtmimp</span><span class="p">.</span><span class="nf">Logf</span><span class="p">(</span><span class="s">&#34;originAffected: %d currentAffected: %d&#34;</span><span class="p">,</span> <span class="nx">originAffected</span><span class="p">,</span> <span class="nx">currentAffected</span><span class="p">)</span>
+	<span class="k">if</span> <span class="p">(</span><span class="nx">ti</span><span class="p">.</span><span class="nx">Op</span> <span class="o">==</span> <span class="nx">BranchCancel</span> <span class="o">||</span> <span class="nx">ti</span><span class="p">.</span><span class="nx">Op</span> <span class="o">==</span> <span class="nx">BranchCompensate</span><span class="p">)</span> <span class="o">&amp;&amp;</span> <span class="nx">originAffected</span> <span class="p">&gt;</span> <span class="mi">0</span> <span class="o">||</span> <span class="c1">// 这个是空补偿
+</span><span class="c1"></span>		<span class="nx">currentAffected</span> <span class="o">==</span> <span class="mi">0</span> <span class="p">{</span> <span class="c1">// 这个是重复请求或者悬挂
+</span><span class="c1"></span>		<span class="k">return</span>
+	<span class="p">}</span>
+	<span class="nx">rerr</span> <span class="p">=</span> <span class="nf">busiCall</span><span class="p">(</span><span class="nx">tx</span><span class="p">)</span>
+</code></pre></div><p>其实就是利用数据库的唯一索引机制，当然每个RM资源你都得新增一张表。</p>
+<p>上面提到，dtm的TM角色本质上就是对应 seata 中的 TC，但是他们的处理模式是不同的。</p>
+<p>dtm中的TM会根据注册时的各分支保存的地址，决定通过http还是rpc调用各RM操作，是由TM直接发起对RM的请求。</p>
+<p>seata-go的实现中，TC是不参与直接调用RM的。</p>
+<p>还记得上篇提到一个双向流RPC接口(BranchCommunicate)。TC通过这个接口把对应分支处理信息传递给RM管理器。</p>
+<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="c1">// ........
+</span><span class="c1"></span><span class="k">switch</span> <span class="nx">msg</span><span class="p">.</span><span class="nx">BranchMessageType</span> <span class="p">{</span>
+  <span class="c1">// 分支commit消息
+</span><span class="c1"></span>			<span class="k">case</span> <span class="nx">apis</span><span class="p">.</span><span class="nx">TypeBranchCommit</span><span class="p">:</span>
+				<span class="nx">request</span> <span class="o">:=</span> <span class="o">&amp;</span><span class="nx">apis</span><span class="p">.</span><span class="nx">BranchCommitRequest</span><span class="p">{}</span>
+				<span class="nx">data</span> <span class="o">:=</span> <span class="nx">msg</span><span class="p">.</span><span class="nf">GetMessage</span><span class="p">().</span><span class="nf">GetValue</span><span class="p">()</span>
+				<span class="nx">err</span> <span class="o">:=</span> <span class="nx">request</span><span class="p">.</span><span class="nf">Unmarshal</span><span class="p">(</span><span class="nx">data</span><span class="p">)</span>
+				<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+					<span class="nx">log</span><span class="p">.</span><span class="nf">Error</span><span class="p">(</span><span class="nx">err</span><span class="p">)</span>
+					<span class="k">continue</span>
+				<span class="p">}</span>
+				<span class="nx">response</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">manager</span><span class="p">.</span><span class="nf">BranchCommit</span><span class="p">(</span><span class="nx">context</span><span class="p">.</span><span class="nf">Background</span><span class="p">(),</span> <span class="nx">request</span><span class="p">)</span>
+				<span class="k">if</span> <span class="nx">err</span> <span class="o">==</span> <span class="kc">nil</span> <span class="p">{</span>
+					<span class="nx">content</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">types</span><span class="p">.</span><span class="nf">MarshalAny</span><span class="p">(</span><span class="nx">response</span><span class="p">)</span>
+					<span class="k">if</span> <span class="nx">err</span> <span class="o">==</span> <span class="kc">nil</span> <span class="p">{</span>
+						<span class="nx">manager</span><span class="p">.</span><span class="nx">branchMessages</span> <span class="o">&lt;-</span> <span class="o">&amp;</span><span class="nx">apis</span><span class="p">.</span><span class="nx">BranchMessage</span><span class="p">{</span>
+							<span class="nx">ID</span><span class="p">:</span>                <span class="nx">msg</span><span class="p">.</span><span class="nx">ID</span><span class="p">,</span>
+							<span class="nx">BranchMessageType</span><span class="p">:</span> <span class="nx">apis</span><span class="p">.</span><span class="nx">TypeBranchCommitResult</span><span class="p">,</span>
+							<span class="nx">Message</span><span class="p">:</span>           <span class="nx">content</span><span class="p">,</span>
+						<span class="p">}</span>
+					<span class="p">}</span>
+				<span class="p">}</span>
+  <span class="c1">// 分支rollback消息
+</span><span class="c1"></span>			<span class="k">case</span> <span class="nx">apis</span><span class="p">.</span><span class="nx">TypeBranchRollback</span><span class="p">:</span>
+  <span class="c1">//........
+</span><span class="c1"></span>			<span class="p">}</span>
+		<span class="p">}</span>
+<span class="c1">//....
+</span></code></pre></div><p>然后由RM管理器根据事务类型选择对应的事务管理器进行处理，最终调用的是对应事务类型管理器的BranchCommit方法。</p>
+<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="c1">// 分支commit
+</span><span class="c1"></span><span class="kd">func</span> <span class="p">(</span><span class="nx">manager</span> <span class="nx">ResourceManager</span><span class="p">)</span> <span class="nf">BranchCommit</span><span class="p">(</span><span class="nx">ctx</span> <span class="nx">context</span><span class="p">.</span><span class="nx">Context</span><span class="p">,</span> <span class="nx">request</span> <span class="o">*</span><span class="nx">apis</span><span class="p">.</span><span class="nx">BranchCommitRequest</span><span class="p">)</span> <span class="p">(</span><span class="o">*</span><span class="nx">apis</span><span class="p">.</span><span class="nx">BranchCommitResponse</span><span class="p">,</span> <span class="kt">error</span><span class="p">)</span> <span class="p">{</span>
+	<span class="nx">rm</span><span class="p">,</span> <span class="nx">ok</span> <span class="o">:=</span> <span class="nx">manager</span><span class="p">.</span><span class="nx">managers</span><span class="p">[</span><span class="nx">request</span><span class="p">.</span><span class="nx">BranchType</span><span class="p">]</span>
+	<span class="k">if</span> <span class="nx">ok</span> <span class="p">{</span>
+		<span class="k">return</span> <span class="nx">rm</span><span class="p">.</span><span class="nf">BranchCommit</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span> <span class="nx">request</span><span class="p">)</span>
+	<span class="p">}</span>
+	<span class="k">return</span> <span class="o">&amp;</span><span class="nx">apis</span><span class="p">.</span><span class="nx">BranchCommitResponse</span><span class="p">{</span>
+		<span class="nx">ResultCode</span><span class="p">:</span> <span class="nx">apis</span><span class="p">.</span><span class="nx">ResultCodeFailed</span><span class="p">,</span>
+		<span class="nx">Message</span><span class="p">:</span>    <span class="nx">fmt</span><span class="p">.</span><span class="nf">Sprintf</span><span class="p">(</span><span class="s">&#34;there is no resource manager for %s&#34;</span><span class="p">,</span> <span class="nx">request</span><span class="p">.</span><span class="nx">BranchType</span><span class="p">.</span><span class="nf">String</span><span class="p">()),</span>
+	<span class="p">},</span> <span class="kc">nil</span>
+<span class="p">}</span>
+</code></pre></div><p>下面是一个TCC事务类型管理器的处理。</p>
+<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="c1">// 只留核心代码
+</span><span class="c1"></span><span class="kd">func</span> <span class="p">(</span><span class="nx">resourceManager</span> <span class="nx">TCCResourceManager</span><span class="p">)</span> <span class="nf">BranchCommit</span><span class="p">(</span><span class="nx">ctx</span> <span class="nx">context</span><span class="p">.</span><span class="nx">Context</span><span class="p">,</span> <span class="nx">request</span> <span class="o">*</span><span class="nx">apis</span><span class="p">.</span><span class="nx">BranchCommitRequest</span><span class="p">)</span> <span class="p">(</span><span class="o">*</span><span class="nx">apis</span><span class="p">.</span><span class="nx">BranchCommitResponse</span><span class="p">,</span> <span class="kt">error</span><span class="p">)</span> <span class="p">{</span>
+	<span class="nx">resource</span> <span class="o">:=</span> <span class="nx">resourceManager</span><span class="p">.</span><span class="nx">ResourceCache</span><span class="p">[</span><span class="nx">request</span><span class="p">.</span><span class="nx">ResourceID</span><span class="p">]</span>
+	<span class="k">if</span> <span class="nx">resource</span> <span class="o">==</span> <span class="kc">nil</span> <span class="p">{</span>
+    <span class="c1">// ....
+</span><span class="c1"></span>	<span class="p">}</span>
+	<span class="nx">tccResource</span> <span class="o">:=</span> <span class="nx">resource</span><span class="p">.(</span><span class="o">*</span><span class="nx">TCCResource</span><span class="p">)</span>
+	<span class="k">if</span> <span class="nx">tccResource</span><span class="p">.</span><span class="nx">CommitMethod</span> <span class="o">==</span> <span class="kc">nil</span> <span class="p">{</span>
+		<span class="c1">// .....
+</span><span class="c1"></span>	<span class="p">}</span>
+	<span class="nx">result</span> <span class="o">:=</span> <span class="kc">false</span>
+	<span class="nx">businessActionContext</span> <span class="o">:=</span> <span class="nf">getBusinessActionContext</span><span class="p">(</span><span class="nx">request</span><span class="p">.</span><span class="nx">XID</span><span class="p">,</span> <span class="nx">request</span><span class="p">.</span><span class="nx">BranchID</span><span class="p">,</span> <span class="nx">request</span><span class="p">.</span><span class="nx">ResourceID</span><span class="p">,</span> <span class="nx">request</span><span class="p">.</span><span class="nx">ApplicationData</span><span class="p">)</span>
+	<span class="nx">args</span> <span class="o">:=</span> <span class="nb">make</span><span class="p">([]</span><span class="kd">interface</span><span class="p">{},</span> <span class="mi">0</span><span class="p">)</span>
+	<span class="nx">args</span> <span class="p">=</span> <span class="nb">append</span><span class="p">(</span><span class="nx">args</span><span class="p">,</span> <span class="nx">businessActionContext</span><span class="p">)</span>
+  <span class="c1">// 最终执行
+</span><span class="c1"></span>	<span class="nx">returnValues</span> <span class="o">:=</span> <span class="nx">proxy</span><span class="p">.</span><span class="nf">Invoke</span><span class="p">(</span><span class="nx">tccResource</span><span class="p">.</span><span class="nx">CommitMethod</span><span class="p">,</span> <span class="kc">nil</span><span class="p">,</span> <span class="nx">args</span><span class="p">)</span>
+  <span class="c1">// ...
+</span><span class="c1"></span><span class="p">}</span>
+
+</code></pre></div><p>对应的事务RM管理器是如何通知、处理各个RM资源的。原理就是我上篇提到的作者实现的一个全局事务代理模式，本质上是利用go的反射实现的，感兴趣的可以自己去扒下源码，也可以看看作者对实现全局事务代理的介绍。</p>
+<h3 id="总结">总结<a href="#总结" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h3>
+<p>这篇文章主要介绍了dtm实现的一些细节，从这两篇文章大体能看出实现上的部分区别，更多的细节还得靠自己去挖掘。</p>
+<p>最后再问几个问题，</p>
+<ul>
+<li>日常开发中你们哪些场景是用到了分布式事务？用的是哪个框架还是自研的？</li>
+<li>或者说在分布式环境下，一致性的问题你们是如何解决的？</li>
+</ul>
+<h3 id="相关文章">相关文章<a href="#相关文章" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h3>
+<ul>
+<li><a href="https://dtm.pub/protocol/support.html">https://dtm.pub/protocol/support.html</a></li>
+<li><a href="https://zhuanlan.zhihu.com/p/351391359">https://zhuanlan.zhihu.com/p/351391359</a></li>
+</ul>
+
+			</div>
+			<div class="content"><br><img src="https://image.syst.top/image/wechat-qr.png"></div>
+			<hr class="post-end">
+			<footer class="post-info">
+				<p>
+					<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-tag meta-icon"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"></path><line x1="7" y1="7" x2="7" y2="7"></line></svg><span class="tag"><a href="https://www.syst.top/tags/go">go</a></span><span class="tag"><a href="https://www.syst.top/tags/enum">enum</a></span>
+				</p>
+				<p><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-file-text"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>1087 Words</p>
+				<p><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-calendar"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>2021-12-08 22:25 &#43;0800</p>
+			</footer>
+		</article>
+		<aside id="toc" class="show-toc">
+			<div class="toc-title">Table of Contents</div>
+			<nav id="TableOfContents">
+  <ul>
+    <li>
+      <ul>
+        <li><a href="#开篇">开篇</a></li>
+        <li><a href="#tm">TM</a></li>
+        <li><a href="#sdk">SDK</a></li>
+        <li><a href="#总结">总结</a></li>
+        <li><a href="#相关文章">相关文章</a></li>
+      </ul>
+    </li>
+  </ul>
+</nav>
+		</aside>
+		<div class="post-nav thin">
+			<a class="next-post" href="https://www.syst.top/posts/go/transaction/">
+				<span class="post-nav-label"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-arrow-left"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>&nbsp;Newer</span><br><span>那些用Go实现的分布式事务框架</span>
+			</a>
+			<a class="prev-post" href="https://www.syst.top/posts/go/channel3/">
+				<span class="post-nav-label">Older&nbsp;<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-arrow-right"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg></span><br><span>channel原理解析(三)</span>
+			</a>
+		</div>
+		<div id="comments" class="thin">
+			<script src="https://utteranc.es/client.js"
+        repo="wuqinqiang/blog"
+        issue-term="pathname"
+        theme="github-light"
+        crossorigin="anonymous"
+        async>
+</script>
+		</div>
+	</main>
+
+	<footer id="site-footer" class="section-inner thin animated fadeIn faster">
+		<p>&copy; 2018 - 2021 <a href="https://www.syst.top">Remember</a> &#183; <a href="http://beian.miit.gov.cn/">浙ICP备18028603号-2</a></p>
+		<p>
+			Made with <a href="https://gohugo.io/" target="_blank" rel="noopener">Hugo</a> &#183; Theme <a href="https://github.com/Track3/hermit" target="_blank" rel="noopener">Hermit</a> &#183; <a href="https://www.syst.top/post/index.xml" target="_blank" title="rss"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-rss"><path d="M4 11a9 9 0 0 1 9 9"></path><path d="M4 4a16 16 0 0 1 16 16"></path><circle cx="5" cy="19" r="1"></circle></svg></a>
+		</p>
+	</footer>
+
+
+	<script src="https://www.syst.top/js/main.min.784417f5847151f848c339cf0acb13a06cbb648b1483435a28ed4556c4ead69b.js"></script>
+<script type="application/javascript">
+var doNotTrack = false;
+if (!doNotTrack) {
+	window.ga=window.ga||function(){(ga.q=ga.q||[]).push(arguments)};ga.l=+new Date;
+	ga('create', 'UA-166045776-1', 'auto');
+	
+	ga('send', 'pageview');
+}
+</script>
+<script async src='https://www.google-analytics.com/analytics.js'></script>
+
+
+</body>
+
+</html>

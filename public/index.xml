@@ -42,6 +42,28 @@ seata-golang 我们先看RM部分结构。</description>
     </item>
     
     <item>
+      <title>那些用Go实现的分布式事务框架(2)</title>
+      <link>https://www.syst.top/posts/go/transaction2/</link>
+      <pubDate>Wed, 08 Dec 2021 22:25:52 +0800</pubDate>
+      
+      <guid>https://www.syst.top/posts/go/transaction2/</guid>
+      <description>开篇 上一篇我们主要介绍的是seata-golang。一个对标seata的go语言实现，当然版本还是落后Java版很多的。
+这次我们来介绍一下另一个go实现的分布式事务:dtm。
+首先来看下dtm整体架构图(来源官网)。
+再来看之前的seata架构图。
+从架构上来看，大差不差。
+seata中的TC对标dam的TM。
+RM两边意思一致。
+seata中的TM对标dtm事务SDK。作用都是一样:第一阶段开启一个全局事务,执行各RM分支事务，第二阶段根据RM第一阶段执行结果，决定调用TC(seata)|TM(dtm) commit或者rollback。
+架构上，个人感觉只是因为模块名称以及图画不一样的差别。
+当然在实现细节上还是有很大差别的。
+我们先简单介绍下DTM各个模块。
+TM TM 层在代码中是没有具体的主体结构的，开始都是函数之前的调用。
+启动TM实际上开启了两个服务，http以及grpc这两个服务。
+// StartSvr StartSvr func StartSvr() { app := common.GetGinApp() app = httpMetrics(app) addRoute(app) dtmimp.Logf(&amp;#34;dtmsvr listen at: %d&amp;#34;, common.DtmHttpPort) go app.Run(fmt.Sprintf(&amp;#34;:%d&amp;#34;, common.DtmHttpPort)) lis, err := net.Listen(&amp;#34;tcp&amp;#34;, fmt.Sprintf(&amp;#34;:%d&amp;#34;, common.DtmGrpcPort)) dtmimp.FatalIfError(err) s := grpc.NewServer( grpc.UnaryInterceptor(grpc_middleware.ChainUnaryServer( grpc.UnaryServerInterceptor(grpcMetrics), grpc.UnaryServerInterceptor(dtmgimp.GrpcServerLog)), )) dtmgimp.RegisterDtmServer(s, &amp;amp;dtmServer{}) dtmimp.Logf(&amp;#34;grpc listening at %v&amp;#34;, lis.Addr()) go func() { err := s.Serve(lis) dtmimp.FatalIfError(err) }() go updateBranchAsync() // 省略代码 } http路由，</description>
+    </item>
+    
+    <item>
       <title>&lt;&lt;不老奇事&gt;&gt;观后感</title>
       <link>https://www.syst.top/lives/bulaoqishi/</link>
       <pubDate>Sun, 07 Nov 2021 21:12:52 +0800</pubDate>
@@ -233,23 +255,6 @@ $ brew tap ktr0731/evans $ brew install evans 我们来操作一下 REPL 模式�
 首先我们需要有一个 pb 文件，假设你的文件在 api/api.proto，我们只需要这样： 默认地址为 127.0.0.1:50051，当然你可以通过 --host 和 --port 来指定服务器。 上图的命令:
  show package 读取 pb 包名， show service 显示对应服务列表。 call xxx 调用 grpc 服务&amp;hellip;&amp;hellip; &amp;hellip;..  更多命令可自行查阅官网。
 除了上述这种直接引入 pb 文件外，我们还可以通过 gRPC 反射包(reflection)， 将 grpc.Server 注册到反射服务中, 这样的话，就可以通过 reflection 提供的反射服务查询到对应的 gRPC 服务或者调用 gRPC 服务。</description>
-    </item>
-    
-    <item>
-      <title>go并发-工作池模式</title>
-      <link>https://www.syst.top/posts/go/worker-pool/</link>
-      <pubDate>Thu, 01 Jul 2021 23:37:45 +0800</pubDate>
-      
-      <guid>https://www.syst.top/posts/go/worker-pool/</guid>
-      <description>开篇 之前写过一篇文章，它有个响亮的名字: Handling 1 Million Requests per Minute with Go。 这是国外的一个作者写的，我做了一篇说明。起的也是这个标题， 阅读量是我最好的一篇，果然文章都是靠标题出彩的&amp;hellip;..
-今天偶然看到另一篇文章(原文在文末)。两篇文章原理相似:有一批工作任务(job)，通过工作池(worker-pool)的方式，达到多 worker 并发处理 job 的效果。
-他们还是有很多不同的点，实现上差别也是蛮大的。
-首先上一篇文章我放了一张图片，大概就是上篇整体的工作流。  每个 worker 处理完任务就好，不关心结果,不对结果做进一步处理。 只要请求不停止，程序就不会停止，没有控制机制，除非宕机。  这篇文章不同点在于:
-首先数据会从 generate (生产数据)-&amp;gt;并发处理数据-&amp;gt;处理结果聚合。 图大概是这样的, 然后它可以通过 context.context 达到控制工作池停止工作的效果。
-最后通过代码，你会发现它不是传统意义上的 worker-pool，后面会说明。
-下图能清晰表达整体流程了。 顺便说一句，这篇文章实现的代码比 Handling 1 Million Requests per Minute with Go 的代码简单多了。
-首先看 job。
-package wpool import ( &amp;#34;context&amp;#34; ) type JobID string type jobType string type jobMetadata map[string]interface{} type ExecutionFn func(ctx context.Context, args interface{}) (interface{}, error) type JobDescriptor struct { ID JobID JType jobType Metadata map[string]interface{} } type Result struct { Value interface{} Err error Descriptor JobDescriptor } type Job struct { Descriptor JobDescriptor ExecFn ExecutionFn Args interface{} } // 处理 job 逻辑,处理结果包装成 Result 结果 func (j Job) execute(ctx context.</description>
     </item>
     
   </channel>
