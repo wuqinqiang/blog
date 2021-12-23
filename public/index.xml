@@ -7,7 +7,7 @@
     <generator>Hugo -- gohugo.io</generator>
     <language>zh-hans</language>
     <copyright>This work is licensed under a Creative Commons Attribution-NonCommercial 4.0 International License.</copyright>
-    <lastBuildDate>Wed, 08 Dec 2021 22:25:52 +0800</lastBuildDate><atom:link href="https://www.syst.top/index.xml" rel="self" type="application/rss+xml" />
+    <lastBuildDate>Thu, 23 Dec 2021 22:23:52 +0800</lastBuildDate><atom:link href="https://www.syst.top/index.xml" rel="self" type="application/rss+xml" />
     <item>
       <title>Myfriends</title>
       <link>https://www.syst.top/friends/friends/</link>
@@ -15,6 +15,24 @@
       
       <guid>https://www.syst.top/friends/friends/</guid>
       <description></description>
+    </item>
+    
+    <item>
+      <title>不定期的一些思考</title>
+      <link>https://www.syst.top/lives/think/</link>
+      <pubDate>Thu, 23 Dec 2021 22:23:52 +0800</pubDate>
+      
+      <guid>https://www.syst.top/lives/think/</guid>
+      <description>不要觉得一件事情简单，自我感觉没有挑战，而无动于衷。你所谓的简单，在很多时候只是你并没有去深度思考事情的本质。
+即使是简单的curd工作，你有没有想过，当前你的设计是否满足未来产品形态的变动？一改就头痛？还是写出来的代码测试用例都难写？
+你有没有这样的时刻？
+当别人带着一个问题来寻找你进行解决方案。你思考一番，在这个问题的基础上加以补丁，你自以为解决了这个问题，直到后面补丁也越来越多。
+你有没有想过，其实，很多时候，出发点就错了。我们都把目光直接切入这个问题的解决方案，也就是所谓的补丁(我并不是说我们不解决问题)，而是，是不是忽略了去思考为什么会出现这样的问题？是不是一开始就错了？
+如果一开始就错了，在这个错误的基础上产生错误的问题，我们应该直接揪出源头，然后干掉它。而不是在错误的基础上疯狂的给错误的问题打上错误的补丁。
+和别人沟通的时候，当别人发表完自己的意见和观点，你开口的第一句是不是:
+&amp;ldquo;不是这样的&amp;rdquo;。
+你喜欢用否定句来当场否定别人，直接当场浇灭对方。
+如果改成 &amp;ldquo;好的，我明白你意思了。但是我想了下，xxxx&amp;rdquo; 类似这样，沟通的效果会不会更加理想？</description>
     </item>
     
     <item>
@@ -239,22 +257,6 @@ Partition Tolerance(分区容忍性) 什么分区？
 大体已经规划完了，后面边开发边写文档，类似极客兔兔的七天系列。
 grpc-shop 计划 15 篇左右完结撒花。
 完毕。</description>
-    </item>
-    
-    <item>
-      <title>超实用的 gRPC 客户端调试工具</title>
-      <link>https://www.syst.top/posts/go/grpc/</link>
-      <pubDate>Tue, 27 Jul 2021 10:01:52 +0800</pubDate>
-      
-      <guid>https://www.syst.top/posts/go/grpc/</guid>
-      <description>介绍 正好看到董泽润老哥写了一篇关于使用 WireShark 分析 gRPC 流量的文章，学到了。
-那我就介绍两个日常开发使用过的两款 gRPC 客户端调试工具吧。
-Evans Evans 有两种模式：REPL 和 CLI。比起其他 gRPC 客户端,更具有表现力。并且它还支持自动补全功能。
-它的安装非常方便，在 Mac 上我们只需要执行以下两行命令即可。
-$ brew tap ktr0731/evans $ brew install evans 我们来操作一下 REPL 模式。
-首先我们需要有一个 pb 文件，假设你的文件在 api/api.proto，我们只需要这样： 默认地址为 127.0.0.1:50051，当然你可以通过 --host 和 --port 来指定服务器。 上图的命令:
- show package 读取 pb 包名， show service 显示对应服务列表。 call xxx 调用 grpc 服务&amp;hellip;&amp;hellip; &amp;hellip;..  更多命令可自行查阅官网。
-除了上述这种直接引入 pb 文件外，我们还可以通过 gRPC 反射包(reflection)， 将 grpc.Server 注册到反射服务中, 这样的话，就可以通过 reflection 提供的反射服务查询到对应的 gRPC 服务或者调用 gRPC 服务。</description>
     </item>
     
   </channel>
