@@ -3,18 +3,16 @@ title: "关于"
 date: "2021-04-03"
 ---
 
-你好，我是吴亲库里，最近沉迷于 Golang,欢迎一起交流。
+你好，我是吴亲库里，是一名普通的开发者。工作主语言:go/php，后续想接触下rust。
 
-### 介绍：
+无名开源爱好者，小小的参与过一些开源项目，后续的目标是深度参与开源项目。目前对分布式事务领域感兴趣。
 
-18 年毕业于某不知名学校，开始走上php之路，20年9月跳槽新公司有幸接触 Golang,从此爱上了它。
+打算自己用Go写一个分布式事务:https://github.com/wuqinqiang/easycar。还在起步，淡定。
+
+
 
 ### 联系方式：
 
 - Github：https://github.com/wuqinqiang
-- 公众号：吴亲强的深夜食堂
+- 公众号：RememberGo
 - 邮箱：wuqinqiang050@gmail.com
-- 微信:我画你猜
-  ![image](https://image.syst.top/image/wechat-qr.png)
-
-
