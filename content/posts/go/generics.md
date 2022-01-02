@@ -1,5 +1,5 @@
 ---
-title: "泛型来了"
+title: "你还不体验泛型吗"
 date: 2022-01-02T18:32:00+08:00 
 toc: true 
 tags:
@@ -112,3 +112,5 @@ tags:
 
 - https://go.dev/doc/tutorial/generics
 - https://teivah.medium.com/when-to-use-generics-in-go-36d49c1aeda
+- https://github.com/mattn/go-generics-example
+
