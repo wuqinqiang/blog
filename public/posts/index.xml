@@ -10,7 +10,7 @@
 		<atom:link href="https://www.syst.top/posts/index.xml" rel="self" type="application/rss+xml" />
 		
 		<item>
-			<title>泛型来了</title>
+			<title>你还不体验泛型吗</title>
 			<link>https://www.syst.top/posts/go/generics/</link>
 			<pubDate>Sun, 02 Jan 2022 18:32:00 +0800</pubDate>
 			
@@ -42,7 +42,7 @@
 还有一些行为方面的。比如 go 中的排序，通过泛型，不需要每一个结构都实现(Len，Less，Swap)三个方法，而是抽象出依赖于三个方法的行为。那么想要实现排序只需要依赖定义的这个抽象就行了。
 其他方面的应用可以自行体验。
 总结 这篇文章主要带你们体验下泛型的基本使用，以及对应的类型约束，最后还简单实验了两个泛型的场景demo，感兴趣的可以自行体验。更多内容，欢迎留言区域交流。
-附录  https://go.dev/doc/tutorial/generics https://teivah.medium.com/when-to-use-generics-in-go-36d49c1aeda  </description>
+附录  https://go.dev/doc/tutorial/generics https://teivah.medium.com/when-to-use-generics-in-go-36d49c1aeda https://github.com/mattn/go-generics-example  </description>
 			<content type="html"><![CDATA[<h3 id="介绍">介绍</h3>
 <p>之前有看过官方发布的一些泛型文章，但是自己没动手玩过。还有没有没玩过的，那么最后一班车了。</p>
 <p>不管学什么入门先从官网拿例子。</p>
@@ -89,6 +89,7 @@
 <ul>
 <li><a href="https://go.dev/doc/tutorial/generics">https://go.dev/doc/tutorial/generics</a></li>
 <li><a href="https://teivah.medium.com/when-to-use-generics-in-go-36d49c1aeda">https://teivah.medium.com/when-to-use-generics-in-go-36d49c1aeda</a></li>
+<li><a href="https://github.com/mattn/go-generics-example">https://github.com/mattn/go-generics-example</a></li>
 </ul>
 ]]></content>
 		</item>

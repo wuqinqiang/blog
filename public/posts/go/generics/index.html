@@ -7,7 +7,7 @@
 	<meta http-equiv="X-UA-Compatible" content="ie=edge">
 	<meta name="theme-color" content="#494f5c">
 	<meta name="msapplication-TileColor" content="#494f5c">
-<meta itemprop="name" content="泛型来了">
+<meta itemprop="name" content="你还不体验泛型吗">
 <meta itemprop="description" content="介绍 之前有看过官方发布的一些泛型文章，但是自己没动手玩过。还有没有没玩过的，那么最后一班车了。
 不管学什么入门先从官网拿例子。
 这段代码很简单，定义两个函数，计算对应传入的map值的和。两个函数最大的不同在于函数参数类型有所不同，一个map的值类型为int64,一个为float64，对应返回参数也有所不同。
@@ -35,15 +35,15 @@
 还有一些行为方面的。比如 go 中的排序，通过泛型，不需要每一个结构都实现(Len，Less，Swap)三个方法，而是抽象出依赖于三个方法的行为。那么想要实现排序只需要依赖定义的这个抽象就行了。
 其他方面的应用可以自行体验。
 总结 这篇文章主要带你们体验下泛型的基本使用，以及对应的类型约束，最后还简单实验了两个泛型的场景demo，感兴趣的可以自行体验。更多内容，欢迎留言区域交流。
-附录  https://go.dev/doc/tutorial/generics https://teivah.medium.com/when-to-use-generics-in-go-36d49c1aeda  ">
+附录  https://go.dev/doc/tutorial/generics https://teivah.medium.com/when-to-use-generics-in-go-36d49c1aeda https://github.com/mattn/go-generics-example  ">
 <meta itemprop="datePublished" content="2022-01-02T18:32:00+08:00" />
 <meta itemprop="dateModified" content="2022-01-02T18:32:00+08:00" />
-<meta itemprop="wordCount" content="56">
+<meta itemprop="wordCount" content="57">
 
 
 
 <meta itemprop="keywords" content="go,generics," />
-<meta property="og:title" content="泛型来了" />
+<meta property="og:title" content="你还不体验泛型吗" />
 <meta property="og:description" content="介绍 之前有看过官方发布的一些泛型文章，但是自己没动手玩过。还有没有没玩过的，那么最后一班车了。
 不管学什么入门先从官网拿例子。
 这段代码很简单，定义两个函数，计算对应传入的map值的和。两个函数最大的不同在于函数参数类型有所不同，一个map的值类型为int64,一个为float64，对应返回参数也有所不同。
@@ -71,13 +71,13 @@
 还有一些行为方面的。比如 go 中的排序，通过泛型，不需要每一个结构都实现(Len，Less，Swap)三个方法，而是抽象出依赖于三个方法的行为。那么想要实现排序只需要依赖定义的这个抽象就行了。
 其他方面的应用可以自行体验。
 总结 这篇文章主要带你们体验下泛型的基本使用，以及对应的类型约束，最后还简单实验了两个泛型的场景demo，感兴趣的可以自行体验。更多内容，欢迎留言区域交流。
-附录  https://go.dev/doc/tutorial/generics https://teivah.medium.com/when-to-use-generics-in-go-36d49c1aeda  " />
+附录  https://go.dev/doc/tutorial/generics https://teivah.medium.com/when-to-use-generics-in-go-36d49c1aeda https://github.com/mattn/go-generics-example  " />
 <meta property="og:type" content="article" />
 <meta property="og:url" content="https://www.syst.top/posts/go/generics/" />
 <meta property="article:published_time" content="2022-01-02T18:32:00+08:00" />
 <meta property="article:modified_time" content="2022-01-02T18:32:00+08:00" />
 <meta name="twitter:card" content="summary"/>
-<meta name="twitter:title" content="泛型来了"/>
+<meta name="twitter:title" content="你还不体验泛型吗"/>
 <meta name="twitter:description" content="介绍 之前有看过官方发布的一些泛型文章，但是自己没动手玩过。还有没有没玩过的，那么最后一班车了。
 不管学什么入门先从官网拿例子。
 这段代码很简单，定义两个函数，计算对应传入的map值的和。两个函数最大的不同在于函数参数类型有所不同，一个map的值类型为int64,一个为float64，对应返回参数也有所不同。
@@ -105,7 +105,7 @@
 还有一些行为方面的。比如 go 中的排序，通过泛型，不需要每一个结构都实现(Len，Less，Swap)三个方法，而是抽象出依赖于三个方法的行为。那么想要实现排序只需要依赖定义的这个抽象就行了。
 其他方面的应用可以自行体验。
 总结 这篇文章主要带你们体验下泛型的基本使用，以及对应的类型约束，最后还简单实验了两个泛型的场景demo，感兴趣的可以自行体验。更多内容，欢迎留言区域交流。
-附录  https://go.dev/doc/tutorial/generics https://teivah.medium.com/when-to-use-generics-in-go-36d49c1aeda  "/>
+附录  https://go.dev/doc/tutorial/generics https://teivah.medium.com/when-to-use-generics-in-go-36d49c1aeda https://github.com/mattn/go-generics-example  "/>
 
 	<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
 	<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
@@ -114,7 +114,7 @@
 	<link rel="mask-icon" href="/safari-pinned-tab.svg" color="">
 	<link rel="shortcut icon" href="/favicon.ico">
 
-	<title>泛型来了</title>
+	<title>你还不体验泛型吗</title>
 	<link rel="stylesheet" href="https://www.syst.top/css/style.min.d3141168199607bf3a517216ce3c263814eecdbc8fca72a9a88700799a838219.css">
 	
 </head>
@@ -154,7 +154,7 @@
 		<article class="thin">
 			<header class="post-header">
 				<div class="post-meta"><span>Jan 2, 2022</span></div>
-				<h1>泛型来了</h1>
+				<h1>你还不体验泛型吗</h1>
 			</header>
 			<div class="content">
 				<h3 id="介绍">介绍<a href="#介绍" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h3>
@@ -203,6 +203,7 @@
 <ul>
 <li><a href="https://go.dev/doc/tutorial/generics">https://go.dev/doc/tutorial/generics</a></li>
 <li><a href="https://teivah.medium.com/when-to-use-generics-in-go-36d49c1aeda">https://teivah.medium.com/when-to-use-generics-in-go-36d49c1aeda</a></li>
+<li><a href="https://github.com/mattn/go-generics-example">https://github.com/mattn/go-generics-example</a></li>
 </ul>
 
 			</div>
@@ -212,7 +213,7 @@
 				<p>
 					<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-tag meta-icon"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"></path><line x1="7" y1="7" x2="7" y2="7"></line></svg><span class="tag"><a href="https://www.syst.top/tags/go">go</a></span><span class="tag"><a href="https://www.syst.top/tags/generics">generics</a></span>
 				</p>
-				<p><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-file-text"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>56 Words</p>
+				<p><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-file-text"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>57 Words</p>
 				<p><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-calendar"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>2022-01-02 18:32 &#43;0800</p>
 			</footer>
 		</article>
