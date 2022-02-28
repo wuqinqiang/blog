@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="zh-hans">
+
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<meta http-equiv="X-UA-Compatible" content="ie=edge">
+	<meta name="theme-color" content="#494f5c">
+	<meta name="msapplication-TileColor" content="#494f5c">
+<meta itemprop="name" content="hystrix-go使用与原理(一)">
+<meta itemprop="description" content="开篇 这周在看内部一个熔断限流包时，发现它是基于一个开源项目 hystrix-go 实现了，因此有了这篇文章。
+Hystrix Hystrix 是由 Netflex  开发的一款开源组件，提供了基础的熔断功能。 Hystrix 将降级的策略封装在 Command 中，提供了 run 和 fallback 两个方法，前者表示正常的逻辑，比如微服务之间的调用&hellip;&hellip;，如果发生了故障，再执行 fallback方法返回结果，我们可以把它理解成保底操作。如果正常逻辑在短时间内频繁发生故障，那么可能会触发短路，也就是之后的请求不再执行 run,而是直接执行 fallback。更多关于 Hystrix 的信息可以查看 https://github.com/Netflix/Hystrix，而 hystrix-go 则是用 go 实现的 hystrix 版，更确切的说，是简化版。只是上一次更新还是 2018年 的一次 pr,也就毕业了？
+为什么需要这些工具？ 比如一个微服务化的产品线上，每一个服务都专注于自己的业务，并对外提供相应的服务接口，或者依赖于外部服务的某个逻辑接口，就像下面这样。 假设我们当前是 服务A，有部分逻辑依赖于 服务C，服务C 又依赖于 服务E,当前微服务之间进行 rpc或者 http通信，假设此时 服务C 调用 服务E 失败,比如由于网络波动导致超时或者服务E由于过载，系统E 已经down掉了。 调用失败，一般会有失败重试等机制。但是再想想，假设服务E已然不可用的情况下，此时新的调用不断产生，同时伴随着调用等待和失败重试，会导致 服务C对服务E的调用而产生大量的积压，慢慢会耗尽服务C的资源，进而导致服务C也down掉，这样恶性循环下，会影响到整个微服务体系，产生雪崩效应。 虽然导致雪崩的发生不仅仅这一种，但是我们需要采取一定的措施，来保证不让这个噩梦发生。而 hystrix-go就很好的提供了 熔断和降级的措施。它的主要思想在于，设置一些阀值，比如最大并发数(当并发数大于设置的并发数，拦截)，错误率百分比(请求数量大于等于设置 的阀值，并且错误率达到设置的百分比时，触发熔断)以及熔断尝试恢复时间等 。
+使用 hystrix-go 的使用非常简单，你可以调用它的 Go 或者 Do方法，只是 Go 方法是异步的方式。而 Do 方法是同步方式。我们从一个简单的例子开启。
+_ = hystrix.Do(&#34;wuqq&#34;, func() error { // talk to other services 	_, err := http.">
+<meta itemprop="datePublished" content="2021-04-17T22:24:32+08:00" />
+<meta itemprop="dateModified" content="2021-04-17T22:24:32+08:00" />
+<meta itemprop="wordCount" content="493">
+
+
+
+<meta itemprop="keywords" content="go," />
+<meta property="og:title" content="hystrix-go使用与原理(一)" />
+<meta property="og:description" content="开篇 这周在看内部一个熔断限流包时，发现它是基于一个开源项目 hystrix-go 实现了，因此有了这篇文章。
+Hystrix Hystrix 是由 Netflex  开发的一款开源组件，提供了基础的熔断功能。 Hystrix 将降级的策略封装在 Command 中，提供了 run 和 fallback 两个方法，前者表示正常的逻辑，比如微服务之间的调用&hellip;&hellip;，如果发生了故障，再执行 fallback方法返回结果，我们可以把它理解成保底操作。如果正常逻辑在短时间内频繁发生故障，那么可能会触发短路，也就是之后的请求不再执行 run,而是直接执行 fallback。更多关于 Hystrix 的信息可以查看 https://github.com/Netflix/Hystrix，而 hystrix-go 则是用 go 实现的 hystrix 版，更确切的说，是简化版。只是上一次更新还是 2018年 的一次 pr,也就毕业了？
+为什么需要这些工具？ 比如一个微服务化的产品线上，每一个服务都专注于自己的业务，并对外提供相应的服务接口，或者依赖于外部服务的某个逻辑接口，就像下面这样。 假设我们当前是 服务A，有部分逻辑依赖于 服务C，服务C 又依赖于 服务E,当前微服务之间进行 rpc或者 http通信，假设此时 服务C 调用 服务E 失败,比如由于网络波动导致超时或者服务E由于过载，系统E 已经down掉了。 调用失败，一般会有失败重试等机制。但是再想想，假设服务E已然不可用的情况下，此时新的调用不断产生，同时伴随着调用等待和失败重试，会导致 服务C对服务E的调用而产生大量的积压，慢慢会耗尽服务C的资源，进而导致服务C也down掉，这样恶性循环下，会影响到整个微服务体系，产生雪崩效应。 虽然导致雪崩的发生不仅仅这一种，但是我们需要采取一定的措施，来保证不让这个噩梦发生。而 hystrix-go就很好的提供了 熔断和降级的措施。它的主要思想在于，设置一些阀值，比如最大并发数(当并发数大于设置的并发数，拦截)，错误率百分比(请求数量大于等于设置 的阀值，并且错误率达到设置的百分比时，触发熔断)以及熔断尝试恢复时间等 。
+使用 hystrix-go 的使用非常简单，你可以调用它的 Go 或者 Do方法，只是 Go 方法是异步的方式。而 Do 方法是同步方式。我们从一个简单的例子开启。
+_ = hystrix.Do(&#34;wuqq&#34;, func() error { // talk to other services 	_, err := http." />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="https://www.syst.top/posts/go/hystrix-go/" />
+<meta property="article:published_time" content="2021-04-17T22:24:32+08:00" />
+<meta property="article:modified_time" content="2021-04-17T22:24:32+08:00" />
+<meta name="twitter:card" content="summary"/>
+<meta name="twitter:title" content="hystrix-go使用与原理(一)"/>
+<meta name="twitter:description" content="开篇 这周在看内部一个熔断限流包时，发现它是基于一个开源项目 hystrix-go 实现了，因此有了这篇文章。
+Hystrix Hystrix 是由 Netflex  开发的一款开源组件，提供了基础的熔断功能。 Hystrix 将降级的策略封装在 Command 中，提供了 run 和 fallback 两个方法，前者表示正常的逻辑，比如微服务之间的调用&hellip;&hellip;，如果发生了故障，再执行 fallback方法返回结果，我们可以把它理解成保底操作。如果正常逻辑在短时间内频繁发生故障，那么可能会触发短路，也就是之后的请求不再执行 run,而是直接执行 fallback。更多关于 Hystrix 的信息可以查看 https://github.com/Netflix/Hystrix，而 hystrix-go 则是用 go 实现的 hystrix 版，更确切的说，是简化版。只是上一次更新还是 2018年 的一次 pr,也就毕业了？
+为什么需要这些工具？ 比如一个微服务化的产品线上，每一个服务都专注于自己的业务，并对外提供相应的服务接口，或者依赖于外部服务的某个逻辑接口，就像下面这样。 假设我们当前是 服务A，有部分逻辑依赖于 服务C，服务C 又依赖于 服务E,当前微服务之间进行 rpc或者 http通信，假设此时 服务C 调用 服务E 失败,比如由于网络波动导致超时或者服务E由于过载，系统E 已经down掉了。 调用失败，一般会有失败重试等机制。但是再想想，假设服务E已然不可用的情况下，此时新的调用不断产生，同时伴随着调用等待和失败重试，会导致 服务C对服务E的调用而产生大量的积压，慢慢会耗尽服务C的资源，进而导致服务C也down掉，这样恶性循环下，会影响到整个微服务体系，产生雪崩效应。 虽然导致雪崩的发生不仅仅这一种，但是我们需要采取一定的措施，来保证不让这个噩梦发生。而 hystrix-go就很好的提供了 熔断和降级的措施。它的主要思想在于，设置一些阀值，比如最大并发数(当并发数大于设置的并发数，拦截)，错误率百分比(请求数量大于等于设置 的阀值，并且错误率达到设置的百分比时，触发熔断)以及熔断尝试恢复时间等 。
+使用 hystrix-go 的使用非常简单，你可以调用它的 Go 或者 Do方法，只是 Go 方法是异步的方式。而 Do 方法是同步方式。我们从一个简单的例子开启。
+_ = hystrix.Do(&#34;wuqq&#34;, func() error { // talk to other services 	_, err := http."/>
+
+	<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+	<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+	<link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+	<link rel="manifest" href="/site.webmanifest">
+	<link rel="mask-icon" href="/safari-pinned-tab.svg" color="">
+	<link rel="shortcut icon" href="/favicon.ico">
+
+	<title>hystrix-go使用与原理(一)</title>
+	<link rel="stylesheet" href="https://www.syst.top/css/style.min.d3141168199607bf3a517216ce3c263814eecdbc8fca72a9a88700799a838219.css">
+	
+</head>
+
+<body id="page">
+	
+	<header id="site-header" class="animated slideInUp faster">
+		<div class="hdr-wrapper section-inner">
+			<div class="hdr-left">
+				<div class="site-branding">
+					<a href="https://www.syst.top">记得</a>
+				</div>
+				<nav class="site-nav hide-in-mobile">
+					<a href="https://www.syst.top/posts/">文章</a>
+					<a href="https://www.syst.top/leetcode/">刷题</a>
+					<a href="https://www.syst.top/lives/">生活</a>
+					<a href="https://www.syst.top/translations/">翻译</a>
+					<a href="https://www.syst.top/friends/">朋友</a>
+					<a href="https://go.aabbccm.com">grpc-shop</a>
+				</nav>
+			</div>
+			<div class="hdr-right hdr-icons">
+				<button id="toc-btn" class="hdr-btn desktop-only-ib" title="Table of Contents"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-list"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3" y2="6"></line><line x1="3" y1="12" x2="3" y2="12"></line><line x1="3" y1="18" x2="3" y2="18"></line></svg></button><span class="hdr-social hide-in-mobile"><a href="https://github.com/wuqinqiang" target="_blank" rel="noopener me" title="Github"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-github"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"></path></svg></a></span><button id="menu-btn" class="hdr-btn" title="Menu"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-menu"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg></button>
+			</div>
+		</div>
+	</header>
+	<div id="mobile-menu" class="animated fast">
+		<ul>
+			<li><a href="https://www.syst.top/posts/">文章</a></li>
+			<li><a href="https://www.syst.top/tags/">标签</a></li>
+			<li><a href="https://www.syst.top/about/">关于</a></li>
+		</ul>
+	</div>
+
+
+	<main class="site-main section-inner animated fadeIn faster">
+		<article class="thin">
+			<header class="post-header">
+				<div class="post-meta"><span>Apr 17, 2021</span></div>
+				<h1>hystrix-go使用与原理(一)</h1>
+			</header>
+			<div class="content">
+				<h2 id="开篇">开篇<a href="#开篇" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h2>
+<p>这周在看内部一个熔断限流包时，发现它是基于一个开源项目 <code>hystrix-go</code> 实现了，因此有了这篇文章。</p>
+<h3 id="hystrix">Hystrix<a href="#hystrix" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h3>
+<p><code>Hystrix</code> 是由 <code>Netflex </code> 开发的一款开源组件，提供了基础的熔断功能。 <code>Hystrix</code> 将降级的策略封装在 <code>Command</code> 中，提供了 <code>run</code> 和 <code>fallback</code> 两个方法，前者表示正常的逻辑，比如微服务之间的调用&hellip;&hellip;，如果发生了故障，再执行 <code>fallback</code>方法返回结果，我们可以把它理解成保底操作。如果正常逻辑在短时间内频繁发生故障，那么可能会触发短路，也就是之后的请求不再执行 <code>run</code>,而是直接执行  <code>fallback</code>。更多关于 <code>Hystrix</code> 的信息可以查看 <code>https://github.com/Netflix/Hystrix</code>，而
+<code>hystrix-go</code> 则是用 <code>go</code> 实现的 <code>hystrix</code> 版，更确切的说，是简化版。只是上一次更新还是 2018年 的一次 <code>pr</code>,也就毕业了？</p>
+<p>为什么需要这些工具？
+比如一个微服务化的产品线上，每一个服务都专注于自己的业务，并对外提供相应的服务接口，或者依赖于外部服务的某个逻辑接口，就像下面这样。
+<img src="https://cdn.learnku.com/uploads/images/202012/27/26855/vZWmoZYanE.png!large" alt=""></p>
+<p>假设我们当前是 <code>服务A</code>，有部分逻辑依赖于 <code>服务C</code>，<code>服务C</code> 又依赖于 <code>服务E</code>,当前微服务之间进行 <code>rpc</code>或者 <code>http</code>通信，假设此时 <code>服务C</code> 调用 服务E 失败,比如由于网络波动导致超时或者服务E由于过载，系统E 已经down掉了。
+<img src="https://cdn.learnku.com/uploads/images/202012/27/26855/0IuLV2g9Pk.png!large" alt=""></p>
+<p>调用失败，一般会有失败重试等机制。但是再想想，假设服务E已然不可用的情况下，此时新的调用不断产生，同时伴随着调用等待和失败重试，会导致 服务C对服务E的调用而产生大量的积压，慢慢会耗尽服务C的资源，进而导致服务C也down掉，这样恶性循环下，会影响到整个微服务体系，产生雪崩效应。
+<img src="https://cdn.learnku.com/uploads/images/202012/27/26855/OChf6d4cTz.png!large" alt=""></p>
+<p>虽然导致雪崩的发生不仅仅这一种，但是我们需要采取一定的措施，来保证不让这个噩梦发生。而 <code>hystrix-go</code>就很好的提供了 熔断和降级的措施。它的主要思想在于，设置一些阀值，比如最大并发数(当并发数大于设置的并发数，拦截)，错误率百分比(请求数量大于等于设置 的阀值，并且错误率达到设置的百分比时，触发熔断)以及熔断尝试恢复时间等 。</p>
+<h3 id="使用">使用<a href="#使用" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h3>
+<p><code>hystrix-go</code> 的使用非常简单，你可以调用它的 <code>Go</code> 或者 <code>Do</code>方法，只是 <code>Go</code> 方法是异步的方式。而 <code>Do</code>  方法是同步方式。我们从一个简单的例子开启。</p>
+<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="nx">_</span> <span class="p">=</span> <span class="nx">hystrix</span><span class="p">.</span><span class="nf">Do</span><span class="p">(</span><span class="s">&#34;wuqq&#34;</span><span class="p">,</span> <span class="kd">func</span><span class="p">()</span> <span class="kt">error</span> <span class="p">{</span>
+		<span class="c1">// talk to other services
+</span><span class="c1"></span>		<span class="nx">_</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">http</span><span class="p">.</span><span class="nf">Get</span><span class="p">(</span><span class="s">&#34;https://www.baidu.com/&#34;</span><span class="p">)</span>
+		<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+			<span class="nx">fmt</span><span class="p">.</span><span class="nf">Println</span><span class="p">(</span><span class="s">&#34;get error:%v&#34;</span><span class="p">,</span><span class="nx">err</span><span class="p">)</span>
+			<span class="k">return</span> <span class="nx">err</span>
+		<span class="p">}</span>
+		<span class="k">return</span> <span class="kc">nil</span>
+	<span class="p">},</span> <span class="kd">func</span><span class="p">(</span><span class="nx">err</span> <span class="kt">error</span><span class="p">)</span> <span class="kt">error</span> <span class="p">{</span>
+		<span class="nx">fmt</span><span class="p">.</span><span class="nf">Printf</span><span class="p">(</span><span class="s">&#34;handle  error:%v\n&#34;</span><span class="p">,</span> <span class="nx">err</span><span class="p">)</span>
+		<span class="k">return</span> <span class="kc">nil</span>
+	<span class="p">})</span>
+</code></pre></div><p><code>Do</code> 函数需要三个参数，第一个参数 <code>commmand</code> 名称，你可以把每个名称当成一个独立当服务，第二个参数是处理正常的逻辑，比如 <code>http</code> 调用服务，返回参数是 <code>err</code>。如果处理|调用失败，那么就执行第三个参数逻辑， 我们称为保底操作。由于服务错误率过高导致熔断器开启，那么之后的请求也直接回调此函数。</p>
+<p>既然熔断器是按照配置的规则而进行是否开启的操作，那么我们当然可以设置我们想要的值。</p>
+<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="nx">hystrix</span><span class="p">.</span><span class="nf">ConfigureCommand</span><span class="p">(</span><span class="s">&#34;wuqq&#34;</span><span class="p">,</span> <span class="nx">hystrix</span><span class="p">.</span><span class="nx">CommandConfig</span><span class="p">{</span>
+		<span class="nx">Timeout</span><span class="p">:</span>                <span class="nb">int</span><span class="p">(</span><span class="mi">3</span> <span class="o">*</span> <span class="nx">time</span><span class="p">.</span><span class="nx">Second</span><span class="p">),</span>
+		<span class="nx">MaxConcurrentRequests</span><span class="p">:</span>  <span class="mi">10</span><span class="p">,</span>
+		<span class="nx">SleepWindow</span><span class="p">:</span>            <span class="mi">5000</span><span class="p">,</span>
+		<span class="nx">RequestVolumeThreshold</span><span class="p">:</span> <span class="mi">10</span><span class="p">,</span>
+		<span class="nx">ErrorPercentThreshold</span><span class="p">:</span>  <span class="mi">30</span><span class="p">,</span>
+	<span class="p">})</span>
+	<span class="nx">_</span> <span class="p">=</span> <span class="nx">hystrix</span><span class="p">.</span><span class="nf">Do</span><span class="p">(</span><span class="s">&#34;wuqq&#34;</span><span class="p">,</span> <span class="kd">func</span><span class="p">()</span> <span class="kt">error</span> <span class="p">{</span>
+		<span class="c1">// talk to other services
+</span><span class="c1"></span>		<span class="nx">_</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">http</span><span class="p">.</span><span class="nf">Get</span><span class="p">(</span><span class="s">&#34;https://www.baidu.com/&#34;</span><span class="p">)</span>
+		<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+			<span class="nx">fmt</span><span class="p">.</span><span class="nf">Println</span><span class="p">(</span><span class="s">&#34;get error:%v&#34;</span><span class="p">,</span><span class="nx">err</span><span class="p">)</span>
+			<span class="k">return</span> <span class="nx">err</span>
+		<span class="p">}</span>
+		<span class="k">return</span> <span class="kc">nil</span>
+	<span class="p">},</span> <span class="kd">func</span><span class="p">(</span><span class="nx">err</span> <span class="kt">error</span><span class="p">)</span> <span class="kt">error</span> <span class="p">{</span>
+		<span class="nx">fmt</span><span class="p">.</span><span class="nf">Printf</span><span class="p">(</span><span class="s">&#34;handle  error:%v\n&#34;</span><span class="p">,</span> <span class="nx">err</span><span class="p">)</span>
+		<span class="k">return</span> <span class="kc">nil</span>
+	<span class="p">})</span>
+</code></pre></div><p>稍微解释一下上面配置的值含义:</p>
+<ul>
+<li>Timeout: 执行 <code>command</code> 的超时时间。</li>
+<li>MaxConcurrentRequests：<code>command</code> 的最大并发量 。</li>
+<li>SleepWindow：当熔断器被打开后，<code>SleepWindow</code> 的时间就是控制过多久后去尝试服务是否可用了。</li>
+<li>RequestVolumeThreshold： 一个统计窗口10秒内请求数量。达到这个请求数量后才去判断是否要开启熔断</li>
+<li>ErrorPercentThreshold：错误百分比，请求数量大于等于<code>RequestVolumeThreshold</code>并且错误率到达这个百分比后就会启动<code>熔断</code></li>
+</ul>
+<p>当然你不设置的话，那么自动走的默认值。
+<img src="https://cdn.learnku.com/uploads/images/202012/27/26855/VX87CNHDs1.png!large" alt=""></p>
+<p>我们再来看一个简单的例子:</p>
+<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kn">package</span> <span class="nx">main</span>
+
+<span class="kn">import</span> <span class="p">(</span>
+   <span class="s">&#34;fmt&#34;</span>
+ <span class="s">&#34;github.com/afex/hystrix-go/hystrix&#34;</span> <span class="s">&#34;net/http&#34;</span> <span class="s">&#34;time&#34;</span><span class="p">)</span>
+
+<span class="kd">type</span> <span class="nx">Handle</span> <span class="kd">struct</span><span class="p">{}</span>
+
+<span class="kd">func</span> <span class="p">(</span><span class="nx">h</span> <span class="o">*</span><span class="nx">Handle</span><span class="p">)</span> <span class="nf">ServeHTTP</span><span class="p">(</span><span class="nx">r</span> <span class="nx">http</span><span class="p">.</span><span class="nx">ResponseWriter</span><span class="p">,</span> <span class="nx">request</span> <span class="o">*</span><span class="nx">http</span><span class="p">.</span><span class="nx">Request</span><span class="p">)</span> <span class="p">{</span>
+   <span class="nx">h</span><span class="p">.</span><span class="nf">Common</span><span class="p">(</span><span class="nx">r</span><span class="p">,</span> <span class="nx">request</span><span class="p">)</span>
+<span class="p">}</span>
+
+<span class="kd">func</span> <span class="p">(</span><span class="nx">h</span> <span class="o">*</span><span class="nx">Handle</span><span class="p">)</span> <span class="nf">Common</span><span class="p">(</span><span class="nx">r</span> <span class="nx">http</span><span class="p">.</span><span class="nx">ResponseWriter</span><span class="p">,</span> <span class="nx">request</span> <span class="o">*</span><span class="nx">http</span><span class="p">.</span><span class="nx">Request</span><span class="p">)</span> <span class="p">{</span>
+   <span class="nx">hystrix</span><span class="p">.</span><span class="nf">ConfigureCommand</span><span class="p">(</span><span class="s">&#34;mycommand&#34;</span><span class="p">,</span> <span class="nx">hystrix</span><span class="p">.</span><span class="nx">CommandConfig</span><span class="p">{</span>
+      <span class="nx">Timeout</span><span class="p">:</span>                <span class="nb">int</span><span class="p">(</span><span class="mi">3</span> <span class="o">*</span> <span class="nx">time</span><span class="p">.</span><span class="nx">Second</span><span class="p">),</span>
+      <span class="nx">MaxConcurrentRequests</span><span class="p">:</span>  <span class="mi">10</span><span class="p">,</span>
+      <span class="nx">SleepWindow</span><span class="p">:</span>            <span class="mi">5000</span><span class="p">,</span>
+      <span class="nx">RequestVolumeThreshold</span><span class="p">:</span> <span class="mi">20</span><span class="p">,</span>
+      <span class="nx">ErrorPercentThreshold</span><span class="p">:</span>  <span class="mi">30</span><span class="p">,</span>
+   <span class="p">})</span>
+   <span class="nx">msg</span> <span class="o">:=</span> <span class="s">&#34;success&#34;</span>
+
+  <span class="nx">_</span> <span class="p">=</span> <span class="nx">hystrix</span><span class="p">.</span><span class="nf">Do</span><span class="p">(</span><span class="s">&#34;mycommand&#34;</span><span class="p">,</span> <span class="kd">func</span><span class="p">()</span> <span class="kt">error</span> <span class="p">{</span>
+      <span class="nx">_</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">http</span><span class="p">.</span><span class="nf">Get</span><span class="p">(</span><span class="s">&#34;https://www.baidu.com&#34;</span><span class="p">)</span>
+      <span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+         <span class="nx">fmt</span><span class="p">.</span><span class="nf">Printf</span><span class="p">(</span><span class="s">&#34;请求失败:%v&#34;</span><span class="p">,</span> <span class="nx">err</span><span class="p">)</span>
+         <span class="k">return</span> <span class="nx">err</span>
+  <span class="p">}</span>
+      <span class="k">return</span> <span class="kc">nil</span>
+  <span class="p">},</span> <span class="kd">func</span><span class="p">(</span><span class="nx">err</span> <span class="kt">error</span><span class="p">)</span> <span class="kt">error</span> <span class="p">{</span>
+      <span class="nx">fmt</span><span class="p">.</span><span class="nf">Printf</span><span class="p">(</span><span class="s">&#34;handle  error:%v\n&#34;</span><span class="p">,</span> <span class="nx">err</span><span class="p">)</span>
+      <span class="nx">msg</span> <span class="p">=</span> <span class="s">&#34;error&#34;</span>
+  <span class="k">return</span> <span class="kc">nil</span>
+  <span class="p">})</span>
+   <span class="nx">r</span><span class="p">.</span><span class="nf">Write</span><span class="p">([]</span><span class="nb">byte</span><span class="p">(</span><span class="nx">msg</span><span class="p">))</span>
+<span class="p">}</span>
+
+<span class="kd">func</span> <span class="nf">main</span><span class="p">()</span> <span class="p">{</span>
+   <span class="nx">http</span><span class="p">.</span><span class="nf">ListenAndServe</span><span class="p">(</span><span class="s">&#34;:8090&#34;</span><span class="p">,</span> <span class="o">&amp;</span><span class="nx">Handle</span><span class="p">{})</span>
+<span class="p">}</span>
+
+</code></pre></div><p>我们开启了一个 <code>http</code> 服务，监听端口号 <code>8090</code>，所有请求的处理逻辑都在  <code>Common </code> 方法中，在这个方法中，我们主要是发起一次 <code>http</code>请求，请求成功响应<code> success</code>,如果失败，响应失败原因。</p>
+<p>我们再写另一个简单程序，并发 <code>11</code> 次的请求 <code>8090</code> 端口。</p>
+<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kn">package</span> <span class="nx">main</span>
+
+<span class="kn">import</span> <span class="p">(</span>
+	<span class="s">&#34;fmt&#34;</span>
+	<span class="s">&#34;io/ioutil&#34;</span>
+	<span class="s">&#34;net/http&#34;</span>
+	<span class="s">&#34;sync&#34;</span>
+	<span class="s">&#34;time&#34;</span>
+<span class="p">)</span>
+
+<span class="kd">var</span> <span class="nx">client</span> <span class="o">*</span><span class="nx">http</span><span class="p">.</span><span class="nx">Client</span>
+
+<span class="kd">func</span> <span class="nf">init</span><span class="p">()</span> <span class="p">{</span>
+	<span class="nx">tr</span> <span class="o">:=</span> <span class="o">&amp;</span><span class="nx">http</span><span class="p">.</span><span class="nx">Transport</span><span class="p">{</span>
+		<span class="nx">MaxIdleConns</span><span class="p">:</span>    <span class="mi">100</span><span class="p">,</span>
+		<span class="nx">IdleConnTimeout</span><span class="p">:</span> <span class="mi">1</span> <span class="o">*</span> <span class="nx">time</span><span class="p">.</span><span class="nx">Second</span><span class="p">,</span>
+	<span class="p">}</span>
+	<span class="nx">client</span> <span class="p">=</span> <span class="o">&amp;</span><span class="nx">http</span><span class="p">.</span><span class="nx">Client</span><span class="p">{</span><span class="nx">Transport</span><span class="p">:</span> <span class="nx">tr</span><span class="p">}</span>
+<span class="p">}</span>
+
+<span class="kd">type</span> <span class="nx">info</span> <span class="kd">struct</span> <span class="p">{</span>
+	<span class="nx">Data</span> <span class="kd">interface</span><span class="p">{}</span> <span class="s">`json:&#34;data&#34;`</span>
+<span class="p">}</span>
+
+<span class="kd">func</span> <span class="nf">main</span><span class="p">()</span> <span class="p">{</span>
+	<span class="kd">var</span> <span class="nx">wg</span> <span class="nx">sync</span><span class="p">.</span><span class="nx">WaitGroup</span>
+
+	<span class="k">for</span> <span class="nx">i</span> <span class="o">:=</span> <span class="mi">0</span><span class="p">;</span> <span class="nx">i</span> <span class="p">&lt;</span> <span class="mi">11</span><span class="p">;</span> <span class="nx">i</span><span class="o">++</span> <span class="p">{</span>
+		<span class="nx">wg</span><span class="p">.</span><span class="nf">Add</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+		<span class="k">go</span> <span class="kd">func</span><span class="p">(</span><span class="nx">int2</span> <span class="kt">int</span><span class="p">)</span> <span class="p">{</span>
+			<span class="k">defer</span> <span class="nx">wg</span><span class="p">.</span><span class="nf">Done</span><span class="p">()</span>
+			<span class="nx">req</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">http</span><span class="p">.</span><span class="nf">NewRequest</span><span class="p">(</span><span class="s">&#34;GET&#34;</span><span class="p">,</span> <span class="s">&#34;http://localhost:8090&#34;</span><span class="p">,</span> <span class="kc">nil</span><span class="p">)</span>
+			<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+				<span class="nx">fmt</span><span class="p">.</span><span class="nf">Printf</span><span class="p">(</span><span class="s">&#34;初始化http客户端处错误:%v&#34;</span><span class="p">,</span> <span class="nx">err</span><span class="p">)</span>
+				<span class="k">return</span>
+			<span class="p">}</span>
+			<span class="nx">resp</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">client</span><span class="p">.</span><span class="nf">Do</span><span class="p">(</span><span class="nx">req</span><span class="p">)</span>
+			<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+				<span class="nx">fmt</span><span class="p">.</span><span class="nf">Printf</span><span class="p">(</span><span class="s">&#34;初始化http客户端处错误:%v&#34;</span><span class="p">,</span> <span class="nx">err</span><span class="p">)</span>
+				<span class="k">return</span>
+			<span class="p">}</span>
+			<span class="k">defer</span> <span class="nx">resp</span><span class="p">.</span><span class="nx">Body</span><span class="p">.</span><span class="nf">Close</span><span class="p">()</span>
+			<span class="nx">nByte</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">ioutil</span><span class="p">.</span><span class="nf">ReadAll</span><span class="p">(</span><span class="nx">resp</span><span class="p">.</span><span class="nx">Body</span><span class="p">)</span>
+			<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+				<span class="nx">fmt</span><span class="p">.</span><span class="nf">Printf</span><span class="p">(</span><span class="s">&#34;读取http数据失败:%v&#34;</span><span class="p">,</span> <span class="nx">err</span><span class="p">)</span>
+				<span class="k">return</span>
+			<span class="p">}</span>
+			<span class="nx">fmt</span><span class="p">.</span><span class="nf">Printf</span><span class="p">(</span><span class="s">&#34;接收到到值:%v\n&#34;</span><span class="p">,</span> <span class="nb">string</span><span class="p">(</span><span class="nx">nByte</span><span class="p">))</span>
+		<span class="p">}(</span><span class="nx">i</span><span class="p">)</span>
+	<span class="p">}</span>
+	<span class="nx">wg</span><span class="p">.</span><span class="nf">Wait</span><span class="p">()</span>
+
+	<span class="nx">fmt</span><span class="p">.</span><span class="nf">Printf</span><span class="p">(</span><span class="s">&#34;请求完毕\n&#34;</span><span class="p">)</span>
+<span class="p">}</span>
+
+</code></pre></div><p>由于我们配置 <code>MaxConcurrentRequests</code> 为10，那么意味着还有个 g 请求会失败:
+<img src="https://cdn.learnku.com/uploads/images/202012/27/26855/lUriDTdjlP.png!large" alt="">
+和我们想的一样。</p>
+<p>接着我们把网络断开，并发请求改成10次。再次运行程序并发请求 <code>8090</code> 端口，此时由于网络已关闭，导致请求百度失败：
+<img src="https://cdn.learnku.com/uploads/images/202012/27/26855/I2axDFfuxj.png!large" alt="">
+接着继续请求：
+<img src="https://cdn.learnku.com/uploads/images/202012/27/26855/LzJiOB1FZb.png!large" alt="">
+熔断器已开启，上面我们配置的<code>RequestVolumeThreshold</code> 和 <code>ErrorPercentThreshold</code> 生效。</p>
+<p>然后我们把网连上，五秒后 (<code>SleepWindow</code>的值)继续并发调用，当前熔断器处于半开的状态，此时请求允许调用依赖，如果成功则关闭，失败则继续开启熔断器。
+<img src="https://cdn.learnku.com/uploads/images/202012/27/26855/BqrjYC5RJW.png!large" alt="">
+可以看到，有一个成功了，那么此时熔断器已关闭，接下来继续运行函数并发调用：
+<img src="https://cdn.learnku.com/uploads/images/202012/27/26855/yMb2jZVBOl.png!large" alt="">
+可以看到，10个都已经是正常成功的状态了。</p>
+<p>那么问题来了，为什么最上面的图只有一个是成功的？5秒已经过了，并且当前网络正常，应该是10个请求都成功，但是我们看到的只有一个是成功状态。通过源码我们可以找到答案:
+具体逻辑在判断当前请求是否可以调用依赖</p>
+<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="k">if</span> <span class="p">!</span><span class="nx">cmd</span><span class="p">.</span><span class="nx">circuit</span><span class="p">.</span><span class="nf">AllowRequest</span><span class="p">()</span> <span class="p">{</span>
+			<span class="o">......</span>
+			<span class="k">return</span>
+		<span class="p">}</span>
+</code></pre></div><div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go">
+<span class="kd">func</span> <span class="p">(</span><span class="nx">circuit</span> <span class="o">*</span><span class="nx">CircuitBreaker</span><span class="p">)</span> <span class="nf">AllowRequest</span><span class="p">()</span> <span class="kt">bool</span> <span class="p">{</span>
+	<span class="k">return</span> <span class="p">!</span><span class="nx">circuit</span><span class="p">.</span><span class="nf">IsOpen</span><span class="p">()</span> <span class="o">||</span> <span class="nx">circuit</span><span class="p">.</span><span class="nf">allowSingleTest</span><span class="p">()</span>
+<span class="p">}</span>
+
+<span class="kd">func</span> <span class="p">(</span><span class="nx">circuit</span> <span class="o">*</span><span class="nx">CircuitBreaker</span><span class="p">)</span> <span class="nf">allowSingleTest</span><span class="p">()</span> <span class="kt">bool</span> <span class="p">{</span>
+	<span class="nx">circuit</span><span class="p">.</span><span class="nx">mutex</span><span class="p">.</span><span class="nf">RLock</span><span class="p">()</span>
+	<span class="k">defer</span> <span class="nx">circuit</span><span class="p">.</span><span class="nx">mutex</span><span class="p">.</span><span class="nf">RUnlock</span><span class="p">()</span>
+
+	<span class="nx">now</span> <span class="o">:=</span> <span class="nx">time</span><span class="p">.</span><span class="nf">Now</span><span class="p">().</span><span class="nf">UnixNano</span><span class="p">()</span>
+	<span class="nx">openedOrLastTestedTime</span> <span class="o">:=</span> <span class="nx">atomic</span><span class="p">.</span><span class="nf">LoadInt64</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">circuit</span><span class="p">.</span><span class="nx">openedOrLastTestedTime</span><span class="p">)</span>
+	<span class="k">if</span> <span class="nx">circuit</span><span class="p">.</span><span class="nx">open</span> <span class="o">&amp;&amp;</span> <span class="nx">now</span> <span class="p">&gt;</span> <span class="nx">openedOrLastTestedTime</span><span class="o">+</span><span class="nf">getSettings</span><span class="p">(</span><span class="nx">circuit</span><span class="p">.</span><span class="nx">Name</span><span class="p">).</span><span class="nx">SleepWindow</span><span class="p">.</span><span class="nf">Nanoseconds</span><span class="p">()</span> <span class="p">{</span>
+	<span class="o">/</span>
+		<span class="nx">swapped</span> <span class="o">:=</span> <span class="nx">atomic</span><span class="p">.</span><span class="nf">CompareAndSwapInt64</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">circuit</span><span class="p">.</span><span class="nx">openedOrLastTestedTime</span><span class="p">,</span> <span class="nx">openedOrLastTestedTime</span><span class="p">,</span> <span class="nx">now</span><span class="p">)</span> <span class="c1">//这一句才是关键
+</span><span class="c1"></span>		<span class="k">if</span> <span class="nx">swapped</span> <span class="p">{</span>
+			<span class="nx">log</span><span class="p">.</span><span class="nf">Printf</span><span class="p">(</span><span class="s">&#34;hystrix-go: allowing single test to possibly close circuit %v&#34;</span><span class="p">,</span> <span class="nx">circuit</span><span class="p">.</span><span class="nx">Name</span><span class="p">)</span>
+		<span class="p">}</span>
+		<span class="k">return</span> <span class="nx">swapped</span>
+	<span class="p">}</span>
+
+	<span class="k">return</span> <span class="kc">false</span>
+<span class="p">}</span>
+</code></pre></div><p>这段代码首先判断了熔断器是否开启，并且当前时间大于 上一次开启熔断器的时间+ <code>SleepWindow</code> 的时间，如果条件都符合的话，更新此熔断器最新的 <code>openedOrLastTestedTime </code> ,是通过  <code>CompareAndSwapInt64 </code> 原子操作完成的，意外着必然只会有一个成功。
+此时熔断器还是半开的状态，接着如果能拿到令牌，执行<code>run</code> 函数（也就是Do传入的第二个简单封装后的函数），发起 <code>http</code> 请求，如果成功，上报成功状态，关闭熔断器。如果失败，那么熔断器依旧开启。
+<img src="https://cdn.learnku.com/uploads/images/202012/27/26855/sLDxoIvR4J.png!large" alt=""></p>
+<p><img src="https://cdn.learnku.com/uploads/images/202012/27/26855/ChLKeOHULy.png!large" alt="hystrix-go源码解析"></p>
+<p>以上就是大体的流程讲解，下一篇文章将解读核心源码以及进一步当思考。</p>
+
+			</div>
+			<div class="content"><br><img src="https://image.syst.top/image/wechat-qr.png"></div>
+			<hr class="post-end">
+			<footer class="post-info">
+				<p>
+					<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-tag meta-icon"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"></path><line x1="7" y1="7" x2="7" y2="7"></line></svg><span class="tag"><a href="https://www.syst.top/tags/go">go</a></span>
+				</p>
+				<p><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-file-text"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>493 Words</p>
+				<p><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-calendar"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>2021-04-17 22:24 &#43;0800</p>
+			</footer>
+		</article>
+		<aside id="toc" class="show-toc">
+			<div class="toc-title">Table of Contents</div>
+			<nav id="TableOfContents">
+  <ul>
+    <li><a href="#开篇">开篇</a>
+      <ul>
+        <li><a href="#hystrix">Hystrix</a></li>
+        <li><a href="#使用">使用</a></li>
+      </ul>
+    </li>
+  </ul>
+</nav>
+		</aside>
+		<div class="post-nav thin">
+			<a class="next-post" href="https://www.syst.top/posts/go/mr/">
+				<span class="post-nav-label"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-arrow-left"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>&nbsp;Newer</span><br><span>如何优雅地实现并发编排任务</span>
+			</a>
+			<a class="prev-post" href="https://www.syst.top/posts/go/etcd-2021-04-10/">
+				<span class="post-nav-label">Older&nbsp;<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-arrow-right"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg></span><br><span>etcd 实战基础篇(一) </span>
+			</a>
+		</div>
+		<div id="comments" class="thin">
+			<script src="https://utteranc.es/client.js"
+        repo="wuqinqiang/blog"
+        issue-term="pathname"
+        theme="github-light"
+        crossorigin="anonymous"
+        async>
+</script>
+		</div>
+	</main>
+
+	<footer id="site-footer" class="section-inner thin animated fadeIn faster">
+		<p>&copy; 2018 - 2022 <a href="https://www.syst.top">Remember</a> &#183; <a href="http://beian.miit.gov.cn/">浙ICP备18028603号-2</a></p>
+		<p>
+			Made with <a href="https://gohugo.io/" target="_blank" rel="noopener">Hugo</a> &#183; Theme <a href="https://github.com/Track3/hermit" target="_blank" rel="noopener">Hermit</a> &#183; <a href="https://www.syst.top/post/index.xml" target="_blank" title="rss"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-rss"><path d="M4 11a9 9 0 0 1 9 9"></path><path d="M4 4a16 16 0 0 1 16 16"></path><circle cx="5" cy="19" r="1"></circle></svg></a>
+		</p>
+	</footer>
+
+
+	<script src="https://www.syst.top/js/main.min.784417f5847151f848c339cf0acb13a06cbb648b1483435a28ed4556c4ead69b.js"></script>
+<script type="application/javascript">
+var doNotTrack = false;
+if (!doNotTrack) {
+	window.ga=window.ga||function(){(ga.q=ga.q||[]).push(arguments)};ga.l=+new Date;
+	ga('create', 'UA-166045776-1', 'auto');
+	
+	ga('send', 'pageview');
+}
+</script>
+<script async src='https://www.google-analytics.com/analytics.js'></script>
+
+
+</body>
+
+</html>
