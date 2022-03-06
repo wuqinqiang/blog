@@ -7,7 +7,7 @@
     <generator>Hugo -- gohugo.io</generator>
     <language>zh-hans</language>
     <copyright>This work is licensed under a Creative Commons Attribution-NonCommercial 4.0 International License.</copyright>
-    <lastBuildDate>Sun, 02 Jan 2022 18:32:00 +0800</lastBuildDate><atom:link href="https://www.syst.top/index.xml" rel="self" type="application/rss+xml" />
+    <lastBuildDate>Sun, 06 Mar 2022 17:37:22 +0800</lastBuildDate><atom:link href="https://www.syst.top/index.xml" rel="self" type="application/rss+xml" />
     <item>
       <title>Myfriends</title>
       <link>https://www.syst.top/friends/friends/</link>
@@ -15,6 +15,25 @@
       
       <guid>https://www.syst.top/friends/friends/</guid>
       <description></description>
+    </item>
+    
+    <item>
+      <title>一个用go实现的有限状态机 </title>
+      <link>https://www.syst.top/posts/go/easyfsm/</link>
+      <pubDate>Sun, 06 Mar 2022 17:37:22 +0800</pubDate>
+      
+      <guid>https://www.syst.top/posts/go/easyfsm/</guid>
+      <description>easyfsm 之前看过新亮老哥的go-fsm-order，感觉还不错。最近在迁移项目的时候，发现有多处业务存在一些状态的流转，所以就基于go-fsm-order做了重改，让它可以在不同的业务场景下使用。
+为什么不使用looplab/fsm，star挺多的啊。
+不是特别喜欢，每次实例化fsm都需要重新传递对应events(虽然我们可以统一封装)，我更期望在项目启动时把此项目涉及到不同业务状态机流转注册到fsm，对应:不同业务-&amp;gt;[状态]-&amp;gt;[事件]-&amp;gt;处理事件主体(包含handler、params、hooks、observers等)。
+当你开始进行状态流转时，只需要
+fsm:=NewFsm(&amp;#34;业务名称&amp;#34;,&amp;#34;当前状态&amp;#34;) currentState,err:=fsm.Call(&amp;#34;事件名称&amp;#34;,&amp;#34;对应事件所需参数可选项&amp;#34;) 为什么需要区分业务？
+因为绝大多数业务的状态值都是从数据库中获取的，比如订单表的订单状态，商品表中的商品状态，有可能值是相同的。
+同一个业务同一属性对应状态值表达单一，不同业务下属性状态可能会出现值相同，但所表达的含义是不同的。
+整体设计:
+简单解释一下：
+ 业务:比如有商品状态业务、订单状态业务&amp;hellip;.. 状态：订单待付款、待发货&amp;hellip;. 事件：对应状态仅可达事件集合。比如待付款状态的可达事件仅有:支付事件和取消事件(取决于自己的业务) 执行事件主体：执行自定义的事件函数,如果有需要，还可以自定义执行事件前后hook，事件订阅者(比如支付事件发生后，异步通知用户等)  使用姿势 go get -u github.com/wuqinqiang/easyfsm 首先自定义业务、状态、事件。
+package main import ( &amp;#34;fmt&amp;#34; &amp;#34;github.com/wuqinqiang/easyfsm&amp;#34; ) var ( // 业务 	businessName easyfsm.BusinessName = &amp;#34;order&amp;#34; // 对应状态 	initState easyfsm.State = 1 // 初始化 	paidState easyfsm.State = 2 // 已付款 	canceled easyfsm.State = 3 // 已取消  //对应事件 	paymentOrderEvent easyfsm.EventName = &amp;#34;paymentOrderEvent&amp;#34; cancelOrderEvent easyfsm.</description>
     </item>
     
     <item>
@@ -261,43 +280,6 @@ B会说:是我。我记得我上一个是A，目前我没有下一个，所以�
 我们取快递的时候，你一定会按照快递放入到快递柜的先后顺序取快递吗？咋么可能。
 但是在channel中，是会保证消息的先进先出(FIFO)关系的。至于咋么保证的，我们终结篇解析代码细节的时候再说。
 总结 这篇文章主要通过一个快递的例子来介绍channel操作的原理。下一篇我们介绍channel针对上述处理的细节逻辑。</description>
-    </item>
-    
-    <item>
-      <title>对CAP理论的理解</title>
-      <link>https://www.syst.top/posts/go/dtm/</link>
-      <pubDate>Sun, 10 Oct 2021 21:25:52 +0800</pubDate>
-      
-      <guid>https://www.syst.top/posts/go/dtm/</guid>
-      <description>介绍 最近经常看到有人发一个Go实现的分布式事务管理器，看到star增的挺猛的，索性看看代码实现，毕竟工作中部分场景也用的上。
-在写源码分析之前，我们来简单了解一些概念型的东西。
-CAP 分布式系统中很大的一个难点在于各个节点之间的状态如何同步，CAP就是分布式系统领域一条已经被证明的定律。
-其中各个字母的含义如下，
- Consistency(一致性) Availability(可用性) Partition tolerance(分区容忍性)  下面我们用一些简单的例子来说明。
-假设我们的系统是由两个服务组成的:G1和G2。
-G1和G2维护了同一条记录V0。G1和G2可以相互通信，外部客户端(Client)可以调用任意一个服务。
-当一个客户端对任意一个服务发起读|写请求，那么被请求的那个服务器根据客户端的请求，处理、响应结果。
-比如客户端向G1发起一个读操作，客户端G1响应请求。
-又比如客户端向G1发起一个写操作，把V0修改成V1。
-Consistency(一致性) 这个一致性和事务中ACID中的C还是有区别的。事务中的C更多是指在事务开始之前和事务结束以后，数据库的完整性没有被破坏。这里的完整性包括一些外键约束、键的唯一性等。
-而分布式事务中的C指的是，写操作之后的读操作，必须返回该值，这就等同于所有节点访问的是同一份最新数据的副本。
-下面是一个非一致性的例子。
-客户端成功请求G1服务器写V1。由于网络分区，导致G1数据不能同步到G2，此时客户端从G2读取数据，依旧返回V0。
-来看一个满足一致性的例子。
-在这个系统中，G1收到客户端写V1的操作，G1在修改自身数据的同时，会把V1数据同步到G2。G1在收到G2的响应后，才向客户端响应结果。这样，之后无论客户端从哪个节点读取数据，都能获取到V1值。
-Availability(可用性) 可用性指的是系统中非故障节点接收到的每一个请求都必须响应。
-在一个可用的系统中，如果客户端向服务器发送一个请求，那么服务器必须响应客户端每一个请求，不允许忽略客户端请求。
-Partition Tolerance(分区容忍性) 什么分区？
- 网络分区。
- 网络分区咋么理解？
- 假设有两台服务器A和B，本来他们两是正常通信的，不知道啥原因，他们之间的网络链接断开，导致无法正常通信。此时本来在同一个网络的AB，发生了网络分区。变成了A所在的A网络和B所在的B网络。这就是网络分区。
- 容忍性是指什么？
- 当一个服务的多台服务器发生上述网络分区的时候，系统依旧能正常提供服务。
- 对CAP的误解 网上很多文章都是这么说的：
- 一个分布式系统最多只能同时满足一致性（Consistency）、可用性（Availability）和分区容错性（Partition tolerance）这三项中的两项，这被称为CAP定律。
- 似乎CAP被解释成一种三选二的定律。
-看到一篇文章CAP Twelve Years Later: How the &amp;quot;Rules&amp;quot; Have Changed有一段CAP的完整表述：
- The CAP theorem asserts that any net­worked shared-data system can have only two of three desirable properties。</description>
     </item>
     
   </channel>

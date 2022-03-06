@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>fsm on 记得</title>
+    <link>https://www.syst.top/tags/fsm/</link>
+    <description>Recent content in fsm on 记得</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>zh-hans</language>
+    <copyright>This work is licensed under a Creative Commons Attribution-NonCommercial 4.0 International License.</copyright>
+    <lastBuildDate>Sun, 06 Mar 2022 17:37:22 +0800</lastBuildDate><atom:link href="https://www.syst.top/tags/fsm/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>一个用go实现的有限状态机 </title>
+      <link>https://www.syst.top/posts/go/easyfsm/</link>
+      <pubDate>Sun, 06 Mar 2022 17:37:22 +0800</pubDate>
+      
+      <guid>https://www.syst.top/posts/go/easyfsm/</guid>
+      <description>easyfsm 之前看过新亮老哥的go-fsm-order，感觉还不错。最近在迁移项目的时候，发现有多处业务存在一些状态的流转，所以就基于go-fsm-order做了重改，让它可以在不同的业务场景下使用。
+为什么不使用looplab/fsm，star挺多的啊。
+不是特别喜欢，每次实例化fsm都需要重新传递对应events(虽然我们可以统一封装)，我更期望在项目启动时把此项目涉及到不同业务状态机流转注册到fsm，对应:不同业务-&amp;gt;[状态]-&amp;gt;[事件]-&amp;gt;处理事件主体(包含handler、params、hooks、observers等)。
+当你开始进行状态流转时，只需要
+fsm:=NewFsm(&amp;#34;业务名称&amp;#34;,&amp;#34;当前状态&amp;#34;) currentState,err:=fsm.Call(&amp;#34;事件名称&amp;#34;,&amp;#34;对应事件所需参数可选项&amp;#34;) 为什么需要区分业务？
+因为绝大多数业务的状态值都是从数据库中获取的，比如订单表的订单状态，商品表中的商品状态，有可能值是相同的。
+同一个业务同一属性对应状态值表达单一，不同业务下属性状态可能会出现值相同，但所表达的含义是不同的。
+整体设计:
+简单解释一下：
+ 业务:比如有商品状态业务、订单状态业务&amp;hellip;.. 状态：订单待付款、待发货&amp;hellip;. 事件：对应状态仅可达事件集合。比如待付款状态的可达事件仅有:支付事件和取消事件(取决于自己的业务) 执行事件主体：执行自定义的事件函数,如果有需要，还可以自定义执行事件前后hook，事件订阅者(比如支付事件发生后，异步通知用户等)  使用姿势 go get -u github.com/wuqinqiang/easyfsm 首先自定义业务、状态、事件。
+package main import ( &amp;#34;fmt&amp;#34; &amp;#34;github.com/wuqinqiang/easyfsm&amp;#34; ) var ( // 业务 	businessName easyfsm.BusinessName = &amp;#34;order&amp;#34; // 对应状态 	initState easyfsm.State = 1 // 初始化 	paidState easyfsm.State = 2 // 已付款 	canceled easyfsm.State = 3 // 已取消  //对应事件 	paymentOrderEvent easyfsm.EventName = &amp;#34;paymentOrderEvent&amp;#34; cancelOrderEvent easyfsm.</description>
+    </item>
+    
+  </channel>
+</rss>
