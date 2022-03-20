@@ -17,15 +17,10 @@ time=max(s1,s2,s3.....,sn) 当然开始堆业务的时候可以先串行化，�
 这样，年底 PPT 就可以加上浓重的一笔流水账:为业务某个接口提高百分之XXX性能，间接产生XXX价值。
 当然这一切的前提是，做老板不懂技术，做技术”懂”你。
 言归正传,如果修改成并发调用，你可能会这么写，
-package main import ( &#34;fmt&#34; &#34;sync&#34; &#34;time&#34; ) func main() { var wg sync.WaitGroup wg.Add(2) var userInfo *User var productList []Product go func() { defer wg.Done() userInfo, _ = getUser() }() go func() { defer wg.Done() productList, _ = getProductList() }() wg.Wait() fmt.Printf(&#34;用户信息:%&#43;v\n&#34;, userInfo) fmt.Printf(&#34;商品信息:%&#43;v\n&#34;, productList) } /********用户服务**********/ type User struct { Name string Age uint8 } func getUser() (*User, error) { time.">
-<meta itemprop="datePublished" content="2021-04-21T23:54:52+08:00" />
+package main import ( &#34;fmt&#34; &#34;sync&#34; &#34;time&#34; ) func main() { var wg sync.WaitGroup wg.Add(2) var userInfo *User var productList []Product go func() { defer wg.Done() userInfo, _ = getUser() }() go func() { defer wg.Done() productList, _ = getProductList() }() wg.Wait() fmt.Printf(&#34;用户信息:%&#43;v\n&#34;, userInfo) fmt.Printf(&#34;商品信息:%&#43;v\n&#34;, productList) } /********用户服务**********/ type User struct { Name string Age uint8 } func getUser() (*User, error) { time."><meta itemprop="datePublished" content="2021-04-21T23:54:52+08:00" />
 <meta itemprop="dateModified" content="2021-04-21T23:54:52+08:00" />
 <meta itemprop="wordCount" content="891">
-
-
-
-<meta itemprop="keywords" content="go,mistake," />
-<meta property="og:title" content="如何优雅地实现并发编排任务" />
+<meta itemprop="keywords" content="go,mistake," /><meta property="og:title" content="如何优雅地实现并发编排任务" />
 <meta property="og:description" content="业务场景 在做任务开发的时候，你们一定会碰到以下场景:
 场景1：调用第三方接口的时候， 一个需求你需要调用不同的接口，做数据组装。 场景2:一个应用首页可能依托于很多服务。那就涉及到在加载页面时需要同时请求多个服务的接口。这一步往往是由后端统一调用组装数据再返回给前端，也就是所谓的 BFF(Backend For Frontend) 层。
 针对以上两种场景，假设在没有强依赖关系下，选择串行调用，那么总耗时即:
@@ -37,9 +32,10 @@ time=max(s1,s2,s3.....,sn) 当然开始堆业务的时候可以先串行化，�
 言归正传,如果修改成并发调用，你可能会这么写，
 package main import ( &#34;fmt&#34; &#34;sync&#34; &#34;time&#34; ) func main() { var wg sync.WaitGroup wg.Add(2) var userInfo *User var productList []Product go func() { defer wg.Done() userInfo, _ = getUser() }() go func() { defer wg.Done() productList, _ = getProductList() }() wg.Wait() fmt.Printf(&#34;用户信息:%&#43;v\n&#34;, userInfo) fmt.Printf(&#34;商品信息:%&#43;v\n&#34;, productList) } /********用户服务**********/ type User struct { Name string Age uint8 } func getUser() (*User, error) { time." />
 <meta property="og:type" content="article" />
-<meta property="og:url" content="https://www.syst.top/posts/go/mr/" />
+<meta property="og:url" content="https://www.syst.top/posts/go/mr/" /><meta property="article:section" content="posts" />
 <meta property="article:published_time" content="2021-04-21T23:54:52+08:00" />
 <meta property="article:modified_time" content="2021-04-21T23:54:52+08:00" />
+
 <meta name="twitter:card" content="summary"/>
 <meta name="twitter:title" content="如何优雅地实现并发编排任务"/>
 <meta name="twitter:description" content="业务场景 在做任务开发的时候，你们一定会碰到以下场景:
@@ -61,7 +57,7 @@ package main import ( &#34;fmt&#34; &#34;sync&#34; &#34;time&#34; ) func main() 
 	<link rel="shortcut icon" href="/favicon.ico">
 
 	<title>如何优雅地实现并发编排任务</title>
-	<link rel="stylesheet" href="https://www.syst.top/css/style.min.d3141168199607bf3a517216ce3c263814eecdbc8fca72a9a88700799a838219.css">
+	<link rel="stylesheet" href="https://www.syst.top/css/style.min.cb0663fd19952012fdb4a1345792a808ae19eb828578bde6eeae217ff1fb1e8b.css">
 	
 </head>
 
@@ -77,7 +73,7 @@ package main import ( &#34;fmt&#34; &#34;sync&#34; &#34;time&#34; ) func main() 
 					<a href="https://www.syst.top/posts/">文章</a>
 					<a href="https://www.syst.top/leetcode/">刷题</a>
 					<a href="https://www.syst.top/lives/">生活</a>
-					<a href="https://www.syst.top/translations/">翻译</a>
+					<a href="https://www.syst.top/readings/">读书笔记</a>
 					<a href="https://www.syst.top/friends/">朋友</a>
 					<a href="https://go.aabbccm.com">grpc-shop</a>
 				</nav>
@@ -108,76 +104,76 @@ package main import ( &#34;fmt&#34; &#34;sync&#34; &#34;time&#34; ) func main() 
 <p>场景1：调用第三方接口的时候， 一个需求你需要调用不同的接口，做数据组装。
 场景2:一个应用首页可能依托于很多服务。那就涉及到在加载页面时需要同时请求多个服务的接口。这一步往往是由后端统一调用组装数据再返回给前端，也就是所谓的 BFF(Backend For Frontend) 层。</p>
 <p>针对以上两种场景，假设在没有强依赖关系下，选择串行调用，那么总耗时即:</p>
-<pre><code>time=s1+s2+....sn
+<pre tabindex="0"><code>time=s1+s2+....sn
 </code></pre><p>按照当代秒入百万的有为青年，这么长时间早就把你祖宗十八代问候了一遍。</p>
 <p>为了伟大的KPI，我们往往会选择并发地调用这些依赖接口。那么总耗时就是:</p>
-<pre><code>time=max(s1,s2,s3.....,sn)
+<pre tabindex="0"><code>time=max(s1,s2,s3.....,sn)
 </code></pre><p>当然开始堆业务的时候可以先串行化，等到上面的人着急的时候，亮出绝招。</p>
 <p>这样，年底 PPT 就可以加上浓重的一笔流水账:为业务某个接口提高百分之XXX性能，间接产生XXX价值。</p>
 <p>当然这一切的前提是，做老板不懂技术，做技术”懂”你。</p>
 <p>言归正传,如果修改成并发调用，你可能会这么写，</p>
-<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kn">package</span> <span class="nx">main</span>
-
-<span class="kn">import</span> <span class="p">(</span>
-	<span class="s">&#34;fmt&#34;</span>
-	<span class="s">&#34;sync&#34;</span>
-	<span class="s">&#34;time&#34;</span>
-<span class="p">)</span>
-
-<span class="kd">func</span> <span class="nf">main</span><span class="p">()</span> <span class="p">{</span>
-	<span class="kd">var</span> <span class="nx">wg</span> <span class="nx">sync</span><span class="p">.</span><span class="nx">WaitGroup</span>
-	<span class="nx">wg</span><span class="p">.</span><span class="nf">Add</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span>
-
-	<span class="kd">var</span> <span class="nx">userInfo</span> <span class="o">*</span><span class="nx">User</span>
-	<span class="kd">var</span> <span class="nx">productList</span> <span class="p">[]</span><span class="nx">Product</span>
-	
-	<span class="k">go</span> <span class="kd">func</span><span class="p">()</span> <span class="p">{</span>
-		<span class="k">defer</span> <span class="nx">wg</span><span class="p">.</span><span class="nf">Done</span><span class="p">()</span>
-		<span class="nx">userInfo</span><span class="p">,</span> <span class="nx">_</span> <span class="p">=</span> <span class="nf">getUser</span><span class="p">()</span>
-	<span class="p">}()</span>
-
-	<span class="k">go</span> <span class="kd">func</span><span class="p">()</span> <span class="p">{</span>
-		<span class="k">defer</span> <span class="nx">wg</span><span class="p">.</span><span class="nf">Done</span><span class="p">()</span>
-		<span class="nx">productList</span><span class="p">,</span> <span class="nx">_</span> <span class="p">=</span> <span class="nf">getProductList</span><span class="p">()</span>
-	<span class="p">}()</span>
-	<span class="nx">wg</span><span class="p">.</span><span class="nf">Wait</span><span class="p">()</span>
-	<span class="nx">fmt</span><span class="p">.</span><span class="nf">Printf</span><span class="p">(</span><span class="s">&#34;用户信息:%+v\n&#34;</span><span class="p">,</span> <span class="nx">userInfo</span><span class="p">)</span>
-	<span class="nx">fmt</span><span class="p">.</span><span class="nf">Printf</span><span class="p">(</span><span class="s">&#34;商品信息:%+v\n&#34;</span><span class="p">,</span> <span class="nx">productList</span><span class="p">)</span>
-<span class="p">}</span>
-
-
-<span class="cm">/********用户服务**********/</span>
-
-<span class="kd">type</span> <span class="nx">User</span> <span class="kd">struct</span> <span class="p">{</span>
-	<span class="nx">Name</span> <span class="kt">string</span>
-	<span class="nx">Age</span>  <span class="kt">uint8</span>
-<span class="p">}</span>
-
-<span class="kd">func</span> <span class="nf">getUser</span><span class="p">()</span> <span class="p">(</span><span class="o">*</span><span class="nx">User</span><span class="p">,</span> <span class="kt">error</span><span class="p">)</span> <span class="p">{</span>
-	<span class="nx">time</span><span class="p">.</span><span class="nf">Sleep</span><span class="p">(</span><span class="mi">500</span> <span class="o">*</span> <span class="nx">time</span><span class="p">.</span><span class="nx">Millisecond</span><span class="p">)</span>
-	<span class="kd">var</span> <span class="nx">u</span> <span class="nx">User</span>
-	<span class="nx">u</span><span class="p">.</span><span class="nx">Name</span> <span class="p">=</span> <span class="s">&#34;wuqinqiang&#34;</span>
-	<span class="nx">u</span><span class="p">.</span><span class="nx">Age</span> <span class="p">=</span> <span class="mi">18</span>
-	<span class="k">return</span> <span class="o">&amp;</span><span class="nx">u</span><span class="p">,</span> <span class="kc">nil</span>
-<span class="p">}</span>
-
-<span class="cm">/********商品服务**********/</span>
-
-<span class="kd">type</span> <span class="nx">Product</span> <span class="kd">struct</span> <span class="p">{</span>
-	<span class="nx">Title</span> <span class="kt">string</span>
-	<span class="nx">Price</span> <span class="kt">uint32</span>
-<span class="p">}</span>
-
-<span class="kd">func</span> <span class="nf">getProductList</span><span class="p">()</span> <span class="p">([]</span><span class="nx">Product</span><span class="p">,</span> <span class="kt">error</span><span class="p">)</span> <span class="p">{</span>
-	<span class="nx">time</span><span class="p">.</span><span class="nf">Sleep</span><span class="p">(</span><span class="mi">400</span> <span class="o">*</span> <span class="nx">time</span><span class="p">.</span><span class="nx">Millisecond</span><span class="p">)</span>
-	<span class="kd">var</span> <span class="nx">list</span> <span class="p">[]</span><span class="nx">Product</span>
-	<span class="nx">list</span> <span class="p">=</span> <span class="nb">append</span><span class="p">(</span><span class="nx">list</span><span class="p">,</span> <span class="nx">Product</span><span class="p">{</span>
-		<span class="nx">Title</span><span class="p">:</span> <span class="s">&#34;SHib&#34;</span><span class="p">,</span>
-		<span class="nx">Price</span><span class="p">:</span> <span class="mi">10</span><span class="p">,</span>
-	<span class="p">})</span>
-	<span class="k">return</span> <span class="nx">list</span><span class="p">,</span> <span class="kc">nil</span>
-<span class="p">}</span>
-</code></pre></div><p>先不管其他问题。从实现上来说，需要多少服务，你会开多少个 <code>G</code>，利用 <code>sync.WaitGroup</code> 的特性，
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="kn">package</span> <span class="nx">main</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="kn">import</span> <span class="p">(</span>
+</span></span><span class="line"><span class="cl">	<span class="s">&#34;fmt&#34;</span>
+</span></span><span class="line"><span class="cl">	<span class="s">&#34;sync&#34;</span>
+</span></span><span class="line"><span class="cl">	<span class="s">&#34;time&#34;</span>
+</span></span><span class="line"><span class="cl"><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="kd">func</span> <span class="nf">main</span><span class="p">()</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">	<span class="kd">var</span> <span class="nx">wg</span> <span class="nx">sync</span><span class="p">.</span><span class="nx">WaitGroup</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">wg</span><span class="p">.</span><span class="nf">Add</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">	<span class="kd">var</span> <span class="nx">userInfo</span> <span class="o">*</span><span class="nx">User</span>
+</span></span><span class="line"><span class="cl">	<span class="kd">var</span> <span class="nx">productList</span> <span class="p">[]</span><span class="nx">Product</span>
+</span></span><span class="line"><span class="cl">	
+</span></span><span class="line"><span class="cl">	<span class="k">go</span> <span class="kd">func</span><span class="p">()</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="k">defer</span> <span class="nx">wg</span><span class="p">.</span><span class="nf">Done</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">userInfo</span><span class="p">,</span> <span class="nx">_</span> <span class="p">=</span> <span class="nf">getUser</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}()</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">	<span class="k">go</span> <span class="kd">func</span><span class="p">()</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="k">defer</span> <span class="nx">wg</span><span class="p">.</span><span class="nf">Done</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">productList</span><span class="p">,</span> <span class="nx">_</span> <span class="p">=</span> <span class="nf">getProductList</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}()</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">wg</span><span class="p">.</span><span class="nf">Wait</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">fmt</span><span class="p">.</span><span class="nf">Printf</span><span class="p">(</span><span class="s">&#34;用户信息:%+v\n&#34;</span><span class="p">,</span> <span class="nx">userInfo</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">fmt</span><span class="p">.</span><span class="nf">Printf</span><span class="p">(</span><span class="s">&#34;商品信息:%+v\n&#34;</span><span class="p">,</span> <span class="nx">productList</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="cm">/********用户服务**********/</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="kd">type</span> <span class="nx">User</span> <span class="kd">struct</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">Name</span> <span class="kt">string</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">Age</span>  <span class="kt">uint8</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="kd">func</span> <span class="nf">getUser</span><span class="p">()</span> <span class="p">(</span><span class="o">*</span><span class="nx">User</span><span class="p">,</span> <span class="kt">error</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">time</span><span class="p">.</span><span class="nf">Sleep</span><span class="p">(</span><span class="mi">500</span> <span class="o">*</span> <span class="nx">time</span><span class="p">.</span><span class="nx">Millisecond</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">	<span class="kd">var</span> <span class="nx">u</span> <span class="nx">User</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">u</span><span class="p">.</span><span class="nx">Name</span> <span class="p">=</span> <span class="s">&#34;wuqinqiang&#34;</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">u</span><span class="p">.</span><span class="nx">Age</span> <span class="p">=</span> <span class="mi">18</span>
+</span></span><span class="line"><span class="cl">	<span class="k">return</span> <span class="o">&amp;</span><span class="nx">u</span><span class="p">,</span> <span class="kc">nil</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="cm">/********商品服务**********/</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="kd">type</span> <span class="nx">Product</span> <span class="kd">struct</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">Title</span> <span class="kt">string</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">Price</span> <span class="kt">uint32</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="kd">func</span> <span class="nf">getProductList</span><span class="p">()</span> <span class="p">([]</span><span class="nx">Product</span><span class="p">,</span> <span class="kt">error</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">time</span><span class="p">.</span><span class="nf">Sleep</span><span class="p">(</span><span class="mi">400</span> <span class="o">*</span> <span class="nx">time</span><span class="p">.</span><span class="nx">Millisecond</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">	<span class="kd">var</span> <span class="nx">list</span> <span class="p">[]</span><span class="nx">Product</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">list</span> <span class="p">=</span> <span class="nb">append</span><span class="p">(</span><span class="nx">list</span><span class="p">,</span> <span class="nx">Product</span><span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">Title</span><span class="p">:</span> <span class="s">&#34;SHib&#34;</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">Price</span><span class="p">:</span> <span class="mi">10</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">	<span class="p">})</span>
+</span></span><span class="line"><span class="cl">	<span class="k">return</span> <span class="nx">list</span><span class="p">,</span> <span class="kc">nil</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></div><p>先不管其他问题。从实现上来说，需要多少服务，你会开多少个 <code>G</code>，利用 <code>sync.WaitGroup</code> 的特性，
 实现并发编排任务的效果。</p>
 <p>好像，问题不大。</p>
 <p>但是随着代号 <code>996</code> 业务场景的增加，你会发现，好多模块都有相似的功能，只是对应的业务场景不同而已。</p>
@@ -187,247 +183,247 @@ package main import ( &#34;fmt&#34; &#34;sync&#34; &#34;time&#34; ) func main() 
 <p>本着不重复造轮子的原则，去搜了下开源项目，最终看上了 <code>go-zero</code> 里面的一个工具 <code>mapreduce</code>。
 从文件名我们能看出来是什么了，可以自行 <code>Google</code> 这个名词。</p>
 <p>使用很简单。我们通过它改造一下上面的代码:</p>
-<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kn">package</span> <span class="nx">main</span>
-
-<span class="kn">import</span> <span class="p">(</span>
-	<span class="s">&#34;fmt&#34;</span>
-	<span class="s">&#34;github.com/tal-tech/go-zero/core/mr&#34;</span>
-	<span class="s">&#34;time&#34;</span>
-<span class="p">)</span>
-
-<span class="kd">func</span> <span class="nf">main</span><span class="p">()</span> <span class="p">{</span>
-	<span class="kd">var</span> <span class="nx">userInfo</span> <span class="o">*</span><span class="nx">User</span>
-	<span class="kd">var</span> <span class="nx">productList</span> <span class="p">[]</span><span class="nx">Product</span>
-	<span class="nx">_</span> <span class="p">=</span> <span class="nx">mr</span><span class="p">.</span><span class="nf">Finish</span><span class="p">(</span><span class="kd">func</span><span class="p">()</span> <span class="p">(</span><span class="nx">err</span> <span class="kt">error</span><span class="p">)</span> <span class="p">{</span>
-		<span class="nx">userInfo</span><span class="p">,</span> <span class="nx">err</span> <span class="p">=</span> <span class="nf">getUser</span><span class="p">()</span>
-		<span class="k">return</span> <span class="nx">err</span>
-	<span class="p">},</span> <span class="kd">func</span><span class="p">()</span> <span class="p">(</span><span class="nx">err</span> <span class="kt">error</span><span class="p">)</span> <span class="p">{</span>
-		<span class="nx">productList</span><span class="p">,</span> <span class="nx">err</span> <span class="p">=</span> <span class="nf">getProductList</span><span class="p">()</span>
-		<span class="k">return</span> <span class="nx">err</span>
-	<span class="p">})</span>
-	<span class="nx">fmt</span><span class="p">.</span><span class="nf">Printf</span><span class="p">(</span><span class="s">&#34;用户信息:%+v\n&#34;</span><span class="p">,</span> <span class="nx">userInfo</span><span class="p">)</span>
-	<span class="nx">fmt</span><span class="p">.</span><span class="nf">Printf</span><span class="p">(</span><span class="s">&#34;商品信息:%+v\n&#34;</span><span class="p">,</span> <span class="nx">productList</span><span class="p">)</span>
-<span class="p">}</span>
-</code></pre></div><pre><code>用户信息:&amp;{Name:wuqinqiang Age:18}
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="kn">package</span> <span class="nx">main</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="kn">import</span> <span class="p">(</span>
+</span></span><span class="line"><span class="cl">	<span class="s">&#34;fmt&#34;</span>
+</span></span><span class="line"><span class="cl">	<span class="s">&#34;github.com/tal-tech/go-zero/core/mr&#34;</span>
+</span></span><span class="line"><span class="cl">	<span class="s">&#34;time&#34;</span>
+</span></span><span class="line"><span class="cl"><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="kd">func</span> <span class="nf">main</span><span class="p">()</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">	<span class="kd">var</span> <span class="nx">userInfo</span> <span class="o">*</span><span class="nx">User</span>
+</span></span><span class="line"><span class="cl">	<span class="kd">var</span> <span class="nx">productList</span> <span class="p">[]</span><span class="nx">Product</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">_</span> <span class="p">=</span> <span class="nx">mr</span><span class="p">.</span><span class="nf">Finish</span><span class="p">(</span><span class="kd">func</span><span class="p">()</span> <span class="p">(</span><span class="nx">err</span> <span class="kt">error</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">userInfo</span><span class="p">,</span> <span class="nx">err</span> <span class="p">=</span> <span class="nf">getUser</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">		<span class="k">return</span> <span class="nx">err</span>
+</span></span><span class="line"><span class="cl">	<span class="p">},</span> <span class="kd">func</span><span class="p">()</span> <span class="p">(</span><span class="nx">err</span> <span class="kt">error</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">productList</span><span class="p">,</span> <span class="nx">err</span> <span class="p">=</span> <span class="nf">getProductList</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">		<span class="k">return</span> <span class="nx">err</span>
+</span></span><span class="line"><span class="cl">	<span class="p">})</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">fmt</span><span class="p">.</span><span class="nf">Printf</span><span class="p">(</span><span class="s">&#34;用户信息:%+v\n&#34;</span><span class="p">,</span> <span class="nx">userInfo</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">fmt</span><span class="p">.</span><span class="nf">Printf</span><span class="p">(</span><span class="s">&#34;商品信息:%+v\n&#34;</span><span class="p">,</span> <span class="nx">productList</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></div><pre tabindex="0"><code>用户信息:&amp;{Name:wuqinqiang Age:18}
 商品信息:[{Title:SHib Price:10}]
 </code></pre><p>是不是舒服多了。</p>
 <p>但是这里还需要注意一点，假设你调用的其中一个服务错误，并且你 <code>return err</code> 对应的错误，那么其他调用的服务会被取消。
 比如我们修改 getProductList 直接响应错误。</p>
-<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kd">func</span> <span class="nf">getProductList</span><span class="p">()</span> <span class="p">([]</span><span class="nx">Product</span><span class="p">,</span> <span class="kt">error</span><span class="p">)</span> <span class="p">{</span>
-	<span class="k">return</span> <span class="kc">nil</span><span class="p">,</span> <span class="nx">errors</span><span class="p">.</span><span class="nf">New</span><span class="p">(</span><span class="s">&#34;test error&#34;</span><span class="p">)</span>
-<span class="p">}</span>
-<span class="c1">//打印
-</span><span class="c1"></span><span class="nx">用户信息</span><span class="p">:&lt;</span><span class="kc">nil</span><span class="p">&gt;</span>
-<span class="nx">商品信息</span><span class="p">:[]</span>
-</code></pre></div><p>那么最终打印的时候连用户信息都会为空，因为出现一个服务错误，用户服务请求被取消了。</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="kd">func</span> <span class="nf">getProductList</span><span class="p">()</span> <span class="p">([]</span><span class="nx">Product</span><span class="p">,</span> <span class="kt">error</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">	<span class="k">return</span> <span class="kc">nil</span><span class="p">,</span> <span class="nx">errors</span><span class="p">.</span><span class="nf">New</span><span class="p">(</span><span class="s">&#34;test error&#34;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span><span class="line"><span class="cl"><span class="c1">//打印
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="nx">用户信息</span><span class="p">:&lt;</span><span class="kc">nil</span><span class="p">&gt;</span>
+</span></span><span class="line"><span class="cl"><span class="nx">商品信息</span><span class="p">:[]</span>
+</span></span></code></pre></div><p>那么最终打印的时候连用户信息都会为空，因为出现一个服务错误，用户服务请求被取消了。</p>
 <p>一般情况下，在请求服务错误的时候我们会有保底操作，一个服务错误不能影响其他请求的结果。
 所以在使用的时候具体处理取决于业务场景。</p>
 <h3 id="源码">源码<a href="#源码" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h3>
 <p>既然用了，那么就追下源码吧。</p>
-<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kd">func</span> <span class="nf">Finish</span><span class="p">(</span><span class="nx">fns</span> <span class="o">...</span><span class="kd">func</span><span class="p">()</span> <span class="kt">error</span><span class="p">)</span> <span class="kt">error</span> <span class="p">{</span>
-	<span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="nx">fns</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span> <span class="p">{</span>
-		<span class="k">return</span> <span class="kc">nil</span>
-	<span class="p">}</span>
-
-	<span class="k">return</span> <span class="nf">MapReduceVoid</span><span class="p">(</span><span class="kd">func</span><span class="p">(</span><span class="nx">source</span> <span class="kd">chan</span><span class="o">&lt;-</span> <span class="kd">interface</span><span class="p">{})</span> <span class="p">{</span>
-		<span class="k">for</span> <span class="nx">_</span><span class="p">,</span> <span class="nx">fn</span> <span class="o">:=</span> <span class="k">range</span> <span class="nx">fns</span> <span class="p">{</span>
-			<span class="nx">source</span> <span class="o">&lt;-</span> <span class="nx">fn</span>
-		<span class="p">}</span>
-	<span class="p">},</span> <span class="kd">func</span><span class="p">(</span><span class="nx">item</span> <span class="kd">interface</span><span class="p">{},</span> <span class="nx">writer</span> <span class="nx">Writer</span><span class="p">,</span> <span class="nx">cancel</span> <span class="kd">func</span><span class="p">(</span><span class="kt">error</span><span class="p">))</span> <span class="p">{</span>
-		<span class="nx">fn</span> <span class="o">:=</span> <span class="nx">item</span><span class="p">.(</span><span class="kd">func</span><span class="p">()</span> <span class="kt">error</span><span class="p">)</span>
-		<span class="k">if</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nf">fn</span><span class="p">();</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
-			<span class="nf">cancel</span><span class="p">(</span><span class="nx">err</span><span class="p">)</span>
-		<span class="p">}</span>
-	<span class="p">},</span> <span class="kd">func</span><span class="p">(</span><span class="nx">pipe</span> <span class="o">&lt;-</span><span class="kd">chan</span> <span class="kd">interface</span><span class="p">{},</span> <span class="nx">cancel</span> <span class="kd">func</span><span class="p">(</span><span class="kt">error</span><span class="p">))</span> <span class="p">{</span>
-		<span class="nf">drain</span><span class="p">(</span><span class="nx">pipe</span><span class="p">)</span>
-	<span class="p">},</span> <span class="nf">WithWorkers</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="nx">fns</span><span class="p">)))</span>
-<span class="p">}</span>
-</code></pre></div><div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kd">func</span> <span class="nf">MapReduceVoid</span><span class="p">(</span><span class="nx">generator</span> <span class="nx">GenerateFunc</span><span class="p">,</span> <span class="nx">mapper</span> <span class="nx">MapperFunc</span><span class="p">,</span> <span class="nx">reducer</span> <span class="nx">VoidReducerFunc</span><span class="p">,</span> <span class="nx">opts</span> <span class="o">...</span><span class="nx">Option</span><span class="p">)</span> <span class="kt">error</span> <span class="p">{</span>
-	<span class="nx">_</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nf">MapReduce</span><span class="p">(</span><span class="nx">generator</span><span class="p">,</span> <span class="nx">mapper</span><span class="p">,</span> <span class="kd">func</span><span class="p">(</span><span class="nx">input</span> <span class="o">&lt;-</span><span class="kd">chan</span> <span class="kd">interface</span><span class="p">{},</span> <span class="nx">writer</span> <span class="nx">Writer</span><span class="p">,</span> <span class="nx">cancel</span> <span class="kd">func</span><span class="p">(</span><span class="kt">error</span><span class="p">))</span> <span class="p">{</span>
-		<span class="nf">reducer</span><span class="p">(</span><span class="nx">input</span><span class="p">,</span> <span class="nx">cancel</span><span class="p">)</span>
-		<span class="nf">drain</span><span class="p">(</span><span class="nx">input</span><span class="p">)</span>
-		<span class="c1">// We need to write a placeholder to let MapReduce to continue on reducer done,
-</span><span class="c1"></span>		<span class="c1">// otherwise, all goroutines are waiting. The placeholder will be discarded by MapReduce.
-</span><span class="c1"></span>		<span class="nx">writer</span><span class="p">.</span><span class="nf">Write</span><span class="p">(</span><span class="nx">lang</span><span class="p">.</span><span class="nx">Placeholder</span><span class="p">)</span>
-	<span class="p">},</span> <span class="nx">opts</span><span class="o">...</span><span class="p">)</span>
-	<span class="k">return</span> <span class="nx">err</span>
-<span class="p">}</span>
-</code></pre></div><p>对于 <code>MapReduceVoid</code>函数，主要查看三个闭包参数。</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="kd">func</span> <span class="nf">Finish</span><span class="p">(</span><span class="nx">fns</span> <span class="o">...</span><span class="kd">func</span><span class="p">()</span> <span class="kt">error</span><span class="p">)</span> <span class="kt">error</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">	<span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="nx">fns</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="k">return</span> <span class="kc">nil</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">	<span class="k">return</span> <span class="nf">MapReduceVoid</span><span class="p">(</span><span class="kd">func</span><span class="p">(</span><span class="nx">source</span> <span class="kd">chan</span><span class="o">&lt;-</span> <span class="kd">interface</span><span class="p">{})</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="k">for</span> <span class="nx">_</span><span class="p">,</span> <span class="nx">fn</span> <span class="o">:=</span> <span class="k">range</span> <span class="nx">fns</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">			<span class="nx">source</span> <span class="o">&lt;-</span> <span class="nx">fn</span>
+</span></span><span class="line"><span class="cl">		<span class="p">}</span>
+</span></span><span class="line"><span class="cl">	<span class="p">},</span> <span class="kd">func</span><span class="p">(</span><span class="nx">item</span> <span class="kd">interface</span><span class="p">{},</span> <span class="nx">writer</span> <span class="nx">Writer</span><span class="p">,</span> <span class="nx">cancel</span> <span class="kd">func</span><span class="p">(</span><span class="kt">error</span><span class="p">))</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">fn</span> <span class="o">:=</span> <span class="nx">item</span><span class="p">.(</span><span class="kd">func</span><span class="p">()</span> <span class="kt">error</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">		<span class="k">if</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nf">fn</span><span class="p">();</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">			<span class="nf">cancel</span><span class="p">(</span><span class="nx">err</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">		<span class="p">}</span>
+</span></span><span class="line"><span class="cl">	<span class="p">},</span> <span class="kd">func</span><span class="p">(</span><span class="nx">pipe</span> <span class="o">&lt;-</span><span class="kd">chan</span> <span class="kd">interface</span><span class="p">{},</span> <span class="nx">cancel</span> <span class="kd">func</span><span class="p">(</span><span class="kt">error</span><span class="p">))</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="nf">drain</span><span class="p">(</span><span class="nx">pipe</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">	<span class="p">},</span> <span class="nf">WithWorkers</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="nx">fns</span><span class="p">)))</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="kd">func</span> <span class="nf">MapReduceVoid</span><span class="p">(</span><span class="nx">generator</span> <span class="nx">GenerateFunc</span><span class="p">,</span> <span class="nx">mapper</span> <span class="nx">MapperFunc</span><span class="p">,</span> <span class="nx">reducer</span> <span class="nx">VoidReducerFunc</span><span class="p">,</span> <span class="nx">opts</span> <span class="o">...</span><span class="nx">Option</span><span class="p">)</span> <span class="kt">error</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">_</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nf">MapReduce</span><span class="p">(</span><span class="nx">generator</span><span class="p">,</span> <span class="nx">mapper</span><span class="p">,</span> <span class="kd">func</span><span class="p">(</span><span class="nx">input</span> <span class="o">&lt;-</span><span class="kd">chan</span> <span class="kd">interface</span><span class="p">{},</span> <span class="nx">writer</span> <span class="nx">Writer</span><span class="p">,</span> <span class="nx">cancel</span> <span class="kd">func</span><span class="p">(</span><span class="kt">error</span><span class="p">))</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="nf">reducer</span><span class="p">(</span><span class="nx">input</span><span class="p">,</span> <span class="nx">cancel</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">		<span class="nf">drain</span><span class="p">(</span><span class="nx">input</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">		<span class="c1">// We need to write a placeholder to let MapReduce to continue on reducer done,
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>		<span class="c1">// otherwise, all goroutines are waiting. The placeholder will be discarded by MapReduce.
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>		<span class="nx">writer</span><span class="p">.</span><span class="nf">Write</span><span class="p">(</span><span class="nx">lang</span><span class="p">.</span><span class="nx">Placeholder</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">	<span class="p">},</span> <span class="nx">opts</span><span class="o">...</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">	<span class="k">return</span> <span class="nx">err</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></div><p>对于 <code>MapReduceVoid</code>函数，主要查看三个闭包参数。</p>
 <ul>
 <li>第一个 <code>GenerateFunc</code> 用于生产数据。</li>
 <li><code>MapperFunc</code> 读取生产出的数据，进行处理。</li>
 <li><code>VoidReducerFunc</code> 这里表示不对 <code>mapper</code> 后的数据做聚合返回。所以这个闭包在此操作几乎0作用。</li>
 </ul>
-<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kd">func</span> <span class="nf">MapReduce</span><span class="p">(</span><span class="nx">generate</span> <span class="nx">GenerateFunc</span><span class="p">,</span> <span class="nx">mapper</span> <span class="nx">MapperFunc</span><span class="p">,</span> <span class="nx">reducer</span> <span class="nx">ReducerFunc</span><span class="p">,</span> <span class="nx">opts</span> <span class="o">...</span><span class="nx">Option</span><span class="p">)</span> <span class="p">(</span><span class="kd">interface</span><span class="p">{},</span> <span class="kt">error</span><span class="p">)</span> <span class="p">{</span>
-	<span class="nx">source</span> <span class="o">:=</span> <span class="nf">buildSource</span><span class="p">(</span><span class="nx">generate</span><span class="p">)</span> 
-	<span class="k">return</span> <span class="nf">MapReduceWithSource</span><span class="p">(</span><span class="nx">source</span><span class="p">,</span> <span class="nx">mapper</span><span class="p">,</span> <span class="nx">reducer</span><span class="p">,</span> <span class="nx">opts</span><span class="o">...</span><span class="p">)</span>
-<span class="p">}</span>
-
-<span class="kd">func</span> <span class="nf">buildSource</span><span class="p">(</span><span class="nx">generate</span> <span class="nx">GenerateFunc</span><span class="p">)</span> <span class="kd">chan</span> <span class="kd">interface</span><span class="p">{}</span> <span class="p">{</span>
-	<span class="nx">source</span> <span class="o">:=</span> <span class="nb">make</span><span class="p">(</span><span class="kd">chan</span> <span class="kd">interface</span><span class="p">{})</span><span class="c1">// 创建无缓冲通道
-</span><span class="c1"></span>	<span class="nx">threading</span><span class="p">.</span><span class="nf">GoSafe</span><span class="p">(</span><span class="kd">func</span><span class="p">()</span> <span class="p">{</span>
-		<span class="k">defer</span> <span class="nb">close</span><span class="p">(</span><span class="nx">source</span><span class="p">)</span>
-		<span class="nf">generate</span><span class="p">(</span><span class="nx">source</span><span class="p">)</span> <span class="c1">//开始生产数据
-</span><span class="c1"></span>	<span class="p">})</span>
-
-	<span class="k">return</span> <span class="nx">source</span> <span class="c1">//返回无缓冲通道
-</span><span class="c1"></span><span class="p">}</span>
-</code></pre></div><p><code>buildSource</code>函数中，返回一个无缓冲的通道。并开启一个 <code>G</code> 运行 <code>generate(source)</code>，往无缓冲通道塞数据。 这个<code>generate(source)</code> 不就是一开始 <code>Finish</code> 传递的第一个闭包参数。</p>
-<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="k">return</span> <span class="nf">MapReduceVoid</span><span class="p">(</span><span class="kd">func</span><span class="p">(</span><span class="nx">source</span> <span class="kd">chan</span><span class="o">&lt;-</span> <span class="kd">interface</span><span class="p">{})</span> <span class="p">{</span>
-	<span class="c1">// 就这个
-</span><span class="c1"></span>		<span class="k">for</span> <span class="nx">_</span><span class="p">,</span> <span class="nx">fn</span> <span class="o">:=</span> <span class="k">range</span> <span class="nx">fns</span> <span class="p">{</span>
-			<span class="nx">source</span> <span class="o">&lt;-</span> <span class="nx">fn</span>
-		<span class="p">}</span>
-	<span class="p">})</span>
-</code></pre></div><p>然后查看 <code>MapReduceWithSource</code> 函数,</p>
-<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kd">func</span> <span class="nf">MapReduceWithSource</span><span class="p">(</span><span class="nx">source</span> <span class="o">&lt;-</span><span class="kd">chan</span> <span class="kd">interface</span><span class="p">{},</span> <span class="nx">mapper</span> <span class="nx">MapperFunc</span><span class="p">,</span> <span class="nx">reducer</span> <span class="nx">ReducerFunc</span><span class="p">,</span>
-	<span class="nx">opts</span> <span class="o">...</span><span class="nx">Option</span><span class="p">)</span> <span class="p">(</span><span class="kd">interface</span><span class="p">{},</span> <span class="kt">error</span><span class="p">)</span> <span class="p">{</span>
-	<span class="nx">options</span> <span class="o">:=</span> <span class="nf">buildOptions</span><span class="p">(</span><span class="nx">opts</span><span class="o">...</span><span class="p">)</span>
-	<span class="c1">//任务执行结束通知信号
-</span><span class="c1"></span>	<span class="nx">output</span> <span class="o">:=</span> <span class="nb">make</span><span class="p">(</span><span class="kd">chan</span> <span class="kd">interface</span><span class="p">{})</span>
-    <span class="c1">//将mapper处理完的数据写入collector
-</span><span class="c1"></span>    <span class="nx">collector</span> <span class="o">:=</span> <span class="nb">make</span><span class="p">(</span><span class="kd">chan</span> <span class="kd">interface</span><span class="p">{},</span> <span class="nx">options</span><span class="p">.</span><span class="nx">workers</span><span class="p">)</span>
-    <span class="c1">// 取消操作信号
-</span><span class="c1"></span>	<span class="nx">done</span> <span class="o">:=</span> <span class="nx">syncx</span><span class="p">.</span><span class="nf">NewDoneChan</span><span class="p">()</span>
-	<span class="nx">writer</span> <span class="o">:=</span> <span class="nf">newGuardedWriter</span><span class="p">(</span><span class="nx">output</span><span class="p">,</span> <span class="nx">done</span><span class="p">.</span><span class="nf">Done</span><span class="p">())</span>
-	<span class="kd">var</span> <span class="nx">closeOnce</span> <span class="nx">sync</span><span class="p">.</span><span class="nx">Once</span>
-	<span class="kd">var</span> <span class="nx">retErr</span> <span class="nx">errorx</span><span class="p">.</span><span class="nx">AtomicError</span>
-	<span class="nx">finish</span> <span class="o">:=</span> <span class="kd">func</span><span class="p">()</span> <span class="p">{</span>
-		<span class="nx">closeOnce</span><span class="p">.</span><span class="nf">Do</span><span class="p">(</span><span class="kd">func</span><span class="p">()</span> <span class="p">{</span>
-			<span class="nx">done</span><span class="p">.</span><span class="nf">Close</span><span class="p">()</span>
-			<span class="nb">close</span><span class="p">(</span><span class="nx">output</span><span class="p">)</span>
-		<span class="p">})</span>
-	<span class="p">}</span>
-	<span class="nx">cancel</span> <span class="o">:=</span> <span class="nf">once</span><span class="p">(</span><span class="kd">func</span><span class="p">(</span><span class="nx">err</span> <span class="kt">error</span><span class="p">)</span> <span class="p">{</span>
-		<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
-			<span class="nx">retErr</span><span class="p">.</span><span class="nf">Set</span><span class="p">(</span><span class="nx">err</span><span class="p">)</span>
-		<span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
-			<span class="nx">retErr</span><span class="p">.</span><span class="nf">Set</span><span class="p">(</span><span class="nx">ErrCancelWithNil</span><span class="p">)</span>
-		<span class="p">}</span>
-
-		<span class="nf">drain</span><span class="p">(</span><span class="nx">source</span><span class="p">)</span>
-		<span class="nf">finish</span><span class="p">()</span>
-	<span class="p">})</span>
-
-	<span class="k">go</span> <span class="kd">func</span><span class="p">()</span> <span class="p">{</span>
-		<span class="k">defer</span> <span class="kd">func</span><span class="p">()</span> <span class="p">{</span>
-			<span class="k">if</span> <span class="nx">r</span> <span class="o">:=</span> <span class="nb">recover</span><span class="p">();</span> <span class="nx">r</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
-				<span class="nf">cancel</span><span class="p">(</span><span class="nx">fmt</span><span class="p">.</span><span class="nf">Errorf</span><span class="p">(</span><span class="s">&#34;%v&#34;</span><span class="p">,</span> <span class="nx">r</span><span class="p">))</span>
-			<span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
-				<span class="nf">finish</span><span class="p">()</span>
-			<span class="p">}</span>
-		<span class="p">}()</span>
-		<span class="nf">reducer</span><span class="p">(</span><span class="nx">collector</span><span class="p">,</span> <span class="nx">writer</span><span class="p">,</span> <span class="nx">cancel</span><span class="p">)</span>
-		<span class="nf">drain</span><span class="p">(</span><span class="nx">collector</span><span class="p">)</span>
-	<span class="p">}()</span>
-	<span class="c1">// 真正从生成器通道取数据执行Mapper
-</span><span class="c1"></span>	<span class="k">go</span> <span class="nf">executeMappers</span><span class="p">(</span><span class="kd">func</span><span class="p">(</span><span class="nx">item</span> <span class="kd">interface</span><span class="p">{},</span> <span class="nx">w</span> <span class="nx">Writer</span><span class="p">)</span> <span class="p">{</span>
-		<span class="nf">mapper</span><span class="p">(</span><span class="nx">item</span><span class="p">,</span> <span class="nx">w</span><span class="p">,</span> <span class="nx">cancel</span><span class="p">)</span>
-	<span class="p">},</span> <span class="nx">source</span><span class="p">,</span> <span class="nx">collector</span><span class="p">,</span> <span class="nx">done</span><span class="p">.</span><span class="nf">Done</span><span class="p">(),</span> <span class="nx">options</span><span class="p">.</span><span class="nx">workers</span><span class="p">)</span>
-
-	<span class="nx">value</span><span class="p">,</span> <span class="nx">ok</span> <span class="o">:=</span> <span class="o">&lt;-</span><span class="nx">output</span>
-	<span class="k">if</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">retErr</span><span class="p">.</span><span class="nf">Load</span><span class="p">();</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
-		<span class="k">return</span> <span class="kc">nil</span><span class="p">,</span> <span class="nx">err</span>
-	<span class="p">}</span> <span class="k">else</span> <span class="k">if</span> <span class="nx">ok</span> <span class="p">{</span>
-		<span class="k">return</span> <span class="nx">value</span><span class="p">,</span> <span class="kc">nil</span>
-	<span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
-		<span class="k">return</span> <span class="kc">nil</span><span class="p">,</span> <span class="nx">ErrReduceNoOutput</span>
-	<span class="p">}</span>
-<span class="p">}</span>
-</code></pre></div><p>这段代码挺长的，我们说下核心的点。我们看到使用一个<code>G</code> 调用 <code>executeMappers</code> 方法。</p>
-<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="k">go</span> <span class="nf">executeMappers</span><span class="p">(</span><span class="kd">func</span><span class="p">(</span><span class="nx">item</span> <span class="kd">interface</span><span class="p">{},</span> <span class="nx">w</span> <span class="nx">Writer</span><span class="p">)</span> <span class="p">{</span>
-		<span class="nf">mapper</span><span class="p">(</span><span class="nx">item</span><span class="p">,</span> <span class="nx">w</span><span class="p">,</span> <span class="nx">cancel</span><span class="p">)</span>
-	<span class="p">},</span> <span class="nx">source</span><span class="p">,</span> <span class="nx">collector</span><span class="p">,</span> <span class="nx">done</span><span class="p">.</span><span class="nf">Done</span><span class="p">(),</span> <span class="nx">options</span><span class="p">.</span><span class="nx">workers</span><span class="p">)</span>
-</code></pre></div><div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kd">func</span> <span class="nf">executeMappers</span><span class="p">(</span><span class="nx">mapper</span> <span class="nx">MapFunc</span><span class="p">,</span> <span class="nx">input</span> <span class="o">&lt;-</span><span class="kd">chan</span> <span class="kd">interface</span><span class="p">{},</span> <span class="nx">collector</span> <span class="kd">chan</span><span class="o">&lt;-</span> <span class="kd">interface</span><span class="p">{},</span>
-	<span class="nx">done</span> <span class="o">&lt;-</span><span class="kd">chan</span> <span class="nx">lang</span><span class="p">.</span><span class="nx">PlaceholderType</span><span class="p">,</span> <span class="nx">workers</span> <span class="kt">int</span><span class="p">)</span> <span class="p">{</span>
-	<span class="kd">var</span> <span class="nx">wg</span> <span class="nx">sync</span><span class="p">.</span><span class="nx">WaitGroup</span>
-	<span class="k">defer</span> <span class="kd">func</span><span class="p">()</span> <span class="p">{</span>
-		<span class="c1">// 等待所有任务全部执行完毕
-</span><span class="c1"></span>		<span class="nx">wg</span><span class="p">.</span><span class="nf">Wait</span><span class="p">()</span>
-		<span class="c1">// 关闭通道
-</span><span class="c1"></span>		<span class="nb">close</span><span class="p">(</span><span class="nx">collector</span><span class="p">)</span>
-	<span class="p">}()</span>
-   <span class="c1">//根据指定数量创建 worker池
-</span><span class="c1"></span>	<span class="nx">pool</span> <span class="o">:=</span> <span class="nb">make</span><span class="p">(</span><span class="kd">chan</span> <span class="nx">lang</span><span class="p">.</span><span class="nx">PlaceholderType</span><span class="p">,</span> <span class="nx">workers</span><span class="p">)</span> 
-	<span class="nx">writer</span> <span class="o">:=</span> <span class="nf">newGuardedWriter</span><span class="p">(</span><span class="nx">collector</span><span class="p">,</span> <span class="nx">done</span><span class="p">)</span>
-	<span class="k">for</span> <span class="p">{</span>
-		<span class="k">select</span> <span class="p">{</span>
-		<span class="k">case</span> <span class="o">&lt;-</span><span class="nx">done</span><span class="p">:</span>
-			<span class="k">return</span>
-		<span class="k">case</span> <span class="nx">pool</span> <span class="o">&lt;-</span> <span class="nx">lang</span><span class="p">.</span><span class="nx">Placeholder</span><span class="p">:</span>
-			<span class="c1">// 从buildSource() 返回的无缓冲通道取数据
-</span><span class="c1"></span>			<span class="nx">item</span><span class="p">,</span> <span class="nx">ok</span> <span class="o">:=</span> <span class="o">&lt;-</span><span class="nx">input</span> 
-			<span class="c1">// 当通道关闭，结束
-</span><span class="c1"></span>			<span class="k">if</span> <span class="p">!</span><span class="nx">ok</span> <span class="p">{</span>
-				<span class="o">&lt;-</span><span class="nx">pool</span>
-				<span class="k">return</span>
-			<span class="p">}</span>
-
-			<span class="nx">wg</span><span class="p">.</span><span class="nf">Add</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
-			<span class="c1">// better to safely run caller defined method
-</span><span class="c1"></span>			<span class="nx">threading</span><span class="p">.</span><span class="nf">GoSafe</span><span class="p">(</span><span class="kd">func</span><span class="p">()</span> <span class="p">{</span>
-				<span class="k">defer</span> <span class="kd">func</span><span class="p">()</span> <span class="p">{</span>
-					<span class="nx">wg</span><span class="p">.</span><span class="nf">Done</span><span class="p">()</span>
-					<span class="o">&lt;-</span><span class="nx">pool</span>
-				<span class="p">}()</span>
-				<span class="c1">//真正运行闭包函数的地方
-</span><span class="c1"></span>               <span class="c1">// func(item interface{}, w Writer) {
-</span><span class="c1"></span>               <span class="c1">//    mapper(item, w, cancel)
-</span><span class="c1"></span>               <span class="c1">//    }
-</span><span class="c1"></span>				<span class="nf">mapper</span><span class="p">(</span><span class="nx">item</span><span class="p">,</span> <span class="nx">writer</span><span class="p">)</span>
-			<span class="p">})</span>
-		<span class="p">}</span>
-	<span class="p">}</span>
-<span class="p">}</span>
-</code></pre></div><p>具体的逻辑已备注，代码很容易懂。</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="kd">func</span> <span class="nf">MapReduce</span><span class="p">(</span><span class="nx">generate</span> <span class="nx">GenerateFunc</span><span class="p">,</span> <span class="nx">mapper</span> <span class="nx">MapperFunc</span><span class="p">,</span> <span class="nx">reducer</span> <span class="nx">ReducerFunc</span><span class="p">,</span> <span class="nx">opts</span> <span class="o">...</span><span class="nx">Option</span><span class="p">)</span> <span class="p">(</span><span class="kd">interface</span><span class="p">{},</span> <span class="kt">error</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">source</span> <span class="o">:=</span> <span class="nf">buildSource</span><span class="p">(</span><span class="nx">generate</span><span class="p">)</span> 
+</span></span><span class="line"><span class="cl">	<span class="k">return</span> <span class="nf">MapReduceWithSource</span><span class="p">(</span><span class="nx">source</span><span class="p">,</span> <span class="nx">mapper</span><span class="p">,</span> <span class="nx">reducer</span><span class="p">,</span> <span class="nx">opts</span><span class="o">...</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="kd">func</span> <span class="nf">buildSource</span><span class="p">(</span><span class="nx">generate</span> <span class="nx">GenerateFunc</span><span class="p">)</span> <span class="kd">chan</span> <span class="kd">interface</span><span class="p">{}</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">source</span> <span class="o">:=</span> <span class="nb">make</span><span class="p">(</span><span class="kd">chan</span> <span class="kd">interface</span><span class="p">{})</span><span class="c1">// 创建无缓冲通道
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="nx">threading</span><span class="p">.</span><span class="nf">GoSafe</span><span class="p">(</span><span class="kd">func</span><span class="p">()</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="k">defer</span> <span class="nb">close</span><span class="p">(</span><span class="nx">source</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">		<span class="nf">generate</span><span class="p">(</span><span class="nx">source</span><span class="p">)</span> <span class="c1">//开始生产数据
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="p">})</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">	<span class="k">return</span> <span class="nx">source</span> <span class="c1">//返回无缓冲通道
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="p">}</span>
+</span></span></code></pre></div><p><code>buildSource</code>函数中，返回一个无缓冲的通道。并开启一个 <code>G</code> 运行 <code>generate(source)</code>，往无缓冲通道塞数据。 这个<code>generate(source)</code> 不就是一开始 <code>Finish</code> 传递的第一个闭包参数。</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="k">return</span> <span class="nf">MapReduceVoid</span><span class="p">(</span><span class="kd">func</span><span class="p">(</span><span class="nx">source</span> <span class="kd">chan</span><span class="o">&lt;-</span> <span class="kd">interface</span><span class="p">{})</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">	<span class="c1">// 就这个
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>		<span class="k">for</span> <span class="nx">_</span><span class="p">,</span> <span class="nx">fn</span> <span class="o">:=</span> <span class="k">range</span> <span class="nx">fns</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">			<span class="nx">source</span> <span class="o">&lt;-</span> <span class="nx">fn</span>
+</span></span><span class="line"><span class="cl">		<span class="p">}</span>
+</span></span><span class="line"><span class="cl">	<span class="p">})</span>
+</span></span></code></pre></div><p>然后查看 <code>MapReduceWithSource</code> 函数,</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="kd">func</span> <span class="nf">MapReduceWithSource</span><span class="p">(</span><span class="nx">source</span> <span class="o">&lt;-</span><span class="kd">chan</span> <span class="kd">interface</span><span class="p">{},</span> <span class="nx">mapper</span> <span class="nx">MapperFunc</span><span class="p">,</span> <span class="nx">reducer</span> <span class="nx">ReducerFunc</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">opts</span> <span class="o">...</span><span class="nx">Option</span><span class="p">)</span> <span class="p">(</span><span class="kd">interface</span><span class="p">{},</span> <span class="kt">error</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">options</span> <span class="o">:=</span> <span class="nf">buildOptions</span><span class="p">(</span><span class="nx">opts</span><span class="o">...</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">	<span class="c1">//任务执行结束通知信号
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="nx">output</span> <span class="o">:=</span> <span class="nb">make</span><span class="p">(</span><span class="kd">chan</span> <span class="kd">interface</span><span class="p">{})</span>
+</span></span><span class="line"><span class="cl">    <span class="c1">//将mapper处理完的数据写入collector
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="nx">collector</span> <span class="o">:=</span> <span class="nb">make</span><span class="p">(</span><span class="kd">chan</span> <span class="kd">interface</span><span class="p">{},</span> <span class="nx">options</span><span class="p">.</span><span class="nx">workers</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">    <span class="c1">// 取消操作信号
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="nx">done</span> <span class="o">:=</span> <span class="nx">syncx</span><span class="p">.</span><span class="nf">NewDoneChan</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">writer</span> <span class="o">:=</span> <span class="nf">newGuardedWriter</span><span class="p">(</span><span class="nx">output</span><span class="p">,</span> <span class="nx">done</span><span class="p">.</span><span class="nf">Done</span><span class="p">())</span>
+</span></span><span class="line"><span class="cl">	<span class="kd">var</span> <span class="nx">closeOnce</span> <span class="nx">sync</span><span class="p">.</span><span class="nx">Once</span>
+</span></span><span class="line"><span class="cl">	<span class="kd">var</span> <span class="nx">retErr</span> <span class="nx">errorx</span><span class="p">.</span><span class="nx">AtomicError</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">finish</span> <span class="o">:=</span> <span class="kd">func</span><span class="p">()</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">closeOnce</span><span class="p">.</span><span class="nf">Do</span><span class="p">(</span><span class="kd">func</span><span class="p">()</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">			<span class="nx">done</span><span class="p">.</span><span class="nf">Close</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">			<span class="nb">close</span><span class="p">(</span><span class="nx">output</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">		<span class="p">})</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">cancel</span> <span class="o">:=</span> <span class="nf">once</span><span class="p">(</span><span class="kd">func</span><span class="p">(</span><span class="nx">err</span> <span class="kt">error</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">			<span class="nx">retErr</span><span class="p">.</span><span class="nf">Set</span><span class="p">(</span><span class="nx">err</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">		<span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">			<span class="nx">retErr</span><span class="p">.</span><span class="nf">Set</span><span class="p">(</span><span class="nx">ErrCancelWithNil</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">		<span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">		<span class="nf">drain</span><span class="p">(</span><span class="nx">source</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">		<span class="nf">finish</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">	<span class="p">})</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">	<span class="k">go</span> <span class="kd">func</span><span class="p">()</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="k">defer</span> <span class="kd">func</span><span class="p">()</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">			<span class="k">if</span> <span class="nx">r</span> <span class="o">:=</span> <span class="nb">recover</span><span class="p">();</span> <span class="nx">r</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">				<span class="nf">cancel</span><span class="p">(</span><span class="nx">fmt</span><span class="p">.</span><span class="nf">Errorf</span><span class="p">(</span><span class="s">&#34;%v&#34;</span><span class="p">,</span> <span class="nx">r</span><span class="p">))</span>
+</span></span><span class="line"><span class="cl">			<span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">				<span class="nf">finish</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">			<span class="p">}</span>
+</span></span><span class="line"><span class="cl">		<span class="p">}()</span>
+</span></span><span class="line"><span class="cl">		<span class="nf">reducer</span><span class="p">(</span><span class="nx">collector</span><span class="p">,</span> <span class="nx">writer</span><span class="p">,</span> <span class="nx">cancel</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">		<span class="nf">drain</span><span class="p">(</span><span class="nx">collector</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}()</span>
+</span></span><span class="line"><span class="cl">	<span class="c1">// 真正从生成器通道取数据执行Mapper
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="k">go</span> <span class="nf">executeMappers</span><span class="p">(</span><span class="kd">func</span><span class="p">(</span><span class="nx">item</span> <span class="kd">interface</span><span class="p">{},</span> <span class="nx">w</span> <span class="nx">Writer</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="nf">mapper</span><span class="p">(</span><span class="nx">item</span><span class="p">,</span> <span class="nx">w</span><span class="p">,</span> <span class="nx">cancel</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">	<span class="p">},</span> <span class="nx">source</span><span class="p">,</span> <span class="nx">collector</span><span class="p">,</span> <span class="nx">done</span><span class="p">.</span><span class="nf">Done</span><span class="p">(),</span> <span class="nx">options</span><span class="p">.</span><span class="nx">workers</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">	<span class="nx">value</span><span class="p">,</span> <span class="nx">ok</span> <span class="o">:=</span> <span class="o">&lt;-</span><span class="nx">output</span>
+</span></span><span class="line"><span class="cl">	<span class="k">if</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">retErr</span><span class="p">.</span><span class="nf">Load</span><span class="p">();</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="k">return</span> <span class="kc">nil</span><span class="p">,</span> <span class="nx">err</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}</span> <span class="k">else</span> <span class="k">if</span> <span class="nx">ok</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="k">return</span> <span class="nx">value</span><span class="p">,</span> <span class="kc">nil</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="k">return</span> <span class="kc">nil</span><span class="p">,</span> <span class="nx">ErrReduceNoOutput</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></div><p>这段代码挺长的，我们说下核心的点。我们看到使用一个<code>G</code> 调用 <code>executeMappers</code> 方法。</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="k">go</span> <span class="nf">executeMappers</span><span class="p">(</span><span class="kd">func</span><span class="p">(</span><span class="nx">item</span> <span class="kd">interface</span><span class="p">{},</span> <span class="nx">w</span> <span class="nx">Writer</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="nf">mapper</span><span class="p">(</span><span class="nx">item</span><span class="p">,</span> <span class="nx">w</span><span class="p">,</span> <span class="nx">cancel</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">	<span class="p">},</span> <span class="nx">source</span><span class="p">,</span> <span class="nx">collector</span><span class="p">,</span> <span class="nx">done</span><span class="p">.</span><span class="nf">Done</span><span class="p">(),</span> <span class="nx">options</span><span class="p">.</span><span class="nx">workers</span><span class="p">)</span>
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="kd">func</span> <span class="nf">executeMappers</span><span class="p">(</span><span class="nx">mapper</span> <span class="nx">MapFunc</span><span class="p">,</span> <span class="nx">input</span> <span class="o">&lt;-</span><span class="kd">chan</span> <span class="kd">interface</span><span class="p">{},</span> <span class="nx">collector</span> <span class="kd">chan</span><span class="o">&lt;-</span> <span class="kd">interface</span><span class="p">{},</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">done</span> <span class="o">&lt;-</span><span class="kd">chan</span> <span class="nx">lang</span><span class="p">.</span><span class="nx">PlaceholderType</span><span class="p">,</span> <span class="nx">workers</span> <span class="kt">int</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">	<span class="kd">var</span> <span class="nx">wg</span> <span class="nx">sync</span><span class="p">.</span><span class="nx">WaitGroup</span>
+</span></span><span class="line"><span class="cl">	<span class="k">defer</span> <span class="kd">func</span><span class="p">()</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="c1">// 等待所有任务全部执行完毕
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>		<span class="nx">wg</span><span class="p">.</span><span class="nf">Wait</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">		<span class="c1">// 关闭通道
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>		<span class="nb">close</span><span class="p">(</span><span class="nx">collector</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}()</span>
+</span></span><span class="line"><span class="cl">   <span class="c1">//根据指定数量创建 worker池
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="nx">pool</span> <span class="o">:=</span> <span class="nb">make</span><span class="p">(</span><span class="kd">chan</span> <span class="nx">lang</span><span class="p">.</span><span class="nx">PlaceholderType</span><span class="p">,</span> <span class="nx">workers</span><span class="p">)</span> 
+</span></span><span class="line"><span class="cl">	<span class="nx">writer</span> <span class="o">:=</span> <span class="nf">newGuardedWriter</span><span class="p">(</span><span class="nx">collector</span><span class="p">,</span> <span class="nx">done</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">	<span class="k">for</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="k">select</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="k">case</span> <span class="o">&lt;-</span><span class="nx">done</span><span class="p">:</span>
+</span></span><span class="line"><span class="cl">			<span class="k">return</span>
+</span></span><span class="line"><span class="cl">		<span class="k">case</span> <span class="nx">pool</span> <span class="o">&lt;-</span> <span class="nx">lang</span><span class="p">.</span><span class="nx">Placeholder</span><span class="p">:</span>
+</span></span><span class="line"><span class="cl">			<span class="c1">// 从buildSource() 返回的无缓冲通道取数据
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>			<span class="nx">item</span><span class="p">,</span> <span class="nx">ok</span> <span class="o">:=</span> <span class="o">&lt;-</span><span class="nx">input</span> 
+</span></span><span class="line"><span class="cl">			<span class="c1">// 当通道关闭，结束
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>			<span class="k">if</span> <span class="p">!</span><span class="nx">ok</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">				<span class="o">&lt;-</span><span class="nx">pool</span>
+</span></span><span class="line"><span class="cl">				<span class="k">return</span>
+</span></span><span class="line"><span class="cl">			<span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">			<span class="nx">wg</span><span class="p">.</span><span class="nf">Add</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">			<span class="c1">// better to safely run caller defined method
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>			<span class="nx">threading</span><span class="p">.</span><span class="nf">GoSafe</span><span class="p">(</span><span class="kd">func</span><span class="p">()</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">				<span class="k">defer</span> <span class="kd">func</span><span class="p">()</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">					<span class="nx">wg</span><span class="p">.</span><span class="nf">Done</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">					<span class="o">&lt;-</span><span class="nx">pool</span>
+</span></span><span class="line"><span class="cl">				<span class="p">}()</span>
+</span></span><span class="line"><span class="cl">				<span class="c1">//真正运行闭包函数的地方
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>               <span class="c1">// func(item interface{}, w Writer) {
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>               <span class="c1">//    mapper(item, w, cancel)
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>               <span class="c1">//    }
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>				<span class="nf">mapper</span><span class="p">(</span><span class="nx">item</span><span class="p">,</span> <span class="nx">writer</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">			<span class="p">})</span>
+</span></span><span class="line"><span class="cl">		<span class="p">}</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></div><p>具体的逻辑已备注，代码很容易懂。</p>
 <p>一旦 <code>executeMappers</code> 函数返回，关闭 <code>collector</code> 通道，那么执行 <code>reducer</code> 不再阻塞。</p>
-<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="k">go</span> <span class="kd">func</span><span class="p">()</span> <span class="p">{</span>
-		<span class="k">defer</span> <span class="kd">func</span><span class="p">()</span> <span class="p">{</span>
-			<span class="k">if</span> <span class="nx">r</span> <span class="o">:=</span> <span class="nb">recover</span><span class="p">();</span> <span class="nx">r</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
-				<span class="nf">cancel</span><span class="p">(</span><span class="nx">fmt</span><span class="p">.</span><span class="nf">Errorf</span><span class="p">(</span><span class="s">&#34;%v&#34;</span><span class="p">,</span> <span class="nx">r</span><span class="p">))</span>
-			<span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
-				<span class="nf">finish</span><span class="p">()</span>
-			<span class="p">}</span>
-		<span class="p">}()</span>
-		<span class="nf">reducer</span><span class="p">(</span><span class="nx">collector</span><span class="p">,</span> <span class="nx">writer</span><span class="p">,</span> <span class="nx">cancel</span><span class="p">)</span>
-		<span class="c1">//这里
-</span><span class="c1"></span>		<span class="nf">drain</span><span class="p">(</span><span class="nx">collector</span><span class="p">)</span>
-	<span class="p">}()</span>
-</code></pre></div><p>这里的 <code>reducer(collector, writer, cancel)</code> 其实就是从 <code>MapReduceVoid</code> 传递的第三个闭包函数。</p>
-<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kd">func</span> <span class="nf">MapReduceVoid</span><span class="p">(</span><span class="nx">generator</span> <span class="nx">GenerateFunc</span><span class="p">,</span> <span class="nx">mapper</span> <span class="nx">MapperFunc</span><span class="p">,</span> <span class="nx">reducer</span> <span class="nx">VoidReducerFunc</span><span class="p">,</span> <span class="nx">opts</span> <span class="o">...</span><span class="nx">Option</span><span class="p">)</span> <span class="kt">error</span> <span class="p">{</span>
-	<span class="nx">_</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nf">MapReduce</span><span class="p">(</span><span class="nx">generator</span><span class="p">,</span> <span class="nx">mapper</span><span class="p">,</span> <span class="kd">func</span><span class="p">(</span><span class="nx">input</span> <span class="o">&lt;-</span><span class="kd">chan</span> <span class="kd">interface</span><span class="p">{},</span> <span class="nx">writer</span> <span class="nx">Writer</span><span class="p">,</span> <span class="nx">cancel</span> <span class="kd">func</span><span class="p">(</span><span class="kt">error</span><span class="p">))</span> <span class="p">{</span>
-		<span class="nf">reducer</span><span class="p">(</span><span class="nx">input</span><span class="p">,</span> <span class="nx">cancel</span><span class="p">)</span>
-		<span class="c1">//这里
-</span><span class="c1"></span>		<span class="nf">drain</span><span class="p">(</span><span class="nx">input</span><span class="p">)</span>
-		<span class="c1">// We need to write a placeholder to let MapReduce to continue on reducer done,
-</span><span class="c1"></span>		<span class="c1">// otherwise, all goroutines are waiting. The placeholder will be discarded by MapReduce.
-</span><span class="c1"></span>		<span class="nx">writer</span><span class="p">.</span><span class="nf">Write</span><span class="p">(</span><span class="nx">lang</span><span class="p">.</span><span class="nx">Placeholder</span><span class="p">)</span>
-	<span class="p">},</span> <span class="nx">opts</span><span class="o">...</span><span class="p">)</span>
-	<span class="k">return</span> <span class="nx">err</span>
-<span class="p">}</span>
-</code></pre></div><p>然后这个闭包函数又执行了 <code>reducer(input, cancel)</code>，这里的 <code>reducer</code> 就是我们一开始解释过的 <code>VoidReducerFunc</code>，从 <code>Finish() 而来</code>。</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="k">go</span> <span class="kd">func</span><span class="p">()</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="k">defer</span> <span class="kd">func</span><span class="p">()</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">			<span class="k">if</span> <span class="nx">r</span> <span class="o">:=</span> <span class="nb">recover</span><span class="p">();</span> <span class="nx">r</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">				<span class="nf">cancel</span><span class="p">(</span><span class="nx">fmt</span><span class="p">.</span><span class="nf">Errorf</span><span class="p">(</span><span class="s">&#34;%v&#34;</span><span class="p">,</span> <span class="nx">r</span><span class="p">))</span>
+</span></span><span class="line"><span class="cl">			<span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">				<span class="nf">finish</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">			<span class="p">}</span>
+</span></span><span class="line"><span class="cl">		<span class="p">}()</span>
+</span></span><span class="line"><span class="cl">		<span class="nf">reducer</span><span class="p">(</span><span class="nx">collector</span><span class="p">,</span> <span class="nx">writer</span><span class="p">,</span> <span class="nx">cancel</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">		<span class="c1">//这里
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>		<span class="nf">drain</span><span class="p">(</span><span class="nx">collector</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}()</span>
+</span></span></code></pre></div><p>这里的 <code>reducer(collector, writer, cancel)</code> 其实就是从 <code>MapReduceVoid</code> 传递的第三个闭包函数。</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="kd">func</span> <span class="nf">MapReduceVoid</span><span class="p">(</span><span class="nx">generator</span> <span class="nx">GenerateFunc</span><span class="p">,</span> <span class="nx">mapper</span> <span class="nx">MapperFunc</span><span class="p">,</span> <span class="nx">reducer</span> <span class="nx">VoidReducerFunc</span><span class="p">,</span> <span class="nx">opts</span> <span class="o">...</span><span class="nx">Option</span><span class="p">)</span> <span class="kt">error</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">_</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nf">MapReduce</span><span class="p">(</span><span class="nx">generator</span><span class="p">,</span> <span class="nx">mapper</span><span class="p">,</span> <span class="kd">func</span><span class="p">(</span><span class="nx">input</span> <span class="o">&lt;-</span><span class="kd">chan</span> <span class="kd">interface</span><span class="p">{},</span> <span class="nx">writer</span> <span class="nx">Writer</span><span class="p">,</span> <span class="nx">cancel</span> <span class="kd">func</span><span class="p">(</span><span class="kt">error</span><span class="p">))</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="nf">reducer</span><span class="p">(</span><span class="nx">input</span><span class="p">,</span> <span class="nx">cancel</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">		<span class="c1">//这里
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>		<span class="nf">drain</span><span class="p">(</span><span class="nx">input</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">		<span class="c1">// We need to write a placeholder to let MapReduce to continue on reducer done,
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>		<span class="c1">// otherwise, all goroutines are waiting. The placeholder will be discarded by MapReduce.
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>		<span class="nx">writer</span><span class="p">.</span><span class="nf">Write</span><span class="p">(</span><span class="nx">lang</span><span class="p">.</span><span class="nx">Placeholder</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">	<span class="p">},</span> <span class="nx">opts</span><span class="o">...</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">	<span class="k">return</span> <span class="nx">err</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></div><p>然后这个闭包函数又执行了 <code>reducer(input, cancel)</code>，这里的 <code>reducer</code> 就是我们一开始解释过的 <code>VoidReducerFunc</code>，从 <code>Finish() 而来</code>。</p>
 <p><img src="https://image.syst.top/image/mr/mr.png" alt="image"></p>
 <p>等等,看到上面三个地方的 <code>drain(input)</code>了吗？</p>
-<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="c1">// drain drains the channel.
-</span><span class="c1"></span><span class="kd">func</span> <span class="nf">drain</span><span class="p">(</span><span class="nx">channel</span> <span class="o">&lt;-</span><span class="kd">chan</span> <span class="kd">interface</span><span class="p">{})</span> <span class="p">{</span>
-	<span class="c1">// drain the channel
-</span><span class="c1"></span>	<span class="k">for</span> <span class="k">range</span> <span class="nx">channel</span> <span class="p">{</span>
-	<span class="p">}</span>
-<span class="p">}</span>
-</code></pre></div><p>其实就是一个排空 <code>channel</code> 的操作，但是三个地方都对同一个 <code>channel</code>,也是让我费解。</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="c1">// drain drains the channel.
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="kd">func</span> <span class="nf">drain</span><span class="p">(</span><span class="nx">channel</span> <span class="o">&lt;-</span><span class="kd">chan</span> <span class="kd">interface</span><span class="p">{})</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">	<span class="c1">// drain the channel
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="k">for</span> <span class="k">range</span> <span class="nx">channel</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></div><p>其实就是一个排空 <code>channel</code> 的操作，但是三个地方都对同一个 <code>channel</code>,也是让我费解。</p>
 <p>还有更重要的一点。</p>
-<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="k">go</span> <span class="kd">func</span><span class="p">()</span> <span class="p">{</span>
-		<span class="k">defer</span> <span class="kd">func</span><span class="p">()</span> <span class="p">{</span>
-			<span class="k">if</span> <span class="nx">r</span> <span class="o">:=</span> <span class="nb">recover</span><span class="p">();</span> <span class="nx">r</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
-				<span class="nf">cancel</span><span class="p">(</span><span class="nx">fmt</span><span class="p">.</span><span class="nf">Errorf</span><span class="p">(</span><span class="s">&#34;%v&#34;</span><span class="p">,</span> <span class="nx">r</span><span class="p">))</span>
-			<span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
-				<span class="nf">finish</span><span class="p">()</span>
-			<span class="p">}</span>
-		<span class="p">}()</span>
-		<span class="nf">reducer</span><span class="p">(</span><span class="nx">collector</span><span class="p">,</span> <span class="nx">writer</span><span class="p">,</span> <span class="nx">cancel</span><span class="p">)</span>
-		<span class="nf">drain</span><span class="p">(</span><span class="nx">collector</span><span class="p">)</span>
-	<span class="p">}()</span>
-</code></pre></div><p>上面的代码，假如执行 <code>reducer</code>，<code>writer</code> 写入引发 <code>panic</code>,那么<code>drain(collector)</code> 会直接卡住。</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="k">go</span> <span class="kd">func</span><span class="p">()</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="k">defer</span> <span class="kd">func</span><span class="p">()</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">			<span class="k">if</span> <span class="nx">r</span> <span class="o">:=</span> <span class="nb">recover</span><span class="p">();</span> <span class="nx">r</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">				<span class="nf">cancel</span><span class="p">(</span><span class="nx">fmt</span><span class="p">.</span><span class="nf">Errorf</span><span class="p">(</span><span class="s">&#34;%v&#34;</span><span class="p">,</span> <span class="nx">r</span><span class="p">))</span>
+</span></span><span class="line"><span class="cl">			<span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">				<span class="nf">finish</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">			<span class="p">}</span>
+</span></span><span class="line"><span class="cl">		<span class="p">}()</span>
+</span></span><span class="line"><span class="cl">		<span class="nf">reducer</span><span class="p">(</span><span class="nx">collector</span><span class="p">,</span> <span class="nx">writer</span><span class="p">,</span> <span class="nx">cancel</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">		<span class="nf">drain</span><span class="p">(</span><span class="nx">collector</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}()</span>
+</span></span></code></pre></div><p>上面的代码，假如执行 <code>reducer</code>，<code>writer</code> 写入引发 <code>panic</code>,那么<code>drain(collector)</code> 会直接卡住。</p>
 <p>不过作者已经修复了这个问题，直接把 <code>drain(collector)</code> 放入到 <code>defer</code>。
 <img src="https://image.syst.top/image/mr/mr-2.png" alt="image"></p>
 <p>具体 issues[1]。</p>
@@ -491,7 +487,7 @@ package main import ( &#34;fmt&#34; &#34;sync&#34; &#34;time&#34; ) func main() 
 	</footer>
 
 
-	<script src="https://www.syst.top/js/main.min.784417f5847151f848c339cf0acb13a06cbb648b1483435a28ed4556c4ead69b.js"></script>
+	<script src="https://www.syst.top/js/main.min.c8a831e54547e9c081939713d77308bf58ae5fed99a75acbcaaa14c5ce45bf89.js"></script>
 <script type="application/javascript">
 var doNotTrack = false;
 if (!doNotTrack) {

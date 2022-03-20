@@ -24,15 +24,10 @@ type call struct { wg sync.WaitGroup val interface{} err error forgotten bool //
 当带着全村人希望的那个请求，获取到数据，给对应key的call赋值，最终执行done，通知等待这个key全村的村民获取数据。
 代码并不复杂。
 自定义singleflight 我们也可以实现一个简易版本的。
-package main import ( &#34;fmt&#34; &#34;sync&#34; &#34;time&#34; ) type CacheEntry struct { data []byte err error wait chan struct{} } type OrderSever struct { cache map[string]*CacheEntry mutex sync.">
-<meta itemprop="datePublished" content="2021-04-25T22:25:52+08:00" />
+package main import ( &#34;fmt&#34; &#34;sync&#34; &#34;time&#34; ) type CacheEntry struct { data []byte err error wait chan struct{} } type OrderSever struct { cache map[string]*CacheEntry mutex sync."><meta itemprop="datePublished" content="2021-04-25T22:25:52+08:00" />
 <meta itemprop="dateModified" content="2021-04-25T22:25:52+08:00" />
 <meta itemprop="wordCount" content="262">
-
-
-
-<meta itemprop="keywords" content="go,enum," />
-<meta property="og:title" content="原来sync.Once还能这么用" />
+<meta itemprop="keywords" content="go,enum," /><meta property="og:title" content="原来sync.Once还能这么用" />
 <meta property="og:description" content="介绍 sync.Once估计大家都不陌生，官方介绍中，
  Once is an object that will perform exactly one action
  正是因为这个特性，Once常常被用于单例对象的初始化场景。
@@ -51,9 +46,10 @@ type call struct { wg sync.WaitGroup val interface{} err error forgotten bool //
 自定义singleflight 我们也可以实现一个简易版本的。
 package main import ( &#34;fmt&#34; &#34;sync&#34; &#34;time&#34; ) type CacheEntry struct { data []byte err error wait chan struct{} } type OrderSever struct { cache map[string]*CacheEntry mutex sync." />
 <meta property="og:type" content="article" />
-<meta property="og:url" content="https://www.syst.top/posts/go/synconce/" />
+<meta property="og:url" content="https://www.syst.top/posts/go/synconce/" /><meta property="article:section" content="posts" />
 <meta property="article:published_time" content="2021-04-25T22:25:52+08:00" />
 <meta property="article:modified_time" content="2021-04-25T22:25:52+08:00" />
+
 <meta name="twitter:card" content="summary"/>
 <meta name="twitter:title" content="原来sync.Once还能这么用"/>
 <meta name="twitter:description" content="介绍 sync.Once估计大家都不陌生，官方介绍中，
@@ -82,7 +78,7 @@ package main import ( &#34;fmt&#34; &#34;sync&#34; &#34;time&#34; ) type CacheEn
 	<link rel="shortcut icon" href="/favicon.ico">
 
 	<title>原来sync.Once还能这么用</title>
-	<link rel="stylesheet" href="https://www.syst.top/css/style.min.d3141168199607bf3a517216ce3c263814eecdbc8fca72a9a88700799a838219.css">
+	<link rel="stylesheet" href="https://www.syst.top/css/style.min.cb0663fd19952012fdb4a1345792a808ae19eb828578bde6eeae217ff1fb1e8b.css">
 	
 </head>
 
@@ -98,7 +94,7 @@ package main import ( &#34;fmt&#34; &#34;sync&#34; &#34;time&#34; ) type CacheEn
 					<a href="https://www.syst.top/posts/">文章</a>
 					<a href="https://www.syst.top/leetcode/">刷题</a>
 					<a href="https://www.syst.top/lives/">生活</a>
-					<a href="https://www.syst.top/translations/">翻译</a>
+					<a href="https://www.syst.top/readings/">读书笔记</a>
 					<a href="https://www.syst.top/friends/">朋友</a>
 					<a href="https://go.aabbccm.com">grpc-shop</a>
 				</nav>
@@ -140,19 +136,19 @@ package main import ( &#34;fmt&#34; &#34;sync&#34; &#34;time&#34; ) type CacheEn
 <p>​                                 图片来源:<a href="https://medium.com/codex/caching-system-stability-766bf5fff69f">caching</a></p>
 <h3 id="singleflight">singleflight<a href="#singleflight" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h3>
 <p><code>Go</code>里有很多防缓存击穿的工具，比如<code>singleflight</code>库。</p>
-<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kd">type</span> <span class="nx">call</span> <span class="kd">struct</span> <span class="p">{</span>
-	<span class="nx">wg</span> <span class="nx">sync</span><span class="p">.</span><span class="nx">WaitGroup</span>
-	<span class="nx">val</span> <span class="kd">interface</span><span class="p">{}</span>
-	<span class="nx">err</span> <span class="kt">error</span>
-	<span class="nx">forgotten</span> <span class="kt">bool</span>
-	<span class="c1">//.....省略部分字段
-</span><span class="c1"></span><span class="p">}</span>
-
-<span class="kd">type</span> <span class="nx">Group</span> <span class="kd">struct</span> <span class="p">{</span>
-	<span class="nx">mu</span> <span class="nx">sync</span><span class="p">.</span><span class="nx">Mutex</span>       
-	<span class="nx">m</span>  <span class="kd">map</span><span class="p">[</span><span class="kt">string</span><span class="p">]</span><span class="o">*</span><span class="nx">call</span> 
-<span class="p">}</span>
-</code></pre></div><p><img src="https://cdn.syst.top/once-1.png" alt=""></p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="kd">type</span> <span class="nx">call</span> <span class="kd">struct</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">wg</span> <span class="nx">sync</span><span class="p">.</span><span class="nx">WaitGroup</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">val</span> <span class="kd">interface</span><span class="p">{}</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">err</span> <span class="kt">error</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">forgotten</span> <span class="kt">bool</span>
+</span></span><span class="line"><span class="cl">	<span class="c1">//.....省略部分字段
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="kd">type</span> <span class="nx">Group</span> <span class="kd">struct</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">mu</span> <span class="nx">sync</span><span class="p">.</span><span class="nx">Mutex</span>       
+</span></span><span class="line"><span class="cl">	<span class="nx">m</span>  <span class="kd">map</span><span class="p">[</span><span class="kt">string</span><span class="p">]</span><span class="o">*</span><span class="nx">call</span> 
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></div><p><img src="https://cdn.syst.top/once-1.png" alt=""></p>
 <p>通过上面简单的代码大概能看出，其实就是对<code>key</code>做了缓存。</p>
 <p>把一个<code>key</code>对应<code>call</code>结构存储在<code>map</code>中。保证只有一个<code>key</code>真正执行<code>fn()</code>服务 ，其他请求则通过<code>sync.waitGroup</code>的<code>wait</code>等待结果。</p>
 <p>至于<code>g.docall(c,key,fn)</code>，</p>
@@ -161,107 +157,107 @@ package main import ( &#34;fmt&#34; &#34;sync&#34; &#34;time&#34; ) type CacheEn
 <p>代码并不复杂。</p>
 <h3 id="自定义singleflight"><strong>自定义</strong>singleflight<a href="#自定义singleflight" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h3>
 <p>我们也可以实现一个简易版本的。</p>
-<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kn">package</span> <span class="nx">main</span>
-
-<span class="kn">import</span> <span class="p">(</span>
-	<span class="s">&#34;fmt&#34;</span>
-	<span class="s">&#34;sync&#34;</span>
-	<span class="s">&#34;time&#34;</span>
-<span class="p">)</span>
-
-<span class="kd">type</span> <span class="nx">CacheEntry</span> <span class="kd">struct</span> <span class="p">{</span>
-	<span class="nx">data</span> <span class="p">[]</span><span class="kt">byte</span>
-	<span class="nx">err</span>  <span class="kt">error</span>
-	<span class="nx">wait</span> <span class="kd">chan</span> <span class="kd">struct</span><span class="p">{}</span>
-<span class="p">}</span>
-
-<span class="kd">type</span> <span class="nx">OrderSever</span> <span class="kd">struct</span> <span class="p">{</span>
-	<span class="nx">cache</span> <span class="kd">map</span><span class="p">[</span><span class="kt">string</span><span class="p">]</span><span class="o">*</span><span class="nx">CacheEntry</span>
-	<span class="nx">mutex</span> <span class="nx">sync</span><span class="p">.</span><span class="nx">Mutex</span>
-<span class="p">}</span>
-
-<span class="kd">func</span> <span class="p">(</span><span class="nx">order</span> <span class="o">*</span><span class="nx">OrderSever</span><span class="p">)</span> <span class="nf">Query</span><span class="p">(</span><span class="nx">key</span> <span class="kt">string</span><span class="p">)</span> <span class="p">([]</span><span class="kt">byte</span><span class="p">,</span> <span class="kt">error</span><span class="p">)</span> <span class="p">{</span>
-	<span class="nx">order</span><span class="p">.</span><span class="nx">mutex</span><span class="p">.</span><span class="nf">Lock</span><span class="p">()</span>
-	<span class="k">if</span> <span class="nx">order</span><span class="p">.</span><span class="nx">cache</span> <span class="o">==</span> <span class="kc">nil</span> <span class="p">{</span>
-		<span class="nx">order</span><span class="p">.</span><span class="nx">cache</span> <span class="p">=</span> <span class="nb">make</span><span class="p">(</span><span class="kd">map</span><span class="p">[</span><span class="kt">string</span><span class="p">]</span><span class="o">*</span><span class="nx">CacheEntry</span><span class="p">)</span>
-	<span class="p">}</span>
-  
-  <span class="c1">//已经有其他兄弟请求了，你等等
-</span><span class="c1"></span>	<span class="k">if</span> <span class="nx">entry</span><span class="p">,</span> <span class="nx">ok</span> <span class="o">:=</span> <span class="nx">order</span><span class="p">.</span><span class="nx">cache</span><span class="p">[</span><span class="nx">key</span><span class="p">];</span> <span class="nx">ok</span> <span class="p">{</span>
-		<span class="nx">order</span><span class="p">.</span><span class="nx">mutex</span><span class="p">.</span><span class="nf">Unlock</span><span class="p">()</span>
-		<span class="o">&lt;-</span><span class="nx">entry</span><span class="p">.</span><span class="nx">wait</span>
-		<span class="k">return</span> <span class="nx">entry</span><span class="p">.</span><span class="nx">data</span><span class="p">,</span> <span class="nx">entry</span><span class="p">.</span><span class="nx">err</span>
-	<span class="p">}</span>
-	<span class="nx">entry</span> <span class="o">:=</span> <span class="o">&amp;</span><span class="nx">CacheEntry</span><span class="p">{</span>
-		<span class="nx">data</span><span class="p">:</span> <span class="nb">make</span><span class="p">([]</span><span class="kt">byte</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span>
-		<span class="nx">wait</span><span class="p">:</span> <span class="nb">make</span><span class="p">(</span><span class="kd">chan</span> <span class="kd">struct</span><span class="p">{}),</span>
-	<span class="p">}</span>
-	<span class="nx">order</span><span class="p">.</span><span class="nx">cache</span><span class="p">[</span><span class="nx">key</span><span class="p">]</span> <span class="p">=</span> <span class="nx">entry</span>
-	<span class="nx">order</span><span class="p">.</span><span class="nx">mutex</span><span class="p">.</span><span class="nf">Unlock</span><span class="p">()</span>
-  <span class="c1">// 请求数据
-</span><span class="c1"></span>	<span class="nx">entry</span><span class="p">.</span><span class="nx">data</span><span class="p">,</span> <span class="nx">entry</span><span class="p">.</span><span class="nx">err</span> <span class="p">=</span> <span class="nf">getOrder</span><span class="p">()</span>
-  <span class="c1">// 请求数据完毕，通知其他兄弟可以拿数据了。
-</span><span class="c1"></span>	<span class="nb">close</span><span class="p">(</span><span class="nx">entry</span><span class="p">.</span><span class="nx">wait</span><span class="p">)</span>
-	<span class="k">return</span> <span class="nx">entry</span><span class="p">.</span><span class="nx">data</span><span class="p">,</span> <span class="kc">nil</span>
-<span class="p">}</span>
-
-<span class="c1">//外部服务
-</span><span class="c1"></span><span class="kd">func</span> <span class="nf">getOrder</span><span class="p">()</span> <span class="p">([]</span><span class="kt">byte</span><span class="p">,</span> <span class="kt">error</span><span class="p">)</span> <span class="p">{</span>
-	<span class="nx">time</span><span class="p">.</span><span class="nf">Sleep</span><span class="p">(</span><span class="mi">50</span> <span class="o">*</span> <span class="nx">time</span><span class="p">.</span><span class="nx">Millisecond</span><span class="p">)</span>
-	<span class="k">return</span> <span class="p">[]</span><span class="nb">byte</span><span class="p">(</span><span class="s">&#34;hello world&#34;</span><span class="p">),</span> <span class="kc">nil</span>
-<span class="p">}</span>
-</code></pre></div><p>代码整体不难，主要的点在于我们是通过通道来实现通知自家兄弟取数据。</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="kn">package</span> <span class="nx">main</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="kn">import</span> <span class="p">(</span>
+</span></span><span class="line"><span class="cl">	<span class="s">&#34;fmt&#34;</span>
+</span></span><span class="line"><span class="cl">	<span class="s">&#34;sync&#34;</span>
+</span></span><span class="line"><span class="cl">	<span class="s">&#34;time&#34;</span>
+</span></span><span class="line"><span class="cl"><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="kd">type</span> <span class="nx">CacheEntry</span> <span class="kd">struct</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">data</span> <span class="p">[]</span><span class="kt">byte</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">err</span>  <span class="kt">error</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">wait</span> <span class="kd">chan</span> <span class="kd">struct</span><span class="p">{}</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="kd">type</span> <span class="nx">OrderSever</span> <span class="kd">struct</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">cache</span> <span class="kd">map</span><span class="p">[</span><span class="kt">string</span><span class="p">]</span><span class="o">*</span><span class="nx">CacheEntry</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">mutex</span> <span class="nx">sync</span><span class="p">.</span><span class="nx">Mutex</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="kd">func</span> <span class="p">(</span><span class="nx">order</span> <span class="o">*</span><span class="nx">OrderSever</span><span class="p">)</span> <span class="nf">Query</span><span class="p">(</span><span class="nx">key</span> <span class="kt">string</span><span class="p">)</span> <span class="p">([]</span><span class="kt">byte</span><span class="p">,</span> <span class="kt">error</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">order</span><span class="p">.</span><span class="nx">mutex</span><span class="p">.</span><span class="nf">Lock</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">	<span class="k">if</span> <span class="nx">order</span><span class="p">.</span><span class="nx">cache</span> <span class="o">==</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">order</span><span class="p">.</span><span class="nx">cache</span> <span class="p">=</span> <span class="nb">make</span><span class="p">(</span><span class="kd">map</span><span class="p">[</span><span class="kt">string</span><span class="p">]</span><span class="o">*</span><span class="nx">CacheEntry</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}</span>
+</span></span><span class="line"><span class="cl">  
+</span></span><span class="line"><span class="cl">  <span class="c1">//已经有其他兄弟请求了，你等等
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="k">if</span> <span class="nx">entry</span><span class="p">,</span> <span class="nx">ok</span> <span class="o">:=</span> <span class="nx">order</span><span class="p">.</span><span class="nx">cache</span><span class="p">[</span><span class="nx">key</span><span class="p">];</span> <span class="nx">ok</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">order</span><span class="p">.</span><span class="nx">mutex</span><span class="p">.</span><span class="nf">Unlock</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">		<span class="o">&lt;-</span><span class="nx">entry</span><span class="p">.</span><span class="nx">wait</span>
+</span></span><span class="line"><span class="cl">		<span class="k">return</span> <span class="nx">entry</span><span class="p">.</span><span class="nx">data</span><span class="p">,</span> <span class="nx">entry</span><span class="p">.</span><span class="nx">err</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">entry</span> <span class="o">:=</span> <span class="o">&amp;</span><span class="nx">CacheEntry</span><span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">data</span><span class="p">:</span> <span class="nb">make</span><span class="p">([]</span><span class="kt">byte</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">wait</span><span class="p">:</span> <span class="nb">make</span><span class="p">(</span><span class="kd">chan</span> <span class="kd">struct</span><span class="p">{}),</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">order</span><span class="p">.</span><span class="nx">cache</span><span class="p">[</span><span class="nx">key</span><span class="p">]</span> <span class="p">=</span> <span class="nx">entry</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">order</span><span class="p">.</span><span class="nx">mutex</span><span class="p">.</span><span class="nf">Unlock</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">  <span class="c1">// 请求数据
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="nx">entry</span><span class="p">.</span><span class="nx">data</span><span class="p">,</span> <span class="nx">entry</span><span class="p">.</span><span class="nx">err</span> <span class="p">=</span> <span class="nf">getOrder</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">  <span class="c1">// 请求数据完毕，通知其他兄弟可以拿数据了。
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="nb">close</span><span class="p">(</span><span class="nx">entry</span><span class="p">.</span><span class="nx">wait</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">	<span class="k">return</span> <span class="nx">entry</span><span class="p">.</span><span class="nx">data</span><span class="p">,</span> <span class="kc">nil</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1">//外部服务
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="kd">func</span> <span class="nf">getOrder</span><span class="p">()</span> <span class="p">([]</span><span class="kt">byte</span><span class="p">,</span> <span class="kt">error</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">time</span><span class="p">.</span><span class="nf">Sleep</span><span class="p">(</span><span class="mi">50</span> <span class="o">*</span> <span class="nx">time</span><span class="p">.</span><span class="nx">Millisecond</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">	<span class="k">return</span> <span class="p">[]</span><span class="nb">byte</span><span class="p">(</span><span class="s">&#34;hello world&#34;</span><span class="p">),</span> <span class="kc">nil</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></div><p>代码整体不难，主要的点在于我们是通过通道来实现通知自家兄弟取数据。</p>
 <p>最后，让我们使用<code>Once</code>来达到同样的效果，不然标题不白起了嘛。</p>
-<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kn">package</span> <span class="nx">main</span>
-
-<span class="kn">import</span> <span class="p">(</span>
-	<span class="s">&#34;fmt&#34;</span>
-	<span class="s">&#34;sync&#34;</span>
-	<span class="s">&#34;time&#34;</span>
-<span class="p">)</span>
-
-<span class="kd">type</span> <span class="nx">CacheEntry</span> <span class="kd">struct</span> <span class="p">{</span>
-	<span class="nx">data</span> <span class="p">[]</span><span class="kt">byte</span>
-	<span class="nx">err</span>  <span class="kt">error</span>
-	<span class="nx">once</span> <span class="o">*</span><span class="nx">sync</span><span class="p">.</span><span class="nx">Once</span>
-<span class="p">}</span>
-
-<span class="kd">type</span> <span class="nx">OrderSever</span> <span class="kd">struct</span> <span class="p">{</span>
-	<span class="nx">cache</span> <span class="kd">map</span><span class="p">[</span><span class="kt">string</span><span class="p">]</span><span class="o">*</span><span class="nx">CacheEntry</span>
-	<span class="nx">mutex</span> <span class="nx">sync</span><span class="p">.</span><span class="nx">Mutex</span>
-<span class="p">}</span>
-
-<span class="kd">func</span> <span class="p">(</span><span class="nx">order</span> <span class="o">*</span><span class="nx">OrderSever</span><span class="p">)</span> <span class="nf">Query</span><span class="p">(</span><span class="nx">key</span> <span class="kt">string</span><span class="p">)</span> <span class="p">([]</span><span class="kt">byte</span><span class="p">,</span> <span class="kt">error</span><span class="p">)</span> <span class="p">{</span>
-	<span class="nx">order</span><span class="p">.</span><span class="nx">mutex</span><span class="p">.</span><span class="nf">Lock</span><span class="p">()</span>
-	<span class="k">if</span> <span class="nx">order</span><span class="p">.</span><span class="nx">cache</span> <span class="o">==</span> <span class="kc">nil</span> <span class="p">{</span>
-		<span class="nx">order</span><span class="p">.</span><span class="nx">cache</span> <span class="p">=</span> <span class="nb">make</span><span class="p">(</span><span class="kd">map</span><span class="p">[</span><span class="kt">string</span><span class="p">]</span><span class="o">*</span><span class="nx">CacheEntry</span><span class="p">)</span>
-	<span class="p">}</span>
-	<span class="nx">entry</span><span class="p">,</span> <span class="nx">ok</span> <span class="o">:=</span> <span class="nx">order</span><span class="p">.</span><span class="nx">cache</span><span class="p">[</span><span class="nx">key</span><span class="p">]</span>
-  
-  <span class="c1">// 找不到就初始化一个
-</span><span class="c1"></span>	<span class="k">if</span> <span class="p">!</span><span class="nx">ok</span> <span class="p">{</span>
-		<span class="nx">entry</span> <span class="p">=</span> <span class="o">&amp;</span><span class="nx">CacheEntry</span><span class="p">{</span>
-			<span class="nx">data</span><span class="p">:</span> <span class="nb">make</span><span class="p">([]</span><span class="kt">byte</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span>
-			<span class="nx">err</span><span class="p">:</span>  <span class="kc">nil</span><span class="p">,</span>
-			<span class="nx">once</span><span class="p">:</span> <span class="nb">new</span><span class="p">(</span><span class="nx">sync</span><span class="p">.</span><span class="nx">Once</span><span class="p">),</span>
-		<span class="p">}</span>
-		<span class="nx">order</span><span class="p">.</span><span class="nx">cache</span><span class="p">[</span><span class="nx">key</span><span class="p">]</span> <span class="p">=</span> <span class="nx">entry</span>
-	<span class="p">}</span>
-	<span class="nx">order</span><span class="p">.</span><span class="nx">mutex</span><span class="p">.</span><span class="nf">Unlock</span><span class="p">()</span>
-  
-  <span class="c1">// 我只执行一次。
-</span><span class="c1"></span>	<span class="nx">entry</span><span class="p">.</span><span class="nx">once</span><span class="p">.</span><span class="nf">Do</span><span class="p">(</span><span class="kd">func</span><span class="p">()</span> <span class="p">{</span>
-		<span class="nx">entry</span><span class="p">.</span><span class="nx">data</span><span class="p">,</span> <span class="nx">entry</span><span class="p">.</span><span class="nx">err</span> <span class="p">=</span> <span class="nf">getOrder</span><span class="p">()</span>
-	<span class="p">})</span>
-  <span class="c1">//数据被赋值了，返回
-</span><span class="c1"></span>	<span class="k">return</span> <span class="nx">entry</span><span class="p">.</span><span class="nx">data</span><span class="p">,</span> <span class="nx">entry</span><span class="p">.</span><span class="nx">err</span>
-<span class="p">}</span>
-
-<span class="kd">func</span> <span class="nf">getOrder</span><span class="p">()</span> <span class="p">([]</span><span class="kt">byte</span><span class="p">,</span> <span class="kt">error</span><span class="p">)</span> <span class="p">{</span>
-	<span class="nx">time</span><span class="p">.</span><span class="nf">Sleep</span><span class="p">(</span><span class="mi">50</span> <span class="o">*</span> <span class="nx">time</span><span class="p">.</span><span class="nx">Millisecond</span><span class="p">)</span>
-	<span class="k">return</span> <span class="p">[]</span><span class="nb">byte</span><span class="p">(</span><span class="s">&#34;hello world&#34;</span><span class="p">),</span> <span class="kc">nil</span>
-<span class="p">}</span>
-</code></pre></div><p>上面核心代码都写出来了，实际开发中需要对请求资源做一些超时控制等操作。</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="kn">package</span> <span class="nx">main</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="kn">import</span> <span class="p">(</span>
+</span></span><span class="line"><span class="cl">	<span class="s">&#34;fmt&#34;</span>
+</span></span><span class="line"><span class="cl">	<span class="s">&#34;sync&#34;</span>
+</span></span><span class="line"><span class="cl">	<span class="s">&#34;time&#34;</span>
+</span></span><span class="line"><span class="cl"><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="kd">type</span> <span class="nx">CacheEntry</span> <span class="kd">struct</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">data</span> <span class="p">[]</span><span class="kt">byte</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">err</span>  <span class="kt">error</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">once</span> <span class="o">*</span><span class="nx">sync</span><span class="p">.</span><span class="nx">Once</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="kd">type</span> <span class="nx">OrderSever</span> <span class="kd">struct</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">cache</span> <span class="kd">map</span><span class="p">[</span><span class="kt">string</span><span class="p">]</span><span class="o">*</span><span class="nx">CacheEntry</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">mutex</span> <span class="nx">sync</span><span class="p">.</span><span class="nx">Mutex</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="kd">func</span> <span class="p">(</span><span class="nx">order</span> <span class="o">*</span><span class="nx">OrderSever</span><span class="p">)</span> <span class="nf">Query</span><span class="p">(</span><span class="nx">key</span> <span class="kt">string</span><span class="p">)</span> <span class="p">([]</span><span class="kt">byte</span><span class="p">,</span> <span class="kt">error</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">order</span><span class="p">.</span><span class="nx">mutex</span><span class="p">.</span><span class="nf">Lock</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">	<span class="k">if</span> <span class="nx">order</span><span class="p">.</span><span class="nx">cache</span> <span class="o">==</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">order</span><span class="p">.</span><span class="nx">cache</span> <span class="p">=</span> <span class="nb">make</span><span class="p">(</span><span class="kd">map</span><span class="p">[</span><span class="kt">string</span><span class="p">]</span><span class="o">*</span><span class="nx">CacheEntry</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">entry</span><span class="p">,</span> <span class="nx">ok</span> <span class="o">:=</span> <span class="nx">order</span><span class="p">.</span><span class="nx">cache</span><span class="p">[</span><span class="nx">key</span><span class="p">]</span>
+</span></span><span class="line"><span class="cl">  
+</span></span><span class="line"><span class="cl">  <span class="c1">// 找不到就初始化一个
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="k">if</span> <span class="p">!</span><span class="nx">ok</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">entry</span> <span class="p">=</span> <span class="o">&amp;</span><span class="nx">CacheEntry</span><span class="p">{</span>
+</span></span><span class="line"><span class="cl">			<span class="nx">data</span><span class="p">:</span> <span class="nb">make</span><span class="p">([]</span><span class="kt">byte</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span>
+</span></span><span class="line"><span class="cl">			<span class="nx">err</span><span class="p">:</span>  <span class="kc">nil</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">			<span class="nx">once</span><span class="p">:</span> <span class="nb">new</span><span class="p">(</span><span class="nx">sync</span><span class="p">.</span><span class="nx">Once</span><span class="p">),</span>
+</span></span><span class="line"><span class="cl">		<span class="p">}</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">order</span><span class="p">.</span><span class="nx">cache</span><span class="p">[</span><span class="nx">key</span><span class="p">]</span> <span class="p">=</span> <span class="nx">entry</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">order</span><span class="p">.</span><span class="nx">mutex</span><span class="p">.</span><span class="nf">Unlock</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">  
+</span></span><span class="line"><span class="cl">  <span class="c1">// 我只执行一次。
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="nx">entry</span><span class="p">.</span><span class="nx">once</span><span class="p">.</span><span class="nf">Do</span><span class="p">(</span><span class="kd">func</span><span class="p">()</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">entry</span><span class="p">.</span><span class="nx">data</span><span class="p">,</span> <span class="nx">entry</span><span class="p">.</span><span class="nx">err</span> <span class="p">=</span> <span class="nf">getOrder</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">	<span class="p">})</span>
+</span></span><span class="line"><span class="cl">  <span class="c1">//数据被赋值了，返回
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="k">return</span> <span class="nx">entry</span><span class="p">.</span><span class="nx">data</span><span class="p">,</span> <span class="nx">entry</span><span class="p">.</span><span class="nx">err</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="kd">func</span> <span class="nf">getOrder</span><span class="p">()</span> <span class="p">([]</span><span class="kt">byte</span><span class="p">,</span> <span class="kt">error</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">time</span><span class="p">.</span><span class="nf">Sleep</span><span class="p">(</span><span class="mi">50</span> <span class="o">*</span> <span class="nx">time</span><span class="p">.</span><span class="nx">Millisecond</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">	<span class="k">return</span> <span class="p">[]</span><span class="nb">byte</span><span class="p">(</span><span class="s">&#34;hello world&#34;</span><span class="p">),</span> <span class="kc">nil</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></div><p>上面核心代码都写出来了，实际开发中需要对请求资源做一些超时控制等操作。</p>
 <h3 id="总结">总结<a href="#总结" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h3>
 <p>平常对<code>Once</code>的使用只停留在初始化工作上，而弱化了它的使用场景。对于其他工具也是一个道理，这就需要去积累和挖掘了。</p>
 <h3 id="附录"><strong>附录</strong><a href="#附录" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h3>
@@ -323,7 +319,7 @@ package main import ( &#34;fmt&#34; &#34;sync&#34; &#34;time&#34; ) type CacheEn
 	</footer>
 
 
-	<script src="https://www.syst.top/js/main.min.784417f5847151f848c339cf0acb13a06cbb648b1483435a28ed4556c4ead69b.js"></script>
+	<script src="https://www.syst.top/js/main.min.c8a831e54547e9c081939713d77308bf58ae5fed99a75acbcaaa14c5ce45bf89.js"></script>
 <script type="application/javascript">
 var doNotTrack = false;
 if (!doNotTrack) {

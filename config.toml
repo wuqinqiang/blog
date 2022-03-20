@@ -87,8 +87,8 @@ googleAnalytics = "UA-166045776-1"
     weight = 8
 
   [[menu.nav]]
-    name = "翻译"
-    url = "translations/"
+    name = "读书笔记"
+    url = "readings/"
     weight = 10
 
 

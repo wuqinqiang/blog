@@ -14,15 +14,10 @@
 大概就长这样:
 现在我们需要对外暴露一个订单服务的接口。
 首页看 main.go 文件。
-package main import ( &#34;fmt&#34; &#34;github.com/gin-gonic/gin&#34; &#34;github.com/wuqinqiang/digvswire/dig&#34; &#34;github.com/wuqinqiang/digvswire/router&#34; ) func main() { serverStart() } func serverStart() { defer func() { if err := recover(); err != nil { fmt.Printf(&#34;init app err:%v\n&#34;, err) } }() e := gin.Default() di := dig.ContainerByDig() err := router.RegisterRouter(e, di) if err != nil { fmt.Printf(&#34;register router err:%v&#34;, err) } _ = e.">
-<meta itemprop="datePublished" content="2021-04-21T23:54:52+08:00" />
+package main import ( &#34;fmt&#34; &#34;github.com/gin-gonic/gin&#34; &#34;github.com/wuqinqiang/digvswire/dig&#34; &#34;github.com/wuqinqiang/digvswire/router&#34; ) func main() { serverStart() } func serverStart() { defer func() { if err := recover(); err != nil { fmt.Printf(&#34;init app err:%v\n&#34;, err) } }() e := gin.Default() di := dig.ContainerByDig() err := router.RegisterRouter(e, di) if err != nil { fmt.Printf(&#34;register router err:%v&#34;, err) } _ = e."><meta itemprop="datePublished" content="2021-04-21T23:54:52+08:00" />
 <meta itemprop="dateModified" content="2021-04-21T23:54:52+08:00" />
 <meta itemprop="wordCount" content="604">
-
-
-
-<meta itemprop="keywords" content="go,mistake," />
-<meta property="og:title" content="为什么把 dig 迁移到 wire" />
+<meta itemprop="keywords" content="go,mistake," /><meta property="og:title" content="为什么把 dig 迁移到 wire" />
 <meta property="og:description" content="开篇 dig 和 wire 都是 Go 依赖注入的工具，那么，本质上功能相似的框架，为什么要从 dig 切换成 wire？
 场景 我们从场景出发。
 假设我们的项目分层是:router-&gt;controller-&gt;service-&gt;dao。
@@ -31,9 +26,10 @@ package main import ( &#34;fmt&#34; &#34;github.com/gin-gonic/gin&#34; &#34;gith
 首页看 main.go 文件。
 package main import ( &#34;fmt&#34; &#34;github.com/gin-gonic/gin&#34; &#34;github.com/wuqinqiang/digvswire/dig&#34; &#34;github.com/wuqinqiang/digvswire/router&#34; ) func main() { serverStart() } func serverStart() { defer func() { if err := recover(); err != nil { fmt.Printf(&#34;init app err:%v\n&#34;, err) } }() e := gin.Default() di := dig.ContainerByDig() err := router.RegisterRouter(e, di) if err != nil { fmt.Printf(&#34;register router err:%v&#34;, err) } _ = e." />
 <meta property="og:type" content="article" />
-<meta property="og:url" content="https://www.syst.top/posts/go/why-dig-to-wire/" />
+<meta property="og:url" content="https://www.syst.top/posts/go/why-dig-to-wire/" /><meta property="article:section" content="posts" />
 <meta property="article:published_time" content="2021-04-21T23:54:52+08:00" />
 <meta property="article:modified_time" content="2021-04-21T23:54:52+08:00" />
+
 <meta name="twitter:card" content="summary"/>
 <meta name="twitter:title" content="为什么把 dig 迁移到 wire"/>
 <meta name="twitter:description" content="开篇 dig 和 wire 都是 Go 依赖注入的工具，那么，本质上功能相似的框架，为什么要从 dig 切换成 wire？
@@ -52,7 +48,7 @@ package main import ( &#34;fmt&#34; &#34;github.com/gin-gonic/gin&#34; &#34;gith
 	<link rel="shortcut icon" href="/favicon.ico">
 
 	<title>为什么把 dig 迁移到 wire</title>
-	<link rel="stylesheet" href="https://www.syst.top/css/style.min.d3141168199607bf3a517216ce3c263814eecdbc8fca72a9a88700799a838219.css">
+	<link rel="stylesheet" href="https://www.syst.top/css/style.min.cb0663fd19952012fdb4a1345792a808ae19eb828578bde6eeae217ff1fb1e8b.css">
 	
 </head>
 
@@ -68,7 +64,7 @@ package main import ( &#34;fmt&#34; &#34;github.com/gin-gonic/gin&#34; &#34;gith
 					<a href="https://www.syst.top/posts/">文章</a>
 					<a href="https://www.syst.top/leetcode/">刷题</a>
 					<a href="https://www.syst.top/lives/">生活</a>
-					<a href="https://www.syst.top/translations/">翻译</a>
+					<a href="https://www.syst.top/readings/">读书笔记</a>
 					<a href="https://www.syst.top/friends/">朋友</a>
 					<a href="https://go.aabbccm.com">grpc-shop</a>
 				</nav>
@@ -103,160 +99,159 @@ package main import ( &#34;fmt&#34; &#34;github.com/gin-gonic/gin&#34; &#34;gith
 <p><img src="https://image.syst.top/image/dig-to-wire/1.png" alt="image"></p>
 <p>现在我们需要对外暴露一个订单服务的接口。</p>
 <p>首页看 <code>main.go</code> 文件。</p>
-<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kn">package</span> <span class="nx">main</span>
-
-<span class="kn">import</span> <span class="p">(</span>
-	<span class="s">&#34;fmt&#34;</span>
-	<span class="s">&#34;github.com/gin-gonic/gin&#34;</span>
-	<span class="s">&#34;github.com/wuqinqiang/digvswire/dig&#34;</span>
-	<span class="s">&#34;github.com/wuqinqiang/digvswire/router&#34;</span>
-<span class="p">)</span>
-
-<span class="kd">func</span> <span class="nf">main</span><span class="p">()</span> <span class="p">{</span>
-	<span class="nf">serverStart</span><span class="p">()</span>
-<span class="p">}</span>
-
-<span class="kd">func</span> <span class="nf">serverStart</span><span class="p">()</span> <span class="p">{</span>
-	<span class="k">defer</span> <span class="kd">func</span><span class="p">()</span> <span class="p">{</span>
-		<span class="k">if</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nb">recover</span><span class="p">();</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
-			<span class="nx">fmt</span><span class="p">.</span><span class="nf">Printf</span><span class="p">(</span><span class="s">&#34;init app err:%v\n&#34;</span><span class="p">,</span> <span class="nx">err</span><span class="p">)</span>
-		<span class="p">}</span>
-	<span class="p">}()</span>
-	<span class="nx">e</span> <span class="o">:=</span> <span class="nx">gin</span><span class="p">.</span><span class="nf">Default</span><span class="p">()</span>
-	<span class="nx">di</span> <span class="o">:=</span> <span class="nx">dig</span><span class="p">.</span><span class="nf">ContainerByDig</span><span class="p">()</span>
-	<span class="nx">err</span> <span class="o">:=</span> <span class="nx">router</span><span class="p">.</span><span class="nf">RegisterRouter</span><span class="p">(</span><span class="nx">e</span><span class="p">,</span> <span class="nx">di</span><span class="p">)</span>
-	<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
-		<span class="nx">fmt</span><span class="p">.</span><span class="nf">Printf</span><span class="p">(</span><span class="s">&#34;register router err:%v&#34;</span><span class="p">,</span> <span class="nx">err</span><span class="p">)</span>
-	<span class="p">}</span>
-	<span class="nx">_</span> <span class="p">=</span> <span class="nx">e</span><span class="p">.</span><span class="nf">Run</span><span class="p">(</span><span class="s">&#34;:8090&#34;</span><span class="p">)</span>
-<span class="p">}</span>
-
-</code></pre></div><p>这里使用了 <code>gin</code> 启动项目。 然后我们查看 <code>dig.ContainerByDig()</code>，</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="kn">package</span> <span class="nx">main</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="kn">import</span> <span class="p">(</span>
+</span></span><span class="line"><span class="cl">	<span class="s">&#34;fmt&#34;</span>
+</span></span><span class="line"><span class="cl">	<span class="s">&#34;github.com/gin-gonic/gin&#34;</span>
+</span></span><span class="line"><span class="cl">	<span class="s">&#34;github.com/wuqinqiang/digvswire/dig&#34;</span>
+</span></span><span class="line"><span class="cl">	<span class="s">&#34;github.com/wuqinqiang/digvswire/router&#34;</span>
+</span></span><span class="line"><span class="cl"><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="kd">func</span> <span class="nf">main</span><span class="p">()</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">	<span class="nf">serverStart</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="kd">func</span> <span class="nf">serverStart</span><span class="p">()</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">	<span class="k">defer</span> <span class="kd">func</span><span class="p">()</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="k">if</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nb">recover</span><span class="p">();</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">			<span class="nx">fmt</span><span class="p">.</span><span class="nf">Printf</span><span class="p">(</span><span class="s">&#34;init app err:%v\n&#34;</span><span class="p">,</span> <span class="nx">err</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">		<span class="p">}</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}()</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">e</span> <span class="o">:=</span> <span class="nx">gin</span><span class="p">.</span><span class="nf">Default</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">di</span> <span class="o">:=</span> <span class="nx">dig</span><span class="p">.</span><span class="nf">ContainerByDig</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">err</span> <span class="o">:=</span> <span class="nx">router</span><span class="p">.</span><span class="nf">RegisterRouter</span><span class="p">(</span><span class="nx">e</span><span class="p">,</span> <span class="nx">di</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">	<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">fmt</span><span class="p">.</span><span class="nf">Printf</span><span class="p">(</span><span class="s">&#34;register router err:%v&#34;</span><span class="p">,</span> <span class="nx">err</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">_</span> <span class="p">=</span> <span class="nx">e</span><span class="p">.</span><span class="nf">Run</span><span class="p">(</span><span class="s">&#34;:8090&#34;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></div><p>这里使用了 <code>gin</code> 启动项目。 然后我们查看 <code>dig.ContainerByDig()</code>，</p>
 <h3 id="dig">dig<a href="#dig" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h3>
-<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kn">package</span> <span class="nx">dig</span>
-
-<span class="kn">import</span> <span class="p">(</span>
-	<span class="s">&#34;github.com/wuqinqiang/digvswire/controller&#34;</span>
-	<span class="s">&#34;github.com/wuqinqiang/digvswire/dao&#34;</span>
-	<span class="s">&#34;github.com/wuqinqiang/digvswire/server&#34;</span>
-	<span class="s">&#34;go.uber.org/dig&#34;</span>
-<span class="p">)</span>
-
-<span class="kd">func</span> <span class="nf">ContainerByDig</span><span class="p">()</span> <span class="o">*</span><span class="nx">dig</span><span class="p">.</span><span class="nx">Container</span> <span class="p">{</span>
-	<span class="nx">d</span> <span class="o">:=</span> <span class="nx">dig</span><span class="p">.</span><span class="nf">New</span><span class="p">()</span>
-	<span class="nx">_</span> <span class="p">=</span> <span class="nx">d</span><span class="p">.</span><span class="nf">Provide</span><span class="p">(</span><span class="nx">dao</span><span class="p">.</span><span class="nx">NewOrderDao</span><span class="p">)</span>
-	<span class="nx">_</span> <span class="p">=</span> <span class="nx">d</span><span class="p">.</span><span class="nf">Provide</span><span class="p">(</span><span class="nx">server</span><span class="p">.</span><span class="nx">NewOrderServer</span><span class="p">)</span>
-	<span class="nx">_</span> <span class="p">=</span> <span class="nx">d</span><span class="p">.</span><span class="nf">Provide</span><span class="p">(</span><span class="nx">controller</span><span class="p">.</span><span class="nx">NewOrderHandler</span><span class="p">)</span>
-	<span class="k">return</span> <span class="nx">d</span>
-<span class="p">}</span>
-</code></pre></div><p>首先通过 <code>dig.New()</code> 创建一个 <code>di</code> 容器。
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="kn">package</span> <span class="nx">dig</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="kn">import</span> <span class="p">(</span>
+</span></span><span class="line"><span class="cl">	<span class="s">&#34;github.com/wuqinqiang/digvswire/controller&#34;</span>
+</span></span><span class="line"><span class="cl">	<span class="s">&#34;github.com/wuqinqiang/digvswire/dao&#34;</span>
+</span></span><span class="line"><span class="cl">	<span class="s">&#34;github.com/wuqinqiang/digvswire/server&#34;</span>
+</span></span><span class="line"><span class="cl">	<span class="s">&#34;go.uber.org/dig&#34;</span>
+</span></span><span class="line"><span class="cl"><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="kd">func</span> <span class="nf">ContainerByDig</span><span class="p">()</span> <span class="o">*</span><span class="nx">dig</span><span class="p">.</span><span class="nx">Container</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">d</span> <span class="o">:=</span> <span class="nx">dig</span><span class="p">.</span><span class="nf">New</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">_</span> <span class="p">=</span> <span class="nx">d</span><span class="p">.</span><span class="nf">Provide</span><span class="p">(</span><span class="nx">dao</span><span class="p">.</span><span class="nx">NewOrderDao</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">_</span> <span class="p">=</span> <span class="nx">d</span><span class="p">.</span><span class="nf">Provide</span><span class="p">(</span><span class="nx">server</span><span class="p">.</span><span class="nx">NewOrderServer</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">_</span> <span class="p">=</span> <span class="nx">d</span><span class="p">.</span><span class="nf">Provide</span><span class="p">(</span><span class="nx">controller</span><span class="p">.</span><span class="nx">NewOrderHandler</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">	<span class="k">return</span> <span class="nx">d</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></div><p>首先通过 <code>dig.New()</code> 创建一个 <code>di</code> 容器。
 <code>Provide</code> 函数用于添加服务提供者，  <code>Provide</code> 函数第一个参数本质上是一个函数。一个告诉容器 &ldquo;我能提供什么，为了提供它，我需要什么？&rdquo; 的函数。</p>
 <p>比如我们看第二个 <code>server.NewOrderServer</code>,</p>
-<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kn">package</span> <span class="nx">server</span>
-
-<span class="kn">import</span> <span class="p">(</span>
-	<span class="s">&#34;github.com/wuqinqiang/digvswire/dao&#34;</span>
-<span class="p">)</span>
-
-<span class="kd">var</span> <span class="nx">_</span> <span class="nx">OrderServerInterface</span> <span class="p">=</span> <span class="o">&amp;</span><span class="nx">OrderServer</span><span class="p">{}</span>
-
-<span class="kd">type</span> <span class="nx">OrderServerInterface</span> <span class="kd">interface</span> <span class="p">{</span>
-	<span class="nf">GetUserOrderList</span><span class="p">(</span><span class="nx">userId</span> <span class="kt">string</span><span class="p">)</span> <span class="p">([]</span><span class="nx">dao</span><span class="p">.</span><span class="nx">Order</span><span class="p">,</span> <span class="kt">error</span><span class="p">)</span>
-<span class="p">}</span>
-
-<span class="kd">type</span> <span class="nx">OrderServer</span> <span class="kd">struct</span> <span class="p">{</span>
-	<span class="nx">orderDao</span> <span class="nx">dao</span><span class="p">.</span><span class="nx">OrderDao</span>
-<span class="p">}</span>
-
-<span class="kd">func</span> <span class="nf">NewOrderServer</span><span class="p">(</span><span class="nx">order</span> <span class="nx">dao</span><span class="p">.</span><span class="nx">OrderDao</span><span class="p">)</span> <span class="nx">OrderServerInterface</span> <span class="p">{</span>
-	<span class="k">return</span> <span class="o">&amp;</span><span class="nx">OrderServer</span><span class="p">{</span><span class="nx">orderDao</span><span class="p">:</span> <span class="nx">order</span><span class="p">}</span>
-<span class="p">}</span>
-
-<span class="kd">func</span> <span class="p">(</span><span class="nx">o</span> <span class="o">*</span><span class="nx">OrderServer</span><span class="p">)</span> <span class="nf">GetUserOrderList</span><span class="p">(</span><span class="nx">userId</span> <span class="kt">string</span><span class="p">)</span> <span class="p">(</span><span class="nx">orderList</span> <span class="p">[]</span><span class="nx">dao</span><span class="p">.</span><span class="nx">Order</span><span class="p">,</span> <span class="nx">err</span> <span class="kt">error</span><span class="p">)</span> <span class="p">{</span>
-	<span class="k">return</span> <span class="nx">o</span><span class="p">.</span><span class="nx">orderDao</span><span class="p">.</span><span class="nf">GetOrderListById</span><span class="p">(</span><span class="nx">userId</span><span class="p">)</span>
-<span class="p">}</span>
-</code></pre></div><p>这里的 <code>NewOrderServer(xxx)</code> 在 <code>Provide</code> 中的语意就是 &ldquo;我能提供一个 <code>OrderServerInterface</code> 服务，但是我需要依赖一个 <code>dao.OrderDao</code>&quot;。</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="kn">package</span> <span class="nx">server</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="kn">import</span> <span class="p">(</span>
+</span></span><span class="line"><span class="cl">	<span class="s">&#34;github.com/wuqinqiang/digvswire/dao&#34;</span>
+</span></span><span class="line"><span class="cl"><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="kd">var</span> <span class="nx">_</span> <span class="nx">OrderServerInterface</span> <span class="p">=</span> <span class="o">&amp;</span><span class="nx">OrderServer</span><span class="p">{}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="kd">type</span> <span class="nx">OrderServerInterface</span> <span class="kd">interface</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">	<span class="nf">GetUserOrderList</span><span class="p">(</span><span class="nx">userId</span> <span class="kt">string</span><span class="p">)</span> <span class="p">([]</span><span class="nx">dao</span><span class="p">.</span><span class="nx">Order</span><span class="p">,</span> <span class="kt">error</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="kd">type</span> <span class="nx">OrderServer</span> <span class="kd">struct</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">orderDao</span> <span class="nx">dao</span><span class="p">.</span><span class="nx">OrderDao</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="kd">func</span> <span class="nf">NewOrderServer</span><span class="p">(</span><span class="nx">order</span> <span class="nx">dao</span><span class="p">.</span><span class="nx">OrderDao</span><span class="p">)</span> <span class="nx">OrderServerInterface</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">	<span class="k">return</span> <span class="o">&amp;</span><span class="nx">OrderServer</span><span class="p">{</span><span class="nx">orderDao</span><span class="p">:</span> <span class="nx">order</span><span class="p">}</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="kd">func</span> <span class="p">(</span><span class="nx">o</span> <span class="o">*</span><span class="nx">OrderServer</span><span class="p">)</span> <span class="nf">GetUserOrderList</span><span class="p">(</span><span class="nx">userId</span> <span class="kt">string</span><span class="p">)</span> <span class="p">(</span><span class="nx">orderList</span> <span class="p">[]</span><span class="nx">dao</span><span class="p">.</span><span class="nx">Order</span><span class="p">,</span> <span class="nx">err</span> <span class="kt">error</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">	<span class="k">return</span> <span class="nx">o</span><span class="p">.</span><span class="nx">orderDao</span><span class="p">.</span><span class="nf">GetOrderListById</span><span class="p">(</span><span class="nx">userId</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></div><p>这里的 <code>NewOrderServer(xxx)</code> 在 <code>Provide</code> 中的语意就是 &ldquo;我能提供一个 <code>OrderServerInterface</code> 服务，但是我需要依赖一个 <code>dao.OrderDao</code>&quot;。</p>
 <p>刚才的代码中，</p>
-<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="nx">_</span> <span class="p">=</span> <span class="nx">d</span><span class="p">.</span><span class="nf">Provide</span><span class="p">(</span><span class="nx">dao</span><span class="p">.</span><span class="nx">NewOrderDao</span><span class="p">)</span>
-<span class="nx">_</span> <span class="p">=</span> <span class="nx">d</span><span class="p">.</span><span class="nf">Provide</span><span class="p">(</span><span class="nx">server</span><span class="p">.</span><span class="nx">NewOrderServer</span><span class="p">)</span>
-<span class="nx">_</span> <span class="p">=</span> <span class="nx">d</span><span class="p">.</span><span class="nf">Provide</span><span class="p">(</span><span class="nx">controller</span><span class="p">.</span><span class="nx">NewOrderHandler</span><span class="p">)</span>
-</code></pre></div><p>因为我们的调用链是 <code>controller-&gt;server-&gt;dao</code>，那么本质上他们的依赖是 <code>controller&lt;-server&lt;-dao</code>，只是依赖的不是具体的实现，而是抽象的接口。</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="nx">_</span> <span class="p">=</span> <span class="nx">d</span><span class="p">.</span><span class="nf">Provide</span><span class="p">(</span><span class="nx">dao</span><span class="p">.</span><span class="nx">NewOrderDao</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="nx">_</span> <span class="p">=</span> <span class="nx">d</span><span class="p">.</span><span class="nf">Provide</span><span class="p">(</span><span class="nx">server</span><span class="p">.</span><span class="nx">NewOrderServer</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="nx">_</span> <span class="p">=</span> <span class="nx">d</span><span class="p">.</span><span class="nf">Provide</span><span class="p">(</span><span class="nx">controller</span><span class="p">.</span><span class="nx">NewOrderHandler</span><span class="p">)</span>
+</span></span></code></pre></div><p>因为我们的调用链是 <code>controller-&gt;server-&gt;dao</code>，那么本质上他们的依赖是 <code>controller&lt;-server&lt;-dao</code>，只是依赖的不是具体的实现，而是抽象的接口。</p>
 <p>所以你看到 <code>Provide</code> 是按照依赖关系顺序写的。</p>
 <p>其实完全没有必要，因为这一步 <code>dig</code> 只会对这些函数进行分析，提取函数的形参以及返回值。然后根据返回的参数来组织容器结构。
 并不会在这一步执行传入的函数，所以在 <code>Provide</code> 阶段前后顺序并不重要，只要确保不遗漏依赖项即可。</p>
 <p>万事俱备，我们开始注册一个能获取订单的路由，</p>
-<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="nx">err</span> <span class="o">:=</span> <span class="nx">router</span><span class="p">.</span><span class="nf">RegisterRouter</span><span class="p">(</span><span class="nx">e</span><span class="p">,</span> <span class="nx">d</span><span class="p">)</span>
-
-<span class="c1">// router.go
-</span><span class="c1"></span><span class="kd">func</span> <span class="nf">RegisterRouter</span><span class="p">(</span><span class="nx">e</span> <span class="o">*</span><span class="nx">gin</span><span class="p">.</span><span class="nx">Engine</span><span class="p">,</span> <span class="nx">dig</span> <span class="o">*</span><span class="nx">dig</span><span class="p">.</span><span class="nx">Container</span><span class="p">)</span> <span class="kt">error</span> <span class="p">{</span>
-	<span class="k">return</span> <span class="nx">dig</span><span class="p">.</span><span class="nf">Invoke</span><span class="p">(</span><span class="kd">func</span><span class="p">(</span><span class="nx">handle</span> <span class="o">*</span><span class="nx">controller</span><span class="p">.</span><span class="nx">OrderHandler</span><span class="p">)</span> <span class="p">{</span>
-		<span class="nx">e</span><span class="p">.</span><span class="nf">GET</span><span class="p">(</span><span class="s">&#34;/user/orders&#34;</span><span class="p">,</span> <span class="nx">handle</span><span class="p">.</span><span class="nx">GetUserOrderList</span><span class="p">)</span>
-	<span class="p">})</span>
-<span class="p">}</span>
-</code></pre></div><p>此时，调用 <code>invoke</code>， 才是真正需要获取 <code>*controller.OrderHandler</code> 对象。</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="nx">err</span> <span class="o">:=</span> <span class="nx">router</span><span class="p">.</span><span class="nf">RegisterRouter</span><span class="p">(</span><span class="nx">e</span><span class="p">,</span> <span class="nx">d</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1">// router.go
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="kd">func</span> <span class="nf">RegisterRouter</span><span class="p">(</span><span class="nx">e</span> <span class="o">*</span><span class="nx">gin</span><span class="p">.</span><span class="nx">Engine</span><span class="p">,</span> <span class="nx">dig</span> <span class="o">*</span><span class="nx">dig</span><span class="p">.</span><span class="nx">Container</span><span class="p">)</span> <span class="kt">error</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">	<span class="k">return</span> <span class="nx">dig</span><span class="p">.</span><span class="nf">Invoke</span><span class="p">(</span><span class="kd">func</span><span class="p">(</span><span class="nx">handle</span> <span class="o">*</span><span class="nx">controller</span><span class="p">.</span><span class="nx">OrderHandler</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">e</span><span class="p">.</span><span class="nf">GET</span><span class="p">(</span><span class="s">&#34;/user/orders&#34;</span><span class="p">,</span> <span class="nx">handle</span><span class="p">.</span><span class="nx">GetUserOrderList</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">	<span class="p">})</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></div><p>此时，调用 <code>invoke</code>， 才是真正需要获取 <code>*controller.OrderHandler</code> 对象。</p>
 <p>调用 <code>invoke</code> 方法，会对传入的参数做分析，参数中存在 <code>handle *controller.OrderHandler</code>, 就会去容器中寻找哪个 <code>Provide</code> 进来的函数返回类型是 <code>handle *controller.OrderHandler</code>,</p>
 <p>就能对应找到,</p>
-<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="nx">_</span> <span class="p">=</span> <span class="nx">d</span><span class="p">.</span><span class="nf">Provide</span><span class="p">(</span><span class="nx">controller</span><span class="p">.</span><span class="nx">NewOrderHandler</span><span class="p">)</span>
-<span class="c1">// 对应
-</span><span class="c1"></span><span class="kd">func</span> <span class="nf">NewOrderHandler</span><span class="p">(</span><span class="nx">server</span> <span class="nx">server</span><span class="p">.</span><span class="nx">OrderServerInterface</span><span class="p">)</span> <span class="o">*</span><span class="nx">OrderHandler</span> <span class="p">{</span>
-	<span class="k">return</span> <span class="o">&amp;</span><span class="nx">OrderHandler</span><span class="p">{</span>
-		<span class="nx">server</span><span class="p">:</span> <span class="nx">server</span><span class="p">,</span>
-	<span class="p">}</span>
-<span class="p">}</span>
-</code></pre></div><p>发现这个函数有形参 <code>server.OrderServerInterface</code>,那就去找对应返回此类型的函数，</p>
-<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="nx">_</span> <span class="p">=</span> <span class="nx">d</span><span class="p">.</span><span class="nf">Provide</span><span class="p">(</span><span class="nx">server</span><span class="p">.</span><span class="nx">NewOrderServer</span><span class="p">)</span>
-<span class="c1">//对应
-</span><span class="c1"></span><span class="kd">func</span> <span class="nf">NewOrderServer</span><span class="p">(</span><span class="nx">order</span> <span class="nx">dao</span><span class="p">.</span><span class="nx">OrderDao</span><span class="p">)</span> <span class="nx">OrderServerInterface</span> <span class="p">{</span>
-	<span class="k">return</span> <span class="o">&amp;</span><span class="nx">OrderServer</span><span class="p">{</span><span class="nx">orderDao</span><span class="p">:</span> <span class="nx">order</span><span class="p">}</span>
-<span class="p">}</span>
-</code></pre></div><p>又发现形参 <code>（order dao.OrderDao)</code>,</p>
-<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="nx">_</span> <span class="p">=</span> <span class="nx">d</span><span class="p">.</span><span class="nf">Provide</span><span class="p">(</span><span class="nx">dao</span><span class="p">.</span><span class="nx">NewOrderDao</span><span class="p">)</span>
-<span class="c1">//对应
-</span><span class="c1"></span><span class="kd">func</span> <span class="nf">NewOrderDao</span><span class="p">()</span> <span class="nx">OrderDao</span> <span class="p">{</span>
-	<span class="k">return</span> <span class="nb">new</span><span class="p">(</span><span class="nx">OrderDaoImpl</span><span class="p">)</span>
-<span class="p">}</span>
-</code></pre></div><p>最后发现 <code>NewOrderDao</code> 没有依赖，不需要再查询依赖。开始执行函数的调用 <code>NewOrderDao()</code>，把返回的 <code>OrderDao</code> 传入到上层的 <code>NewOrderServer(order dao.OrderDao)</code> 进行函数调用，
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="nx">_</span> <span class="p">=</span> <span class="nx">d</span><span class="p">.</span><span class="nf">Provide</span><span class="p">(</span><span class="nx">controller</span><span class="p">.</span><span class="nx">NewOrderHandler</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="c1">// 对应
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="kd">func</span> <span class="nf">NewOrderHandler</span><span class="p">(</span><span class="nx">server</span> <span class="nx">server</span><span class="p">.</span><span class="nx">OrderServerInterface</span><span class="p">)</span> <span class="o">*</span><span class="nx">OrderHandler</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">	<span class="k">return</span> <span class="o">&amp;</span><span class="nx">OrderHandler</span><span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">server</span><span class="p">:</span> <span class="nx">server</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></div><p>发现这个函数有形参 <code>server.OrderServerInterface</code>,那就去找对应返回此类型的函数，</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="nx">_</span> <span class="p">=</span> <span class="nx">d</span><span class="p">.</span><span class="nf">Provide</span><span class="p">(</span><span class="nx">server</span><span class="p">.</span><span class="nx">NewOrderServer</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="c1">//对应
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="kd">func</span> <span class="nf">NewOrderServer</span><span class="p">(</span><span class="nx">order</span> <span class="nx">dao</span><span class="p">.</span><span class="nx">OrderDao</span><span class="p">)</span> <span class="nx">OrderServerInterface</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">	<span class="k">return</span> <span class="o">&amp;</span><span class="nx">OrderServer</span><span class="p">{</span><span class="nx">orderDao</span><span class="p">:</span> <span class="nx">order</span><span class="p">}</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></div><p>又发现形参 <code>（order dao.OrderDao)</code>,</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="nx">_</span> <span class="p">=</span> <span class="nx">d</span><span class="p">.</span><span class="nf">Provide</span><span class="p">(</span><span class="nx">dao</span><span class="p">.</span><span class="nx">NewOrderDao</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="c1">//对应
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="kd">func</span> <span class="nf">NewOrderDao</span><span class="p">()</span> <span class="nx">OrderDao</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">	<span class="k">return</span> <span class="nb">new</span><span class="p">(</span><span class="nx">OrderDaoImpl</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></div><p>最后发现 <code>NewOrderDao</code> 没有依赖，不需要再查询依赖。开始执行函数的调用 <code>NewOrderDao()</code>，把返回的 <code>OrderDao</code> 传入到上层的 <code>NewOrderServer(order dao.OrderDao)</code> 进行函数调用，
 <code>NewOrderServer(order dao.OrderDao)</code> 返回的 <code>OrderServerInterface</code> 继续返回到上层 <code>NewOrderHandler(server server.OrderServerInterface)</code> 执行调用，最后再把函数调用返回的 <code>*OrderHandler</code> 传递给 <code>dig.Invoke(func(handle *controller.OrderHandler) {}</code>,</p>
 <p>整个链路就通了。用一个简陋的图来描述这个过程
 <img src="https://image.syst.top/image/dig-to-wire/2.png" alt="image"></p>
 <p><code>dig</code> 的整个流程采用的是反射机制，在运行时计算依赖关系，构造依赖对象。</p>
 <p>这样会存在什么问题？</p>
 <p>假设我现在注释掉 <code>Provide</code> 的一行代码，比如,</p>
-<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kd">func</span> <span class="nf">ContainerByDig</span><span class="p">()</span> <span class="o">*</span><span class="nx">dig</span><span class="p">.</span><span class="nx">Container</span> <span class="p">{</span>
-	<span class="nx">d</span> <span class="o">:=</span> <span class="nx">dig</span><span class="p">.</span><span class="nf">New</span><span class="p">()</span>
-	<span class="c1">//_ = d.Provide(dao.NewOrderDao)
-</span><span class="c1"></span>	<span class="nx">_</span> <span class="p">=</span> <span class="nx">d</span><span class="p">.</span><span class="nf">Provide</span><span class="p">(</span><span class="nx">server</span><span class="p">.</span><span class="nx">NewOrderServer</span><span class="p">)</span>
-	<span class="nx">_</span> <span class="p">=</span> <span class="nx">d</span><span class="p">.</span><span class="nf">Provide</span><span class="p">(</span><span class="nx">controller</span><span class="p">.</span><span class="nx">NewOrderHandler</span><span class="p">)</span>
-	<span class="k">return</span> <span class="nx">d</span>
-<span class="p">}</span>
-</code></pre></div><p>我们在编译项目的时候并不会报任何错误，只会在运行时才发现缺少了依赖项。
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="kd">func</span> <span class="nf">ContainerByDig</span><span class="p">()</span> <span class="o">*</span><span class="nx">dig</span><span class="p">.</span><span class="nx">Container</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">d</span> <span class="o">:=</span> <span class="nx">dig</span><span class="p">.</span><span class="nf">New</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">	<span class="c1">//_ = d.Provide(dao.NewOrderDao)
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="nx">_</span> <span class="p">=</span> <span class="nx">d</span><span class="p">.</span><span class="nf">Provide</span><span class="p">(</span><span class="nx">server</span><span class="p">.</span><span class="nx">NewOrderServer</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">_</span> <span class="p">=</span> <span class="nx">d</span><span class="p">.</span><span class="nf">Provide</span><span class="p">(</span><span class="nx">controller</span><span class="p">.</span><span class="nx">NewOrderHandler</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">	<span class="k">return</span> <span class="nx">d</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></div><p>我们在编译项目的时候并不会报任何错误，只会在运行时才发现缺少了依赖项。
 <img src="https://image.syst.top/image/dig-to-wire/3.png" alt="image"></p>
 <h3 id="wire">wire<a href="#wire" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h3>
 <p>还是上面的代码，我们使用 <code>wire</code> 作为我们的 <code>DI</code> 容器。</p>
 <p><code>wire</code> 也有两个核心概念: <code>Provider</code> 和 <code>Injector</code>。</p>
 <p>其中 <code>Provider</code> 的概念和 <code>dig</code> 的概念是一样的:&ldquo;我能提供什么？我需要什么依赖&rdquo;。</p>
 <p>比如下面 <code>wire.go</code> 中的代码,</p>
-<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="c1">//+build wireinject
-</span><span class="c1"></span>
-<span class="kn">package</span> <span class="nx">wire</span>
-
-<span class="kn">import</span> <span class="p">(</span>
-	<span class="s">&#34;github.com/google/wire&#34;</span>
-	<span class="s">&#34;github.com/wuqinqiang/digvswire/controller&#34;</span>
-	<span class="s">&#34;github.com/wuqinqiang/digvswire/dao&#34;</span>
-	<span class="s">&#34;github.com/wuqinqiang/digvswire/server&#34;</span>
-<span class="p">)</span>
-
-<span class="kd">var</span> <span class="nx">orderSet</span> <span class="p">=</span> <span class="nx">wire</span><span class="p">.</span><span class="nf">NewSet</span><span class="p">(</span>
-	<span class="nx">dao</span><span class="p">.</span><span class="nx">NewOrderDao</span><span class="p">,</span>
-	<span class="nx">server</span><span class="p">.</span><span class="nx">NewOrderServer</span><span class="p">,</span>
-	<span class="nx">controller</span><span class="p">.</span><span class="nx">NewOrderHandler</span><span class="p">)</span>
-
-<span class="kd">func</span> <span class="nf">ContainerByWire</span><span class="p">()</span> <span class="o">*</span><span class="nx">controller</span><span class="p">.</span><span class="nx">OrderHandler</span> <span class="p">{</span>
-	<span class="nx">wire</span><span class="p">.</span><span class="nf">Build</span><span class="p">(</span><span class="nx">orderSet</span><span class="p">)</span>
-	<span class="k">return</span> <span class="o">&amp;</span><span class="nx">controller</span><span class="p">.</span><span class="nx">OrderHandler</span><span class="p">{}</span>
-<span class="p">}</span>
-</code></pre></div><p>其中，<code>dao.NewOrderDao</code> 、<code>server.NewOrderServer</code> 以及 <code>controller.NewOrderHandler</code> 就是 <code>Provider</code>。</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="c1">//+build wireinject
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>
+</span></span><span class="line"><span class="cl"><span class="kn">package</span> <span class="nx">wire</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="kn">import</span> <span class="p">(</span>
+</span></span><span class="line"><span class="cl">	<span class="s">&#34;github.com/google/wire&#34;</span>
+</span></span><span class="line"><span class="cl">	<span class="s">&#34;github.com/wuqinqiang/digvswire/controller&#34;</span>
+</span></span><span class="line"><span class="cl">	<span class="s">&#34;github.com/wuqinqiang/digvswire/dao&#34;</span>
+</span></span><span class="line"><span class="cl">	<span class="s">&#34;github.com/wuqinqiang/digvswire/server&#34;</span>
+</span></span><span class="line"><span class="cl"><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="kd">var</span> <span class="nx">orderSet</span> <span class="p">=</span> <span class="nx">wire</span><span class="p">.</span><span class="nf">NewSet</span><span class="p">(</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">dao</span><span class="p">.</span><span class="nx">NewOrderDao</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">server</span><span class="p">.</span><span class="nx">NewOrderServer</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">controller</span><span class="p">.</span><span class="nx">NewOrderHandler</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="kd">func</span> <span class="nf">ContainerByWire</span><span class="p">()</span> <span class="o">*</span><span class="nx">controller</span><span class="p">.</span><span class="nx">OrderHandler</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">wire</span><span class="p">.</span><span class="nf">Build</span><span class="p">(</span><span class="nx">orderSet</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">	<span class="k">return</span> <span class="o">&amp;</span><span class="nx">controller</span><span class="p">.</span><span class="nx">OrderHandler</span><span class="p">{}</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></div><p>其中，<code>dao.NewOrderDao</code> 、<code>server.NewOrderServer</code> 以及 <code>controller.NewOrderHandler</code> 就是 <code>Provider</code>。</p>
 <p>你会发现这里还调用 <code>wire.NewSet</code> 把他们整合在一起，赋值给了一个变量 <code>orderSet</code>。</p>
 <p>其实是用到 <code>ProviderSet</code> 的概念。原理就是把一组相关的 <code>Provider</code> 进行打包。</p>
 <p>这样的好处是:</p>
@@ -271,60 +266,59 @@ package main import ( &#34;fmt&#34; &#34;github.com/gin-gonic/gin&#34; &#34;gith
 <p>此时如果你的依赖项存在问题，那么就会报错提示。比如我现在隐藏上面的 <code>dao.NewOrderDao</code>,那么会出现
 <img src="https://image.syst.top/image/dig-to-wire/4.png" alt="image"></p>
 <p>如果依赖不存在问题，最终会生成一个 <code>wire_gen.go</code> 文件。</p>
-<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="c1">// Code generated by Wire. DO NOT EDIT.
-</span><span class="c1"></span>
-<span class="c1">//go:generate go run github.com/google/wire/cmd/wire
-</span><span class="c1">//+build !wireinject
-</span><span class="c1"></span>
-<span class="kn">package</span> <span class="nx">wire</span>
-
-<span class="kn">import</span> <span class="p">(</span>
-	<span class="s">&#34;github.com/google/wire&#34;</span>
-	<span class="s">&#34;github.com/wuqinqiang/digvswire/controller&#34;</span>
-	<span class="s">&#34;github.com/wuqinqiang/digvswire/dao&#34;</span>
-	<span class="s">&#34;github.com/wuqinqiang/digvswire/server&#34;</span>
-<span class="p">)</span>
-
-<span class="c1">// Injectors from wire.go:
-</span><span class="c1"></span>
-<span class="kd">func</span> <span class="nf">ContainerByWire</span><span class="p">()</span> <span class="o">*</span><span class="nx">controller</span><span class="p">.</span><span class="nx">OrderHandler</span> <span class="p">{</span>
-	<span class="nx">orderDao</span> <span class="o">:=</span> <span class="nx">dao</span><span class="p">.</span><span class="nf">NewOrderDao</span><span class="p">()</span>
-	<span class="nx">orderServerInterface</span> <span class="o">:=</span> <span class="nx">server</span><span class="p">.</span><span class="nf">NewOrderServer</span><span class="p">(</span><span class="nx">orderDao</span><span class="p">)</span>
-	<span class="nx">orderHandler</span> <span class="o">:=</span> <span class="nx">controller</span><span class="p">.</span><span class="nf">NewOrderHandler</span><span class="p">(</span><span class="nx">orderServerInterface</span><span class="p">)</span>
-	<span class="k">return</span> <span class="nx">orderHandler</span>
-<span class="p">}</span>
-
-<span class="c1">// wire.go:
-</span><span class="c1"></span>
-<span class="kd">var</span> <span class="nx">orderSet</span> <span class="p">=</span> <span class="nx">wire</span><span class="p">.</span><span class="nf">NewSet</span><span class="p">(</span><span class="nx">dao</span><span class="p">.</span><span class="nx">NewOrderDao</span><span class="p">,</span> <span class="nx">server</span><span class="p">.</span><span class="nx">NewOrderServer</span><span class="p">,</span> <span class="nx">controller</span><span class="p">.</span><span class="nx">NewOrderHandler</span><span class="p">)</span>
-
-</code></pre></div><p>需要注意上面两个文件。我们看到 <code>wire.go</code> 中第一行 <code>//+build wireinject</code> ，这个 <code>build tag</code> 确保在常规编译时忽略 <code>wire.go</code> 文件。
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="c1">// Code generated by Wire. DO NOT EDIT.
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>
+</span></span><span class="line"><span class="cl"><span class="c1">//go:generate go run github.com/google/wire/cmd/wire
+</span></span></span><span class="line"><span class="cl"><span class="c1">//+build !wireinject
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>
+</span></span><span class="line"><span class="cl"><span class="kn">package</span> <span class="nx">wire</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="kn">import</span> <span class="p">(</span>
+</span></span><span class="line"><span class="cl">	<span class="s">&#34;github.com/google/wire&#34;</span>
+</span></span><span class="line"><span class="cl">	<span class="s">&#34;github.com/wuqinqiang/digvswire/controller&#34;</span>
+</span></span><span class="line"><span class="cl">	<span class="s">&#34;github.com/wuqinqiang/digvswire/dao&#34;</span>
+</span></span><span class="line"><span class="cl">	<span class="s">&#34;github.com/wuqinqiang/digvswire/server&#34;</span>
+</span></span><span class="line"><span class="cl"><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1">// Injectors from wire.go:
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>
+</span></span><span class="line"><span class="cl"><span class="kd">func</span> <span class="nf">ContainerByWire</span><span class="p">()</span> <span class="o">*</span><span class="nx">controller</span><span class="p">.</span><span class="nx">OrderHandler</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">orderDao</span> <span class="o">:=</span> <span class="nx">dao</span><span class="p">.</span><span class="nf">NewOrderDao</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">orderServerInterface</span> <span class="o">:=</span> <span class="nx">server</span><span class="p">.</span><span class="nf">NewOrderServer</span><span class="p">(</span><span class="nx">orderDao</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">orderHandler</span> <span class="o">:=</span> <span class="nx">controller</span><span class="p">.</span><span class="nf">NewOrderHandler</span><span class="p">(</span><span class="nx">orderServerInterface</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">	<span class="k">return</span> <span class="nx">orderHandler</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1">// wire.go:
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>
+</span></span><span class="line"><span class="cl"><span class="kd">var</span> <span class="nx">orderSet</span> <span class="p">=</span> <span class="nx">wire</span><span class="p">.</span><span class="nf">NewSet</span><span class="p">(</span><span class="nx">dao</span><span class="p">.</span><span class="nx">NewOrderDao</span><span class="p">,</span> <span class="nx">server</span><span class="p">.</span><span class="nx">NewOrderServer</span><span class="p">,</span> <span class="nx">controller</span><span class="p">.</span><span class="nx">NewOrderHandler</span><span class="p">)</span>
+</span></span></code></pre></div><p>需要注意上面两个文件。我们看到 <code>wire.go</code> 中第一行 <code>//+build wireinject</code> ，这个 <code>build tag</code> 确保在常规编译时忽略 <code>wire.go</code> 文件。
 而与之相对的 <code>wire_gen.go</code> 中的 <code>//+build !wireinject</code>。 两个对立的 <code>build tag</code> 是为了确保在任意情况下，两个文件只有一个文件生效，
 避免出现 &ldquo;<code>ContainerByWire()</code> 方法被重新定义&rdquo; 的编译错误。</p>
 <p>现在我们可以真正使用 <code>injector</code> 了，我们在入口文件中替换成 <code>dig</code>。</p>
-<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kd">func</span> <span class="nf">serverStart</span><span class="p">()</span> <span class="p">{</span>
-	<span class="k">defer</span> <span class="kd">func</span><span class="p">()</span> <span class="p">{</span>
-		<span class="k">if</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nb">recover</span><span class="p">();</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
-			<span class="nx">fmt</span><span class="p">.</span><span class="nf">Printf</span><span class="p">(</span><span class="s">&#34;init app err:%v\n&#34;</span><span class="p">,</span> <span class="nx">err</span><span class="p">)</span>
-		<span class="p">}</span>
-	<span class="p">}()</span>
-	<span class="nx">e</span> <span class="o">:=</span> <span class="nx">gin</span><span class="p">.</span><span class="nf">Default</span><span class="p">()</span>
-	<span class="nx">err</span> <span class="o">:=</span> <span class="nx">router</span><span class="p">.</span><span class="nf">RegisterRouterByWire</span><span class="p">(</span><span class="nx">e</span><span class="p">,</span> <span class="nx">wire</span><span class="p">.</span><span class="nf">ContainerByWire</span><span class="p">())</span>
-	<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
-		<span class="nb">panic</span><span class="p">(</span><span class="nx">err</span><span class="p">)</span>
-	<span class="p">}</span>
-	<span class="nx">_</span> <span class="p">=</span> <span class="nx">e</span><span class="p">.</span><span class="nf">Run</span><span class="p">(</span><span class="s">&#34;:8090&#34;</span><span class="p">)</span>
-<span class="p">}</span>
-</code></pre></div><div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kd">func</span> <span class="nf">RegisterRouterByWire</span><span class="p">(</span><span class="nx">e</span> <span class="o">*</span><span class="nx">gin</span><span class="p">.</span><span class="nx">Engine</span><span class="p">,</span> <span class="nx">handler</span> <span class="o">*</span><span class="nx">controller</span><span class="p">.</span><span class="nx">OrderHandler</span><span class="p">)</span> <span class="kt">error</span> <span class="p">{</span>
-	<span class="nx">e</span><span class="p">.</span><span class="nf">GET</span><span class="p">(</span><span class="s">&#34;/v2/user/orders&#34;</span><span class="p">,</span> <span class="nx">handler</span><span class="p">.</span><span class="nx">GetUserOrderList</span><span class="p">)</span>
-	<span class="k">return</span> <span class="kc">nil</span>
-<span class="p">}</span>
-</code></pre></div><p>一切正常。</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="kd">func</span> <span class="nf">serverStart</span><span class="p">()</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">	<span class="k">defer</span> <span class="kd">func</span><span class="p">()</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="k">if</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nb">recover</span><span class="p">();</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">			<span class="nx">fmt</span><span class="p">.</span><span class="nf">Printf</span><span class="p">(</span><span class="s">&#34;init app err:%v\n&#34;</span><span class="p">,</span> <span class="nx">err</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">		<span class="p">}</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}()</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">e</span> <span class="o">:=</span> <span class="nx">gin</span><span class="p">.</span><span class="nf">Default</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">err</span> <span class="o">:=</span> <span class="nx">router</span><span class="p">.</span><span class="nf">RegisterRouterByWire</span><span class="p">(</span><span class="nx">e</span><span class="p">,</span> <span class="nx">wire</span><span class="p">.</span><span class="nf">ContainerByWire</span><span class="p">())</span>
+</span></span><span class="line"><span class="cl">	<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="nb">panic</span><span class="p">(</span><span class="nx">err</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">_</span> <span class="p">=</span> <span class="nx">e</span><span class="p">.</span><span class="nf">Run</span><span class="p">(</span><span class="s">&#34;:8090&#34;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="kd">func</span> <span class="nf">RegisterRouterByWire</span><span class="p">(</span><span class="nx">e</span> <span class="o">*</span><span class="nx">gin</span><span class="p">.</span><span class="nx">Engine</span><span class="p">,</span> <span class="nx">handler</span> <span class="o">*</span><span class="nx">controller</span><span class="p">.</span><span class="nx">OrderHandler</span><span class="p">)</span> <span class="kt">error</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">e</span><span class="p">.</span><span class="nf">GET</span><span class="p">(</span><span class="s">&#34;/v2/user/orders&#34;</span><span class="p">,</span> <span class="nx">handler</span><span class="p">.</span><span class="nx">GetUserOrderList</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">	<span class="k">return</span> <span class="kc">nil</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></div><p>一切正常。</p>
 <p>当然 <code>wire</code> 有一个点需要注意，在 <code>wire.go</code> 文件中开头几行:</p>
-<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="c1">//+build wireinject
-</span><span class="c1"></span>
-<span class="kn">package</span> <span class="nx">wire</span>
-</code></pre></div><p><code>build tag</code> 和 <code>package</code> 他们之间是有空行的，如果没有空行，<code>build tag</code> 识别不了，那么编译的时候就会报重复声明的错误：
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="c1">//+build wireinject
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>
+</span></span><span class="line"><span class="cl"><span class="kn">package</span> <span class="nx">wire</span>
+</span></span></code></pre></div><p><code>build tag</code> 和 <code>package</code> 他们之间是有空行的，如果没有空行，<code>build tag</code> 识别不了，那么编译的时候就会报重复声明的错误：
 <img src="https://image.syst.top/image/dig-to-wire/5.png" alt="image"></p>
 <p>还有很多高级的操作可以自行了解。</p>
 <h3 id="总结">总结<a href="#总结" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h3>
@@ -401,7 +395,7 @@ package main import ( &#34;fmt&#34; &#34;github.com/gin-gonic/gin&#34; &#34;gith
 	</footer>
 
 
-	<script src="https://www.syst.top/js/main.min.784417f5847151f848c339cf0acb13a06cbb648b1483435a28ed4556c4ead69b.js"></script>
+	<script src="https://www.syst.top/js/main.min.c8a831e54547e9c081939713d77308bf58ae5fed99a75acbcaaa14c5ce45bf89.js"></script>
 <script type="application/javascript">
 var doNotTrack = false;
 if (!doNotTrack) {

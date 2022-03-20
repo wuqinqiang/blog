@@ -138,7 +138,7 @@ runtime.hchan结构。
       <guid>https://www.syst.top/posts/go/enum/</guid>
       <description>介绍 Go 语言实际上没有直接支持枚举的关键字。一般我们都是通过 const + iota 实现枚举的能力。
 有人要问了，为什么一定要使用枚举呢？stackoverflow 上有一个高赞的回答，如下:
-You should always use enums when a variable (especially a method parameter) can only take one out of a small set of possible values. Examples would be things like type constants (contract status: &amp;quot;permanent&amp;quot;, &amp;quot;temp&amp;quot;, &amp;quot;apprentice&amp;quot;), or flags (&amp;quot;execute now&amp;quot;, &amp;quot;defer execution&amp;quot;). If you use enums instead of integers (or String codes), you increase compile-time checking and avoid errors from passing in invalid constants, and you document which values are legal to use.</description>
+You should always use enums when a variable (especially a method parameter) can only take one out of a small set of possible values. Examples would be things like type constants (contract status: &amp;#34;permanent&amp;#34;, &amp;#34;temp&amp;#34;, &amp;#34;apprentice&amp;#34;), or flags (&amp;#34;execute now&amp;#34;, &amp;#34;defer execution&amp;#34;). If you use enums instead of integers (or String codes), you increase compile-time checking and avoid errors from passing in invalid constants, and you document which values are legal to use.</description>
     </item>
     
     <item>
@@ -179,7 +179,8 @@ JSON-To-Stuct 这个工具可以把 json 格式的数据转换成 go 的 struct�
 其实这个功能 21 版的 goland 也支持了。在 goland 中你只需要这样,
 Table-To-Stuct 被业务缠身的同学每天免不了 CURD。CURD 之前总得建表吧。建表之后总得在代码中定义模型吧。总不能又一个个字段定义，那么下面这个工具可能管用。
 假设你有一个库 dream，库里有一个表 category，结构如下，
-CREATE TABLE `category` ( `id` int(11) unsigned NOT NULL AUTO_INCREMENT, `name` varchar(20) NOT NULL DEFAULT &amp;#39;&amp;#39;, `parent_id` int(11) unsigned NOT NULL DEFAULT &amp;#39;0&amp;#39;, `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP, `updated_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP, PRIMARY KEY (`id`), UNIQUE KEY `name` (`name`) ) ENGINE=InnoDB AUTO_INCREMENT=23 DEFAULT CHARSET=utf8mb4; 你只需引入包 github.</description>
+CREATETABLE`category`(`id`int(11)unsignedNOTNULLAUTO_INCREMENT,`name`varchar(20)NOTNULLDEFAULT&amp;#39;&amp;#39;,`parent_id`int(11)unsignedNOTNULLDEFAULT&amp;#39;0&amp;#39;,`created_at`timestampNOTNULLDEFAULTCURRENT_TIMESTAMP,`updated_at`timestampNOTNULLDEFAULTCURRENT_TIMESTAMP,PRIMARYKEY(`id`),UNIQUEKEY`name`(`name`))ENGINE=InnoDBAUTO_INCREMENT=23DEFAULTCHARSET=utf8mb4;你只需引入包 github.com/gohouse/converter ,然后写这样的代码，就可以实现 table-to-go 功能。
+package main import ( &amp;#34;fmt&amp;#34; &amp;#34;github.com/gohouse/converter&amp;#34; ) func main() { // 初始化 	t2t := converter.NewTable2Struct() // 个性化配置 	t2t.Config(&amp;amp;converter.T2tConfig{ // 如果字段首字母本来就是大写, 就不添加tag, 默认false添加, true不添加 	RmTagIfUcFirsted: false, // tag的字段名字是否转换为小写, 如果本身有大写字母的话, 默认false不转 	TagToLower: false, // 字段首字母大写的同时, 是否要把其他字母转换为小写,默认false不转换 	UcFirstOnly: false, //// 每个struct放入单独的文件,默认false,放入同一个文件(暂未提供) 	//SeperatFile: false, 	}) // 开始迁移转换 	err := t2t.</description>
     </item>
     
     <item>

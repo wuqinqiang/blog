@@ -13,15 +13,10 @@
 上篇文章说过，所谓的无限缓冲，无非是借助一个中间层的数据结构，暂存临时数据。
 在 chanx 中，结构是这样的:
 type UnboundedChan struct { In chan&lt;- T // channel for write 	Out &lt;-chan T // channel for read 	buffer *RingBuffer // buffer } in 和 out 的职责在上篇文章已经说明，这里的 buffer 就是我们所谓的中间临时存储层。其中的 RingBuffer 结构我们后面再说。
-func NewUnboundedChan(initCapacity int) UnboundedChan { return NewUnboundedChanSize(initCapacity, initCapacity, initCapacity) } func NewUnboundedChanSize(initInCapacity, initOutCapacity, initBufCapacity int) UnboundedChan { in := make(chan T, initInCapacity) out := make(chan T, initOutCapacity) ch := UnboundedChan{In: in, Out: out, buffer: NewRingBuffer(initBufCapacity)} go process(in, out, ch) return ch } 它提供了两个初始化 UnboundedChan 的方法，从代码中我们可以明显的看出,NewUnboundedChanSize 可以给每个属性自定义自己的容量大小。仅此而已。">
-<meta itemprop="datePublished" content="2021-04-25T22:25:52+08:00" />
+func NewUnboundedChan(initCapacity int) UnboundedChan { return NewUnboundedChanSize(initCapacity, initCapacity, initCapacity) } func NewUnboundedChanSize(initInCapacity, initOutCapacity, initBufCapacity int) UnboundedChan { in := make(chan T, initInCapacity) out := make(chan T, initOutCapacity) ch := UnboundedChan{In: in, Out: out, buffer: NewRingBuffer(initBufCapacity)} go process(in, out, ch) return ch } 它提供了两个初始化 UnboundedChan 的方法，从代码中我们可以明显的看出,NewUnboundedChanSize 可以给每个属性自定义自己的容量大小。仅此而已。"><meta itemprop="datePublished" content="2021-04-25T22:25:52+08:00" />
 <meta itemprop="dateModified" content="2021-04-25T22:25:52+08:00" />
 <meta itemprop="wordCount" content="267">
-
-
-
-<meta itemprop="keywords" content="go,enum," />
-<meta property="og:title" content="无限缓冲的channel(2)" />
+<meta itemprop="keywords" content="go,enum," /><meta property="og:title" content="无限缓冲的channel(2)" />
 <meta property="og:description" content="chanx 上篇文章我们提到，当我们创建一个有缓冲的通道并指定了容量，那么在这个通道的生命周期内，我们将再也无法改变它的容量。 由此引发了关于无限缓存的 channel 话题讨论。 我们分析了一个实现无限缓冲的代码。 最后，我们也提到了它还可以继续优化的点。
 鸟窝的 chanx 正是基于此方案改造而成的，我们来看看他俩的不同之处。
 上篇文章说过，所谓的无限缓冲，无非是借助一个中间层的数据结构，暂存临时数据。
@@ -29,9 +24,10 @@ func NewUnboundedChan(initCapacity int) UnboundedChan { return NewUnboundedChanS
 type UnboundedChan struct { In chan&lt;- T // channel for write 	Out &lt;-chan T // channel for read 	buffer *RingBuffer // buffer } in 和 out 的职责在上篇文章已经说明，这里的 buffer 就是我们所谓的中间临时存储层。其中的 RingBuffer 结构我们后面再说。
 func NewUnboundedChan(initCapacity int) UnboundedChan { return NewUnboundedChanSize(initCapacity, initCapacity, initCapacity) } func NewUnboundedChanSize(initInCapacity, initOutCapacity, initBufCapacity int) UnboundedChan { in := make(chan T, initInCapacity) out := make(chan T, initOutCapacity) ch := UnboundedChan{In: in, Out: out, buffer: NewRingBuffer(initBufCapacity)} go process(in, out, ch) return ch } 它提供了两个初始化 UnboundedChan 的方法，从代码中我们可以明显的看出,NewUnboundedChanSize 可以给每个属性自定义自己的容量大小。仅此而已。" />
 <meta property="og:type" content="article" />
-<meta property="og:url" content="https://www.syst.top/posts/go/unlimited-2/" />
+<meta property="og:url" content="https://www.syst.top/posts/go/unlimited-2/" /><meta property="article:section" content="posts" />
 <meta property="article:published_time" content="2021-04-25T22:25:52+08:00" />
 <meta property="article:modified_time" content="2021-04-25T22:25:52+08:00" />
+
 <meta name="twitter:card" content="summary"/>
 <meta name="twitter:title" content="无限缓冲的channel(2)"/>
 <meta name="twitter:description" content="chanx 上篇文章我们提到，当我们创建一个有缓冲的通道并指定了容量，那么在这个通道的生命周期内，我们将再也无法改变它的容量。 由此引发了关于无限缓存的 channel 话题讨论。 我们分析了一个实现无限缓冲的代码。 最后，我们也提到了它还可以继续优化的点。
@@ -49,7 +45,7 @@ func NewUnboundedChan(initCapacity int) UnboundedChan { return NewUnboundedChanS
 	<link rel="shortcut icon" href="/favicon.ico">
 
 	<title>无限缓冲的channel(2)</title>
-	<link rel="stylesheet" href="https://www.syst.top/css/style.min.d3141168199607bf3a517216ce3c263814eecdbc8fca72a9a88700799a838219.css">
+	<link rel="stylesheet" href="https://www.syst.top/css/style.min.cb0663fd19952012fdb4a1345792a808ae19eb828578bde6eeae217ff1fb1e8b.css">
 	
 </head>
 
@@ -65,7 +61,7 @@ func NewUnboundedChan(initCapacity int) UnboundedChan { return NewUnboundedChanS
 					<a href="https://www.syst.top/posts/">文章</a>
 					<a href="https://www.syst.top/leetcode/">刷题</a>
 					<a href="https://www.syst.top/lives/">生活</a>
-					<a href="https://www.syst.top/translations/">翻译</a>
+					<a href="https://www.syst.top/readings/">读书笔记</a>
 					<a href="https://www.syst.top/friends/">朋友</a>
 					<a href="https://go.aabbccm.com">grpc-shop</a>
 				</nav>
@@ -97,26 +93,26 @@ func NewUnboundedChan(initCapacity int) UnboundedChan { return NewUnboundedChanS
 <p>鸟窝的 <code>chanx</code> 正是基于此方案改造而成的，我们来看看他俩的不同之处。</p>
 <p>上篇文章说过，所谓的无限缓冲，无非是借助一个中间层的数据结构，暂存临时数据。</p>
 <p>在 <code>chanx</code> 中，结构是这样的:</p>
-<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kd">type</span> <span class="nx">UnboundedChan</span> <span class="kd">struct</span> <span class="p">{</span>
-	<span class="nx">In</span>     <span class="kd">chan</span><span class="o">&lt;-</span> <span class="nx">T</span>    <span class="c1">// channel for write
-</span><span class="c1"></span>	<span class="nx">Out</span>    <span class="o">&lt;-</span><span class="kd">chan</span> <span class="nx">T</span>    <span class="c1">// channel for read
-</span><span class="c1"></span>	<span class="nx">buffer</span> <span class="o">*</span><span class="nx">RingBuffer</span> <span class="c1">// buffer
-</span><span class="c1"></span><span class="p">}</span>
-</code></pre></div><p><code>in</code> 和 <code>out</code> 的职责在上篇文章已经说明，这里的 <code>buffer</code> 就是我们所谓的中间临时存储层。其中的 <code>RingBuffer</code> 结构我们后面再说。</p>
-<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kd">func</span> <span class="nf">NewUnboundedChan</span><span class="p">(</span><span class="nx">initCapacity</span> <span class="kt">int</span><span class="p">)</span> <span class="nx">UnboundedChan</span> <span class="p">{</span>
-	<span class="k">return</span> <span class="nf">NewUnboundedChanSize</span><span class="p">(</span><span class="nx">initCapacity</span><span class="p">,</span> <span class="nx">initCapacity</span><span class="p">,</span> <span class="nx">initCapacity</span><span class="p">)</span>
-<span class="p">}</span>
-
-<span class="kd">func</span> <span class="nf">NewUnboundedChanSize</span><span class="p">(</span><span class="nx">initInCapacity</span><span class="p">,</span> <span class="nx">initOutCapacity</span><span class="p">,</span> <span class="nx">initBufCapacity</span> <span class="kt">int</span><span class="p">)</span> <span class="nx">UnboundedChan</span> <span class="p">{</span>
-	<span class="nx">in</span> <span class="o">:=</span> <span class="nb">make</span><span class="p">(</span><span class="kd">chan</span> <span class="nx">T</span><span class="p">,</span> <span class="nx">initInCapacity</span><span class="p">)</span>
-	<span class="nx">out</span> <span class="o">:=</span> <span class="nb">make</span><span class="p">(</span><span class="kd">chan</span> <span class="nx">T</span><span class="p">,</span> <span class="nx">initOutCapacity</span><span class="p">)</span>
-	<span class="nx">ch</span> <span class="o">:=</span> <span class="nx">UnboundedChan</span><span class="p">{</span><span class="nx">In</span><span class="p">:</span> <span class="nx">in</span><span class="p">,</span> <span class="nx">Out</span><span class="p">:</span> <span class="nx">out</span><span class="p">,</span> <span class="nx">buffer</span><span class="p">:</span> <span class="nf">NewRingBuffer</span><span class="p">(</span><span class="nx">initBufCapacity</span><span class="p">)}</span>
-
-	<span class="k">go</span> <span class="nf">process</span><span class="p">(</span><span class="nx">in</span><span class="p">,</span> <span class="nx">out</span><span class="p">,</span> <span class="nx">ch</span><span class="p">)</span>
-
-	<span class="k">return</span> <span class="nx">ch</span>
-<span class="p">}</span>
-</code></pre></div><p>它提供了两个初始化 <code>UnboundedChan</code> 的方法，从代码中我们可以明显的看出,<code>NewUnboundedChanSize</code> 可以给每个属性自定义自己的容量大小。仅此而已。</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="kd">type</span> <span class="nx">UnboundedChan</span> <span class="kd">struct</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">In</span>     <span class="kd">chan</span><span class="o">&lt;-</span> <span class="nx">T</span>    <span class="c1">// channel for write
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="nx">Out</span>    <span class="o">&lt;-</span><span class="kd">chan</span> <span class="nx">T</span>    <span class="c1">// channel for read
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="nx">buffer</span> <span class="o">*</span><span class="nx">RingBuffer</span> <span class="c1">// buffer
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="p">}</span>
+</span></span></code></pre></div><p><code>in</code> 和 <code>out</code> 的职责在上篇文章已经说明，这里的 <code>buffer</code> 就是我们所谓的中间临时存储层。其中的 <code>RingBuffer</code> 结构我们后面再说。</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="kd">func</span> <span class="nf">NewUnboundedChan</span><span class="p">(</span><span class="nx">initCapacity</span> <span class="kt">int</span><span class="p">)</span> <span class="nx">UnboundedChan</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">	<span class="k">return</span> <span class="nf">NewUnboundedChanSize</span><span class="p">(</span><span class="nx">initCapacity</span><span class="p">,</span> <span class="nx">initCapacity</span><span class="p">,</span> <span class="nx">initCapacity</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="kd">func</span> <span class="nf">NewUnboundedChanSize</span><span class="p">(</span><span class="nx">initInCapacity</span><span class="p">,</span> <span class="nx">initOutCapacity</span><span class="p">,</span> <span class="nx">initBufCapacity</span> <span class="kt">int</span><span class="p">)</span> <span class="nx">UnboundedChan</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">in</span> <span class="o">:=</span> <span class="nb">make</span><span class="p">(</span><span class="kd">chan</span> <span class="nx">T</span><span class="p">,</span> <span class="nx">initInCapacity</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">out</span> <span class="o">:=</span> <span class="nb">make</span><span class="p">(</span><span class="kd">chan</span> <span class="nx">T</span><span class="p">,</span> <span class="nx">initOutCapacity</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">ch</span> <span class="o">:=</span> <span class="nx">UnboundedChan</span><span class="p">{</span><span class="nx">In</span><span class="p">:</span> <span class="nx">in</span><span class="p">,</span> <span class="nx">Out</span><span class="p">:</span> <span class="nx">out</span><span class="p">,</span> <span class="nx">buffer</span><span class="p">:</span> <span class="nf">NewRingBuffer</span><span class="p">(</span><span class="nx">initBufCapacity</span><span class="p">)}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">	<span class="k">go</span> <span class="nf">process</span><span class="p">(</span><span class="nx">in</span><span class="p">,</span> <span class="nx">out</span><span class="p">,</span> <span class="nx">ch</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">	<span class="k">return</span> <span class="nx">ch</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></div><p>它提供了两个初始化 <code>UnboundedChan</code> 的方法，从代码中我们可以明显的看出,<code>NewUnboundedChanSize</code> 可以给每个属性自定义自己的容量大小。仅此而已。</p>
 <p><code>chanx</code> 中 关于 <code>in</code> 和 <code>out</code> 都是带缓冲的通道，而上篇文章中的 <code>in</code> 和 <code>out</code> 都是无缓冲的通道。
 这和他们对数据的流转处理有很大关系。</p>
 <p>我们接下去看 <code>process(in,out,ch)</code> 最核心的方法。
@@ -133,15 +129,15 @@ func NewUnboundedChan(initCapacity int) UnboundedChan { return NewUnboundedChanS
 <h2 id="buffer">buffer<a href="#buffer" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h2>
 <p>上篇文章我提到了关于 <code>buffer</code> 优化的点。</p>
 <p><code>chanx</code> 是如何优化的?</p>
-<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="c1">// type T interface{}
-</span><span class="c1"></span><span class="kd">type</span> <span class="nx">RingBuffer</span> <span class="kd">struct</span> <span class="p">{</span>
-	<span class="nx">buf</span>         <span class="p">[]</span><span class="nx">T</span> 
-	<span class="nx">initialSize</span> <span class="kt">int</span>
-	<span class="nx">size</span>        <span class="kt">int</span>
-	<span class="nx">r</span>           <span class="kt">int</span> <span class="c1">// read pointer
-</span><span class="c1"></span>	<span class="nx">w</span>           <span class="kt">int</span> <span class="c1">// write pointer
-</span><span class="c1"></span><span class="p">}</span>
-</code></pre></div><p>这是 <code>buffer</code> 的结构，其中</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="c1">// type T interface{}
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="kd">type</span> <span class="nx">RingBuffer</span> <span class="kd">struct</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">buf</span>         <span class="p">[]</span><span class="nx">T</span> 
+</span></span><span class="line"><span class="cl">	<span class="nx">initialSize</span> <span class="kt">int</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">size</span>        <span class="kt">int</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">r</span>           <span class="kt">int</span> <span class="c1">// read pointer
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="nx">w</span>           <span class="kt">int</span> <span class="c1">// write pointer
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="p">}</span>
+</span></span></code></pre></div><p>这是 <code>buffer</code> 的结构，其中</p>
 <ul>
 <li><code>buf</code> 具体存储数据的结构。</li>
 <li><code>initialSize</code> 初始化化 <code>buf</code> 的长度</li>
@@ -161,16 +157,16 @@ func NewUnboundedChan(initCapacity int) UnboundedChan { return NewUnboundedChanS
 <p>那么迁移的过程就是下图这样的。</p>
 <p><img src="https://image.syst.top/image/unlimited-2/unlimit-5.png" alt="image"></p>
 <p>还有，当 <code>buffer</code> 为空并且当前的 <code>size</code> 比初始化 <code>size</code> 还大，那么可以考虑重置 <code>buffer</code> 了。</p>
-<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="c1">//if ch.buffer.IsEmpty() &amp;&amp; ch.buffer.size &gt; ch.buffer.initialSize { 
-</span><span class="c1">//						ch.buffer.Reset()
-</span><span class="c1">//					}
-</span><span class="c1"></span><span class="kd">func</span> <span class="p">(</span><span class="nx">r</span> <span class="o">*</span><span class="nx">RingBuffer</span><span class="p">)</span> <span class="nf">Reset</span><span class="p">()</span> <span class="p">{</span>
-<span class="nx">r</span><span class="p">.</span><span class="nx">r</span> <span class="p">=</span> <span class="mi">0</span>
-<span class="nx">r</span><span class="p">.</span><span class="nx">w</span> <span class="p">=</span> <span class="mi">0</span>
-<span class="nx">r</span><span class="p">.</span><span class="nx">size</span> <span class="p">=</span> <span class="nx">r</span><span class="p">.</span><span class="nx">initialSize</span>
-<span class="nx">r</span><span class="p">.</span><span class="nx">buf</span> <span class="p">=</span> <span class="nb">make</span><span class="p">([]</span><span class="nx">T</span><span class="p">,</span> <span class="nx">r</span><span class="p">.</span><span class="nx">initialSize</span><span class="p">)</span>
-<span class="p">}</span>
-</code></pre></div><p>剩下的代码,就没什么好说的了。</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="c1">//if ch.buffer.IsEmpty() &amp;&amp; ch.buffer.size &gt; ch.buffer.initialSize { 
+</span></span></span><span class="line"><span class="cl"><span class="c1">//						ch.buffer.Reset()
+</span></span></span><span class="line"><span class="cl"><span class="c1">//					}
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="kd">func</span> <span class="p">(</span><span class="nx">r</span> <span class="o">*</span><span class="nx">RingBuffer</span><span class="p">)</span> <span class="nf">Reset</span><span class="p">()</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl"><span class="nx">r</span><span class="p">.</span><span class="nx">r</span> <span class="p">=</span> <span class="mi">0</span>
+</span></span><span class="line"><span class="cl"><span class="nx">r</span><span class="p">.</span><span class="nx">w</span> <span class="p">=</span> <span class="mi">0</span>
+</span></span><span class="line"><span class="cl"><span class="nx">r</span><span class="p">.</span><span class="nx">size</span> <span class="p">=</span> <span class="nx">r</span><span class="p">.</span><span class="nx">initialSize</span>
+</span></span><span class="line"><span class="cl"><span class="nx">r</span><span class="p">.</span><span class="nx">buf</span> <span class="p">=</span> <span class="nb">make</span><span class="p">([]</span><span class="nx">T</span><span class="p">,</span> <span class="nx">r</span><span class="p">.</span><span class="nx">initialSize</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></div><p>剩下的代码,就没什么好说的了。</p>
 <h3 id="总结">总结<a href="#总结" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h3>
 <p>继上篇文章后，这篇文章我们主要讲解了 <code>chanx</code> 是如何实现无限缓冲的 <code>channel</code>。
 其中最重要的一个点在于 <code>chanx</code> 中 <code>buffer</code> 实现采用的是 <code>ringbuffer</code>，达到资源复用的同时还能自动扩容。</p>
@@ -226,7 +222,7 @@ func NewUnboundedChan(initCapacity int) UnboundedChan { return NewUnboundedChanS
 	</footer>
 
 
-	<script src="https://www.syst.top/js/main.min.784417f5847151f848c339cf0acb13a06cbb648b1483435a28ed4556c4ead69b.js"></script>
+	<script src="https://www.syst.top/js/main.min.c8a831e54547e9c081939713d77308bf58ae5fed99a75acbcaaa14c5ce45bf89.js"></script>
 <script type="application/javascript">
 var doNotTrack = false;
 if (!doNotTrack) {

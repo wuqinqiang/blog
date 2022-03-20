@@ -11,23 +11,19 @@
 <meta itemprop="description" content="最近一直在看 etcd 相关的东西，为了不&quot;白看&quot;，加深理解，随即开启此系列的输出。
 Etcd是什么 Etcd 是由 Go 编写的。它是一个强一致性的分布式键值存储，提供一种可靠的方式来存储需要由分布式系统或者机器集群访问的数据。 同时 Etcd 各节点中的通信是通过 Raft 一致性算法来处理的。 有很多大型开源项目的底层都基于 Etcd，举几个比较有名的工业级项目:kubernetes、 CoreDNS、ROOK&hellip;&hellip;
 Etcd 的场景  服务发现。(可以把服务存储到某个 prefix 开头的 key中，然后消费端或者服务信息以调用， 同时消费者也可以通过 watch 获得 key 的变化) 消息分布和订阅 分布式锁 Leader 选举 分布式队列 负载均衡 &hellip;&hellip;  和 redis 的区别 面试的时候可能有面试官喜欢问，
- redis 的数据类型更丰富(string, hash, set ,zset, list)，etcd 仅仅就是 key-val。 etcd 的底层是 Raft 算法，可以保证数据的强一致性。而 redis 数据复制上是主备异步复制，只能最终一致性。 读写性能上，因为 etcd 保证强一致性，所以会比 redis 差。 存储方面，etcd 使用的是持久化存储boltdb，而 redis 的方案是可持久化的 aof/rdb -&hellip;&hellip;  环境与说明 直接下载编译好的二进制文件也好，还是自己下载源码编译运行，先开启一个单节点服务就行。我本地使用 goreman 搭建了三个实例。 这里稍微说明一下:PEER ADDRS 指的是向其他 etcd server 暴露的通信地址,比如上图 name=infra1 要调用 infra2， 调用的就是 http://127.">
-<meta itemprop="datePublished" content="2021-04-10T09:54:52+08:00" />
+ redis 的数据类型更丰富(string, hash, set ,zset, list)，etcd 仅仅就是 key-val。 etcd 的底层是 Raft 算法，可以保证数据的强一致性。而 redis 数据复制上是主备异步复制，只能最终一致性。 读写性能上，因为 etcd 保证强一致性，所以会比 redis 差。 存储方面，etcd 使用的是持久化存储boltdb，而 redis 的方案是可持久化的 aof/rdb -&hellip;&hellip;  环境与说明 直接下载编译好的二进制文件也好，还是自己下载源码编译运行，先开启一个单节点服务就行。我本地使用 goreman 搭建了三个实例。 这里稍微说明一下:PEER ADDRS 指的是向其他 etcd server 暴露的通信地址,比如上图 name=infra1 要调用 infra2， 调用的就是 http://127."><meta itemprop="datePublished" content="2021-04-10T09:54:52+08:00" />
 <meta itemprop="dateModified" content="2021-04-10T09:54:52+08:00" />
 <meta itemprop="wordCount" content="870">
-
-
-
-<meta itemprop="keywords" content="etcd,分布式," />
-<meta property="og:title" content="etcd 实战基础篇(一) " />
+<meta itemprop="keywords" content="etcd,分布式," /><meta property="og:title" content="etcd 实战基础篇(一) " />
 <meta property="og:description" content="最近一直在看 etcd 相关的东西，为了不&quot;白看&quot;，加深理解，随即开启此系列的输出。
 Etcd是什么 Etcd 是由 Go 编写的。它是一个强一致性的分布式键值存储，提供一种可靠的方式来存储需要由分布式系统或者机器集群访问的数据。 同时 Etcd 各节点中的通信是通过 Raft 一致性算法来处理的。 有很多大型开源项目的底层都基于 Etcd，举几个比较有名的工业级项目:kubernetes、 CoreDNS、ROOK&hellip;&hellip;
 Etcd 的场景  服务发现。(可以把服务存储到某个 prefix 开头的 key中，然后消费端或者服务信息以调用， 同时消费者也可以通过 watch 获得 key 的变化) 消息分布和订阅 分布式锁 Leader 选举 分布式队列 负载均衡 &hellip;&hellip;  和 redis 的区别 面试的时候可能有面试官喜欢问，
  redis 的数据类型更丰富(string, hash, set ,zset, list)，etcd 仅仅就是 key-val。 etcd 的底层是 Raft 算法，可以保证数据的强一致性。而 redis 数据复制上是主备异步复制，只能最终一致性。 读写性能上，因为 etcd 保证强一致性，所以会比 redis 差。 存储方面，etcd 使用的是持久化存储boltdb，而 redis 的方案是可持久化的 aof/rdb -&hellip;&hellip;  环境与说明 直接下载编译好的二进制文件也好，还是自己下载源码编译运行，先开启一个单节点服务就行。我本地使用 goreman 搭建了三个实例。 这里稍微说明一下:PEER ADDRS 指的是向其他 etcd server 暴露的通信地址,比如上图 name=infra1 要调用 infra2， 调用的就是 http://127." />
 <meta property="og:type" content="article" />
-<meta property="og:url" content="https://www.syst.top/posts/go/etcd-2021-04-10/" />
+<meta property="og:url" content="https://www.syst.top/posts/go/etcd-2021-04-10/" /><meta property="article:section" content="posts" />
 <meta property="article:published_time" content="2021-04-10T09:54:52+08:00" />
 <meta property="article:modified_time" content="2021-04-10T09:54:52+08:00" />
+
 <meta name="twitter:card" content="summary"/>
 <meta name="twitter:title" content="etcd 实战基础篇(一) "/>
 <meta name="twitter:description" content="最近一直在看 etcd 相关的东西，为了不&quot;白看&quot;，加深理解，随即开启此系列的输出。
@@ -43,7 +39,7 @@ Etcd 的场景  服务发现。(可以把服务存储到某个 prefix 开头的 
 	<link rel="shortcut icon" href="/favicon.ico">
 
 	<title>etcd 实战基础篇(一) </title>
-	<link rel="stylesheet" href="https://www.syst.top/css/style.min.d3141168199607bf3a517216ce3c263814eecdbc8fca72a9a88700799a838219.css">
+	<link rel="stylesheet" href="https://www.syst.top/css/style.min.cb0663fd19952012fdb4a1345792a808ae19eb828578bde6eeae217ff1fb1e8b.css">
 	
 </head>
 
@@ -59,7 +55,7 @@ Etcd 的场景  服务发现。(可以把服务存储到某个 prefix 开头的 
 					<a href="https://www.syst.top/posts/">文章</a>
 					<a href="https://www.syst.top/leetcode/">刷题</a>
 					<a href="https://www.syst.top/lives/">生活</a>
-					<a href="https://www.syst.top/translations/">翻译</a>
+					<a href="https://www.syst.top/readings/">读书笔记</a>
 					<a href="https://www.syst.top/friends/">朋友</a>
 					<a href="https://go.aabbccm.com">grpc-shop</a>
 				</nav>
@@ -119,66 +115,66 @@ Etcd 的场景  服务发现。(可以把服务存储到某个 prefix 开头的 
 <p>以下是本篇文章涉及到的全部代码,下面我们开始分块讲解.</p>
 <h3 id="初始化-etcd-客户端">初始化 etcd 客户端<a href="#初始化-etcd-客户端" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h3>
 <p>我们先初始化一个 etcd 客户端</p>
-<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kd">var</span> <span class="nx">addr</span> <span class="p">=</span> <span class="nx">flag</span><span class="p">.</span><span class="nf">String</span><span class="p">(</span><span class="s">&#34;addr&#34;</span><span class="p">,</span> <span class="s">&#34;http://127.0.0.1:2379&#34;</span><span class="p">,</span> <span class="s">&#34;etcd address&#34;</span><span class="p">)</span>
-
-<span class="kd">var</span> <span class="nx">cli</span> <span class="o">*</span><span class="nx">clientv3</span><span class="p">.</span><span class="nx">Client</span>
-
-<span class="c1">// 初始化etcd 客户端
-</span><span class="c1"></span><span class="kd">func</span> <span class="nf">init</span><span class="p">()</span> <span class="p">{</span>
-	<span class="nx">flag</span><span class="p">.</span><span class="nf">Parse</span><span class="p">()</span>
-	<span class="kd">var</span> <span class="nx">err</span> <span class="kt">error</span>
-	<span class="c1">// 解析etcd的地址，编程[]string
-</span><span class="c1"></span>	<span class="nx">endpoints</span> <span class="o">:=</span> <span class="nx">strings</span><span class="p">.</span><span class="nf">Split</span><span class="p">(</span><span class="o">*</span><span class="nx">addr</span><span class="p">,</span> <span class="s">&#34;,&#34;</span><span class="p">)</span>
-	<span class="c1">// 创建一个 etcd 的客户端
-</span><span class="c1"></span>	<span class="nx">cli</span><span class="p">,</span> <span class="nx">err</span> <span class="p">=</span> <span class="nx">clientv3</span><span class="p">.</span><span class="nf">New</span><span class="p">(</span><span class="nx">clientv3</span><span class="p">.</span><span class="nx">Config</span><span class="p">{</span><span class="nx">Endpoints</span><span class="p">:</span> <span class="nx">endpoints</span><span class="p">,</span>
-		<span class="nx">DialTimeout</span><span class="p">:</span> <span class="mi">5</span> <span class="o">*</span> <span class="nx">time</span><span class="p">.</span><span class="nx">Second</span><span class="p">})</span>
-	<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
-		<span class="nx">fmt</span><span class="p">.</span><span class="nf">Printf</span><span class="p">(</span><span class="s">&#34;初始化客户端失败:%v\n&#34;</span><span class="p">,</span> <span class="nx">err</span><span class="p">)</span>
-		<span class="nx">log</span><span class="p">.</span><span class="nf">Fatal</span><span class="p">(</span><span class="nx">err</span><span class="p">)</span>
-	<span class="p">}</span>
-<span class="p">}</span>
-</code></pre></div><h3 id="put-操作">put 操作<a href="#put-操作" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h3>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="kd">var</span> <span class="nx">addr</span> <span class="p">=</span> <span class="nx">flag</span><span class="p">.</span><span class="nf">String</span><span class="p">(</span><span class="s">&#34;addr&#34;</span><span class="p">,</span> <span class="s">&#34;http://127.0.0.1:2379&#34;</span><span class="p">,</span> <span class="s">&#34;etcd address&#34;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="kd">var</span> <span class="nx">cli</span> <span class="o">*</span><span class="nx">clientv3</span><span class="p">.</span><span class="nx">Client</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1">// 初始化etcd 客户端
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="kd">func</span> <span class="nf">init</span><span class="p">()</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">flag</span><span class="p">.</span><span class="nf">Parse</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">	<span class="kd">var</span> <span class="nx">err</span> <span class="kt">error</span>
+</span></span><span class="line"><span class="cl">	<span class="c1">// 解析etcd的地址，编程[]string
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="nx">endpoints</span> <span class="o">:=</span> <span class="nx">strings</span><span class="p">.</span><span class="nf">Split</span><span class="p">(</span><span class="o">*</span><span class="nx">addr</span><span class="p">,</span> <span class="s">&#34;,&#34;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">	<span class="c1">// 创建一个 etcd 的客户端
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="nx">cli</span><span class="p">,</span> <span class="nx">err</span> <span class="p">=</span> <span class="nx">clientv3</span><span class="p">.</span><span class="nf">New</span><span class="p">(</span><span class="nx">clientv3</span><span class="p">.</span><span class="nx">Config</span><span class="p">{</span><span class="nx">Endpoints</span><span class="p">:</span> <span class="nx">endpoints</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">DialTimeout</span><span class="p">:</span> <span class="mi">5</span> <span class="o">*</span> <span class="nx">time</span><span class="p">.</span><span class="nx">Second</span><span class="p">})</span>
+</span></span><span class="line"><span class="cl">	<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">fmt</span><span class="p">.</span><span class="nf">Printf</span><span class="p">(</span><span class="s">&#34;初始化客户端失败:%v\n&#34;</span><span class="p">,</span> <span class="nx">err</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">log</span><span class="p">.</span><span class="nf">Fatal</span><span class="p">(</span><span class="nx">err</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></div><h3 id="put-操作">put 操作<a href="#put-操作" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h3>
 <p>命令行 <code>etcdctl put key val</code> 对应操作</p>
-<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="c1">// 设置key
-</span><span class="c1"></span><span class="kd">func</span> <span class="nf">PutKey</span><span class="p">(</span><span class="nx">key</span> <span class="kt">string</span><span class="p">,</span> <span class="nx">value</span> <span class="kt">string</span><span class="p">)</span> <span class="p">{</span>
-	<span class="kd">var</span> <span class="nx">err</span> <span class="kt">error</span>
-	<span class="kd">var</span> <span class="nx">resp</span> <span class="o">*</span><span class="nx">clientv3</span><span class="p">.</span><span class="nx">PutResponse</span>
-	<span class="nx">resp</span><span class="p">,</span> <span class="nx">err</span> <span class="p">=</span> <span class="nx">cli</span><span class="p">.</span><span class="nf">Put</span><span class="p">(</span><span class="nx">context</span><span class="p">.</span><span class="nf">Background</span><span class="p">(),</span> <span class="nx">key</span><span class="p">,</span> <span class="nx">value</span><span class="p">)</span>
-	<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
-		<span class="nx">fmt</span><span class="p">.</span><span class="nf">Printf</span><span class="p">(</span><span class="s">&#34;设置 key 失败:%v\n&#34;</span><span class="p">,</span> <span class="nx">err</span><span class="p">)</span>
-		<span class="k">return</span>
-	<span class="p">}</span>
-	<span class="nx">fmt</span><span class="p">.</span><span class="nf">Printf</span><span class="p">(</span><span class="s">&#34;操作结果：%v\n&#34;</span><span class="p">,</span> <span class="nx">resp</span><span class="p">)</span>
-<span class="p">}</span>
-</code></pre></div><p>除了简单的设置，我们还有一种租约模式，也就是设置一个key的有效期，在有效期之内可以进行续租，如果没续租到期就过期。 对应的命令行是分两段:</p>
-<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="nx">etcdctl</span> <span class="nx">lease</span> <span class="nx">grant</span> <span class="mi">200</span>
-<span class="c1">// lease 326978bac638650a granted with TTL(200s)
-</span><span class="c1"></span><span class="nx">etcdctl</span> <span class="nx">put</span> <span class="nx">hello</span> <span class="nx">world</span> <span class="o">--</span><span class="nx">lease</span><span class="p">=</span><span class="mi">326978</span><span class="nx">bac638650a</span>
-</code></pre></div><p>对应操作</p>
-<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="c1">// 设置会过期的key
-</span><span class="c1"></span><span class="kd">func</span> <span class="nf">PutKeyLease</span><span class="p">(</span><span class="nx">key</span> <span class="kt">string</span><span class="p">,</span> <span class="nx">value</span> <span class="kt">string</span><span class="p">,</span> <span class="nx">ttl</span> <span class="kt">int64</span><span class="p">)</span> <span class="p">{</span>
-	<span class="kd">var</span> <span class="nx">err</span> <span class="kt">error</span>
-	<span class="kd">var</span> <span class="nx">resp</span> <span class="o">*</span><span class="nx">clientv3</span><span class="p">.</span><span class="nx">PutResponse</span>
-
-	<span class="c1">// 创建一个租约对象
-</span><span class="c1"></span>	<span class="kd">var</span> <span class="nx">lease</span> <span class="nx">clientv3</span><span class="p">.</span><span class="nx">Lease</span>
-	<span class="nx">lease</span> <span class="p">=</span> <span class="nx">clientv3</span><span class="p">.</span><span class="nf">NewLease</span><span class="p">(</span><span class="nx">cli</span><span class="p">)</span>
-
-	<span class="kd">var</span> <span class="nx">leaseResp</span> <span class="o">*</span><span class="nx">clientv3</span><span class="p">.</span><span class="nx">LeaseGrantResponse</span>
-	<span class="c1">// 根据时间，生成一个租约
-</span><span class="c1"></span>	<span class="nx">leaseResp</span><span class="p">,</span> <span class="nx">err</span> <span class="p">=</span> <span class="nx">lease</span><span class="p">.</span><span class="nf">Grant</span><span class="p">(</span><span class="nx">context</span><span class="p">.</span><span class="nf">Background</span><span class="p">(),</span> <span class="nx">ttl</span><span class="p">)</span>
-	<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
-		<span class="nx">fmt</span><span class="p">.</span><span class="nf">Printf</span><span class="p">(</span><span class="s">&#34;设置 租约 失败:%v\n&#34;</span><span class="p">,</span> <span class="nx">err</span><span class="p">)</span>
-	<span class="p">}</span>
-
-	<span class="nx">resp</span><span class="p">,</span> <span class="nx">err</span> <span class="p">=</span> <span class="nx">cli</span><span class="p">.</span><span class="nf">Put</span><span class="p">(</span><span class="nx">context</span><span class="p">.</span><span class="nf">Background</span><span class="p">(),</span> <span class="nx">key</span><span class="p">,</span> <span class="nx">value</span><span class="p">,</span> <span class="nx">clientv3</span><span class="p">.</span><span class="nf">WithLease</span><span class="p">(</span><span class="nx">leaseResp</span><span class="p">.</span><span class="nx">ID</span><span class="p">))</span>
-	<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
-		<span class="nx">fmt</span><span class="p">.</span><span class="nf">Printf</span><span class="p">(</span><span class="s">&#34;设置 key 失败:%v\n&#34;</span><span class="p">,</span> <span class="nx">err</span><span class="p">)</span>
-		<span class="k">return</span>
-	<span class="p">}</span>
-	<span class="nx">fmt</span><span class="p">.</span><span class="nf">Printf</span><span class="p">(</span><span class="s">&#34;操作结果：%v\n&#34;</span><span class="p">,</span> <span class="nx">resp</span><span class="p">)</span>
-<span class="p">}</span>
-</code></pre></div><p>etcd 的租约模式，简单的说， 当 Lease server 收到 client 请求，比如上面创建一个有效期200秒的请求，会通过 Raft
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="c1">// 设置key
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="kd">func</span> <span class="nf">PutKey</span><span class="p">(</span><span class="nx">key</span> <span class="kt">string</span><span class="p">,</span> <span class="nx">value</span> <span class="kt">string</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">	<span class="kd">var</span> <span class="nx">err</span> <span class="kt">error</span>
+</span></span><span class="line"><span class="cl">	<span class="kd">var</span> <span class="nx">resp</span> <span class="o">*</span><span class="nx">clientv3</span><span class="p">.</span><span class="nx">PutResponse</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">resp</span><span class="p">,</span> <span class="nx">err</span> <span class="p">=</span> <span class="nx">cli</span><span class="p">.</span><span class="nf">Put</span><span class="p">(</span><span class="nx">context</span><span class="p">.</span><span class="nf">Background</span><span class="p">(),</span> <span class="nx">key</span><span class="p">,</span> <span class="nx">value</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">	<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">fmt</span><span class="p">.</span><span class="nf">Printf</span><span class="p">(</span><span class="s">&#34;设置 key 失败:%v\n&#34;</span><span class="p">,</span> <span class="nx">err</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">		<span class="k">return</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">fmt</span><span class="p">.</span><span class="nf">Printf</span><span class="p">(</span><span class="s">&#34;操作结果：%v\n&#34;</span><span class="p">,</span> <span class="nx">resp</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></div><p>除了简单的设置，我们还有一种租约模式，也就是设置一个key的有效期，在有效期之内可以进行续租，如果没续租到期就过期。 对应的命令行是分两段:</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="nx">etcdctl</span> <span class="nx">lease</span> <span class="nx">grant</span> <span class="mi">200</span>
+</span></span><span class="line"><span class="cl"><span class="c1">// lease 326978bac638650a granted with TTL(200s)
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="nx">etcdctl</span> <span class="nx">put</span> <span class="nx">hello</span> <span class="nx">world</span> <span class="o">--</span><span class="nx">lease</span><span class="p">=</span><span class="mi">326978</span><span class="nx">bac638650a</span>
+</span></span></code></pre></div><p>对应操作</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="c1">// 设置会过期的key
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="kd">func</span> <span class="nf">PutKeyLease</span><span class="p">(</span><span class="nx">key</span> <span class="kt">string</span><span class="p">,</span> <span class="nx">value</span> <span class="kt">string</span><span class="p">,</span> <span class="nx">ttl</span> <span class="kt">int64</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">	<span class="kd">var</span> <span class="nx">err</span> <span class="kt">error</span>
+</span></span><span class="line"><span class="cl">	<span class="kd">var</span> <span class="nx">resp</span> <span class="o">*</span><span class="nx">clientv3</span><span class="p">.</span><span class="nx">PutResponse</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">	<span class="c1">// 创建一个租约对象
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="kd">var</span> <span class="nx">lease</span> <span class="nx">clientv3</span><span class="p">.</span><span class="nx">Lease</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">lease</span> <span class="p">=</span> <span class="nx">clientv3</span><span class="p">.</span><span class="nf">NewLease</span><span class="p">(</span><span class="nx">cli</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">	<span class="kd">var</span> <span class="nx">leaseResp</span> <span class="o">*</span><span class="nx">clientv3</span><span class="p">.</span><span class="nx">LeaseGrantResponse</span>
+</span></span><span class="line"><span class="cl">	<span class="c1">// 根据时间，生成一个租约
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="nx">leaseResp</span><span class="p">,</span> <span class="nx">err</span> <span class="p">=</span> <span class="nx">lease</span><span class="p">.</span><span class="nf">Grant</span><span class="p">(</span><span class="nx">context</span><span class="p">.</span><span class="nf">Background</span><span class="p">(),</span> <span class="nx">ttl</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">	<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">fmt</span><span class="p">.</span><span class="nf">Printf</span><span class="p">(</span><span class="s">&#34;设置 租约 失败:%v\n&#34;</span><span class="p">,</span> <span class="nx">err</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">	<span class="nx">resp</span><span class="p">,</span> <span class="nx">err</span> <span class="p">=</span> <span class="nx">cli</span><span class="p">.</span><span class="nf">Put</span><span class="p">(</span><span class="nx">context</span><span class="p">.</span><span class="nf">Background</span><span class="p">(),</span> <span class="nx">key</span><span class="p">,</span> <span class="nx">value</span><span class="p">,</span> <span class="nx">clientv3</span><span class="p">.</span><span class="nf">WithLease</span><span class="p">(</span><span class="nx">leaseResp</span><span class="p">.</span><span class="nx">ID</span><span class="p">))</span>
+</span></span><span class="line"><span class="cl">	<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">fmt</span><span class="p">.</span><span class="nf">Printf</span><span class="p">(</span><span class="s">&#34;设置 key 失败:%v\n&#34;</span><span class="p">,</span> <span class="nx">err</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">		<span class="k">return</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">fmt</span><span class="p">.</span><span class="nf">Printf</span><span class="p">(</span><span class="s">&#34;操作结果：%v\n&#34;</span><span class="p">,</span> <span class="nx">resp</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></div><p>etcd 的租约模式，简单的说， 当 Lease server 收到 client 请求，比如上面创建一个有效期200秒的请求，会通过 Raft
 模块完成日志同步， 随后 Apply 模块的 Grant 接口执行日志条目内容。这是后续我们要研究的，这里略微提一下。</p>
 <p>首先你得创建一个 Lease(租约)，获取到一个 Lease 唯一id，然后 put 的时候带上这个 id。当一个 key 指定一个 Lease 的时候，
 底层最终是会把这个 key 关联到 Lease 的内存集合中。所以本质上，一个 Lease 可以 关联 n 个 key。而我们平常使用的缓存 key 设置过期时间，一般是把 key 和过期时间一对一绑定。</p>
@@ -186,196 +182,195 @@ Etcd 的场景  服务发现。(可以把服务存储到某个 prefix 开头的 
 <p>其实原理说起来也很简单。Lease 在底层存储的结构是堆。由一个异步的 G 专门负责的去淘汰过期的 Lease。定时从最小堆中取出已经到期的 Lease。 然后删除 Lease 以及 删除通过 LeaseId 关联上此 Lease 的
 key 列表。后面我们分析源码的时候专门讨论这块。</p>
 <p>这里我还要说一点，你可以看到，不管是 put 一个普通的 key，还是一个带有租约的 key，调用的都是同一个方法。</p>
-<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="c1">// 普通的
-</span><span class="c1"></span>	<span class="nx">resp</span><span class="p">,</span> <span class="nx">err</span> <span class="p">=</span> <span class="nx">cli</span><span class="p">.</span><span class="nf">Put</span><span class="p">(</span><span class="nx">context</span><span class="p">.</span><span class="nf">Background</span><span class="p">(),</span> <span class="nx">key</span><span class="p">,</span> <span class="nx">value</span><span class="p">)</span>
-<span class="c1">// 租约
-</span><span class="c1"></span>	<span class="nx">resp</span><span class="p">,</span> <span class="nx">err</span> <span class="p">=</span> <span class="nx">cli</span><span class="p">.</span><span class="nf">Put</span><span class="p">(</span><span class="nx">context</span><span class="p">.</span><span class="nf">Background</span><span class="p">(),</span> <span class="nx">key</span><span class="p">,</span> <span class="nx">value</span><span class="p">,</span> <span class="nx">clientv3</span><span class="p">.</span><span class="nf">WithLease</span><span class="p">(</span><span class="nx">leaseResp</span><span class="p">.</span><span class="nx">ID</span><span class="p">))</span>
-	
-<span class="c1">// 源码里面
-</span><span class="c1"></span><span class="kd">type</span> <span class="nx">OpOption</span> <span class="kd">func</span><span class="p">(</span><span class="o">*</span><span class="nx">Op</span><span class="p">)</span>
-
-<span class="kd">func</span> <span class="nf">WithLease</span><span class="p">(</span><span class="nx">leaseID</span> <span class="nx">LeaseID</span><span class="p">)</span> <span class="nx">OpOption</span> <span class="p">{</span>
-	<span class="k">return</span> <span class="kd">func</span><span class="p">(</span><span class="nx">op</span> <span class="o">*</span><span class="nx">Op</span><span class="p">)</span> <span class="p">{</span> <span class="nx">op</span><span class="p">.</span><span class="nx">leaseID</span> <span class="p">=</span> <span class="nx">leaseID</span> <span class="p">}</span>
-<span class="p">}</span>
-<span class="kd">func</span> <span class="p">(</span><span class="nx">op</span> <span class="o">*</span><span class="nx">Op</span><span class="p">)</span> <span class="nf">applyOpts</span><span class="p">(</span><span class="nx">opts</span> <span class="p">[]</span><span class="nx">OpOption</span><span class="p">)</span> <span class="p">{</span>
-	<span class="k">for</span> <span class="nx">_</span><span class="p">,</span> <span class="nx">opt</span> <span class="o">:=</span> <span class="k">range</span> <span class="nx">opts</span> <span class="p">{</span>
-		<span class="nf">opt</span><span class="p">(</span><span class="nx">op</span><span class="p">)</span>
-	<span class="p">}</span>
-<span class="p">}</span>
-</code></pre></div><p>看出来了吗？一个很常见的设计模式，装饰器。</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="c1">// 普通的
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="nx">resp</span><span class="p">,</span> <span class="nx">err</span> <span class="p">=</span> <span class="nx">cli</span><span class="p">.</span><span class="nf">Put</span><span class="p">(</span><span class="nx">context</span><span class="p">.</span><span class="nf">Background</span><span class="p">(),</span> <span class="nx">key</span><span class="p">,</span> <span class="nx">value</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="c1">// 租约
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="nx">resp</span><span class="p">,</span> <span class="nx">err</span> <span class="p">=</span> <span class="nx">cli</span><span class="p">.</span><span class="nf">Put</span><span class="p">(</span><span class="nx">context</span><span class="p">.</span><span class="nf">Background</span><span class="p">(),</span> <span class="nx">key</span><span class="p">,</span> <span class="nx">value</span><span class="p">,</span> <span class="nx">clientv3</span><span class="p">.</span><span class="nf">WithLease</span><span class="p">(</span><span class="nx">leaseResp</span><span class="p">.</span><span class="nx">ID</span><span class="p">))</span>
+</span></span><span class="line"><span class="cl">	
+</span></span><span class="line"><span class="cl"><span class="c1">// 源码里面
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="kd">type</span> <span class="nx">OpOption</span> <span class="kd">func</span><span class="p">(</span><span class="o">*</span><span class="nx">Op</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="kd">func</span> <span class="nf">WithLease</span><span class="p">(</span><span class="nx">leaseID</span> <span class="nx">LeaseID</span><span class="p">)</span> <span class="nx">OpOption</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">	<span class="k">return</span> <span class="kd">func</span><span class="p">(</span><span class="nx">op</span> <span class="o">*</span><span class="nx">Op</span><span class="p">)</span> <span class="p">{</span> <span class="nx">op</span><span class="p">.</span><span class="nx">leaseID</span> <span class="p">=</span> <span class="nx">leaseID</span> <span class="p">}</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span><span class="line"><span class="cl"><span class="kd">func</span> <span class="p">(</span><span class="nx">op</span> <span class="o">*</span><span class="nx">Op</span><span class="p">)</span> <span class="nf">applyOpts</span><span class="p">(</span><span class="nx">opts</span> <span class="p">[]</span><span class="nx">OpOption</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">	<span class="k">for</span> <span class="nx">_</span><span class="p">,</span> <span class="nx">opt</span> <span class="o">:=</span> <span class="k">range</span> <span class="nx">opts</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="nf">opt</span><span class="p">(</span><span class="nx">op</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></div><p>看出来了吗？一个很常见的设计模式，装饰器。</p>
 <h3 id="get-操作">Get 操作<a href="#get-操作" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h3>
 <p>命令行 <code>etcdctl get key</code> 对应操作,</p>
-<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kd">func</span> <span class="nf">GetKey</span><span class="p">(</span><span class="nx">key</span> <span class="kt">string</span><span class="p">)</span> <span class="p">{</span>
-	<span class="kd">var</span> <span class="nx">err</span> <span class="kt">error</span>
-	<span class="kd">var</span> <span class="nx">res</span> <span class="o">*</span><span class="nx">clientv3</span><span class="p">.</span><span class="nx">GetResponse</span>
-	<span class="nx">res</span><span class="p">,</span> <span class="nx">err</span> <span class="p">=</span> <span class="nx">cli</span><span class="p">.</span><span class="nf">Get</span><span class="p">(</span><span class="nx">context</span><span class="p">.</span><span class="nf">Background</span><span class="p">(),</span> <span class="nx">key</span><span class="p">)</span>
-	<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
-		<span class="nx">fmt</span><span class="p">.</span><span class="nf">Printf</span><span class="p">(</span><span class="s">&#34;获取 key 失败 :%v\n&#34;</span><span class="p">,</span> <span class="nx">err</span><span class="p">)</span>
-		<span class="k">return</span>
-	<span class="p">}</span>
-	<span class="nx">fmt</span><span class="p">.</span><span class="nf">Printf</span><span class="p">(</span><span class="s">&#34;key %v 的值是：%+v\n&#34;</span><span class="p">,</span> <span class="nx">key</span><span class="p">,</span> <span class="nx">res</span><span class="p">)</span>
-<span class="p">}</span>
-</code></pre></div><p>我们都知道，etcd从 v3 开始，底层实现了 MVCC 机制。所以在 etcd 中的 key 是存在多个历史版本的。
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="kd">func</span> <span class="nf">GetKey</span><span class="p">(</span><span class="nx">key</span> <span class="kt">string</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">	<span class="kd">var</span> <span class="nx">err</span> <span class="kt">error</span>
+</span></span><span class="line"><span class="cl">	<span class="kd">var</span> <span class="nx">res</span> <span class="o">*</span><span class="nx">clientv3</span><span class="p">.</span><span class="nx">GetResponse</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">res</span><span class="p">,</span> <span class="nx">err</span> <span class="p">=</span> <span class="nx">cli</span><span class="p">.</span><span class="nf">Get</span><span class="p">(</span><span class="nx">context</span><span class="p">.</span><span class="nf">Background</span><span class="p">(),</span> <span class="nx">key</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">	<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">fmt</span><span class="p">.</span><span class="nf">Printf</span><span class="p">(</span><span class="s">&#34;获取 key 失败 :%v\n&#34;</span><span class="p">,</span> <span class="nx">err</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">		<span class="k">return</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">fmt</span><span class="p">.</span><span class="nf">Printf</span><span class="p">(</span><span class="s">&#34;key %v 的值是：%+v\n&#34;</span><span class="p">,</span> <span class="nx">key</span><span class="p">,</span> <span class="nx">res</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></div><p>我们都知道，etcd从 v3 开始，底层实现了 MVCC 机制。所以在 etcd 中的 key 是存在多个历史版本的。
 我们会在命令行中 <code>etcdctl get hello --rev=?</code>,比如
 <img src="https://image.syst.top/image/etcd/rev-1.png" alt="image">
 可以看到，不同版本的 key(&ldquo;hello&rdquo;)的值是不一样的。</p>
-<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="c1">// 获取指定版本的key
-</span><span class="c1"></span><span class="kd">func</span> <span class="nf">GetKeyByVersion</span><span class="p">(</span><span class="nx">key</span> <span class="kt">string</span><span class="p">,</span> <span class="nx">version</span> <span class="kt">int64</span><span class="p">)</span> <span class="p">{</span>
-	<span class="kd">var</span> <span class="nx">err</span> <span class="kt">error</span>
-	<span class="kd">var</span> <span class="nx">res</span> <span class="o">*</span><span class="nx">clientv3</span><span class="p">.</span><span class="nx">GetResponse</span>
-	<span class="nx">res</span><span class="p">,</span> <span class="nx">err</span> <span class="p">=</span> <span class="nx">cli</span><span class="p">.</span><span class="nf">Get</span><span class="p">(</span><span class="nx">context</span><span class="p">.</span><span class="nf">Background</span><span class="p">(),</span> <span class="nx">key</span><span class="p">,</span> <span class="nx">clientv3</span><span class="p">.</span><span class="nf">WithRev</span><span class="p">(</span><span class="nx">version</span><span class="p">))</span>
-	<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
-		<span class="nx">fmt</span><span class="p">.</span><span class="nf">Printf</span><span class="p">(</span><span class="s">&#34;删除 key:%v 失败:%v&#34;</span><span class="p">,</span> <span class="nx">key</span><span class="p">,</span> <span class="nx">err</span><span class="p">)</span>
-		<span class="k">return</span>
-	<span class="p">}</span>
-	<span class="nx">fmt</span><span class="p">.</span><span class="nf">Printf</span><span class="p">(</span><span class="s">&#34;请求key:%v,请求版本:%v,获取结果：%+v\n&#34;</span><span class="p">,</span> <span class="nx">key</span><span class="p">,</span> <span class="nx">version</span><span class="p">,</span> <span class="nx">res</span><span class="p">)</span>
-</code></pre></div><p>一样的套路。我们也可以运行这段代码演示一下。</p>
-<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="nx">src</span><span class="p">.</span><span class="nf">GetKeyByVersion</span><span class="p">(</span><span class="s">&#34;hello&#34;</span><span class="p">,</span> <span class="mi">20</span><span class="p">)</span>
-<span class="nx">src</span><span class="p">.</span><span class="nf">GetKeyByVersion</span><span class="p">(</span><span class="s">&#34;hello&#34;</span><span class="p">,</span> <span class="mi">21</span><span class="p">)</span>
-</code></pre></div><p><img src="https://image.syst.top/image/etcd/rev-2.png" alt="image">
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="c1">// 获取指定版本的key
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="kd">func</span> <span class="nf">GetKeyByVersion</span><span class="p">(</span><span class="nx">key</span> <span class="kt">string</span><span class="p">,</span> <span class="nx">version</span> <span class="kt">int64</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">	<span class="kd">var</span> <span class="nx">err</span> <span class="kt">error</span>
+</span></span><span class="line"><span class="cl">	<span class="kd">var</span> <span class="nx">res</span> <span class="o">*</span><span class="nx">clientv3</span><span class="p">.</span><span class="nx">GetResponse</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">res</span><span class="p">,</span> <span class="nx">err</span> <span class="p">=</span> <span class="nx">cli</span><span class="p">.</span><span class="nf">Get</span><span class="p">(</span><span class="nx">context</span><span class="p">.</span><span class="nf">Background</span><span class="p">(),</span> <span class="nx">key</span><span class="p">,</span> <span class="nx">clientv3</span><span class="p">.</span><span class="nf">WithRev</span><span class="p">(</span><span class="nx">version</span><span class="p">))</span>
+</span></span><span class="line"><span class="cl">	<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">fmt</span><span class="p">.</span><span class="nf">Printf</span><span class="p">(</span><span class="s">&#34;删除 key:%v 失败:%v&#34;</span><span class="p">,</span> <span class="nx">key</span><span class="p">,</span> <span class="nx">err</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">		<span class="k">return</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">fmt</span><span class="p">.</span><span class="nf">Printf</span><span class="p">(</span><span class="s">&#34;请求key:%v,请求版本:%v,获取结果：%+v\n&#34;</span><span class="p">,</span> <span class="nx">key</span><span class="p">,</span> <span class="nx">version</span><span class="p">,</span> <span class="nx">res</span><span class="p">)</span>
+</span></span></code></pre></div><p>一样的套路。我们也可以运行这段代码演示一下。</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="nx">src</span><span class="p">.</span><span class="nf">GetKeyByVersion</span><span class="p">(</span><span class="s">&#34;hello&#34;</span><span class="p">,</span> <span class="mi">20</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="nx">src</span><span class="p">.</span><span class="nf">GetKeyByVersion</span><span class="p">(</span><span class="s">&#34;hello&#34;</span><span class="p">,</span> <span class="mi">21</span><span class="p">)</span>
+</span></span></code></pre></div><p><img src="https://image.syst.top/image/etcd/rev-2.png" alt="image">
 其他参数暂时忽略，主要看 Kvs 里面的结果。</p>
 <h3 id="watch-操作">Watch 操作<a href="#watch-操作" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h3>
 <p>命令行 <code>./etcdctl watch hello</code></p>
 <p>为了避免客户端的反复轮询， etcd 提供了 event 机制。客户端可以订阅一系列的 event ，用于 watch 某些 key 。
 当这些被 watch 的 key 更新时， etcd 就会通知客户端。</p>
-<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="c1">// 监听key 变动
-</span><span class="c1"></span><span class="kd">func</span> <span class="nf">WatchKey</span><span class="p">(</span><span class="nx">key</span> <span class="kt">string</span><span class="p">)</span> <span class="p">{</span>
-	<span class="kd">var</span> <span class="nx">watch</span> <span class="nx">clientv3</span><span class="p">.</span><span class="nx">WatchChan</span>
-	<span class="nx">watch</span> <span class="p">=</span> <span class="nx">cli</span><span class="p">.</span><span class="nf">Watch</span><span class="p">(</span><span class="nx">context</span><span class="p">.</span><span class="nf">Background</span><span class="p">(),</span> <span class="nx">key</span><span class="p">)</span>
-	<span class="k">for</span> <span class="p">{</span>
-		<span class="nx">res</span> <span class="o">:=</span> <span class="o">&lt;-</span><span class="nx">watch</span>
-		<span class="nx">fmt</span><span class="p">.</span><span class="nf">Printf</span><span class="p">(</span><span class="s">&#34;key:%v变动通知：%+v\n&#34;</span><span class="p">,</span> <span class="nx">key</span><span class="p">,</span> <span class="nx">res</span><span class="p">)</span>
-		<span class="nx">fmt</span><span class="p">.</span><span class="nf">Printf</span><span class="p">(</span><span class="s">&#34;值:%+v\n&#34;</span><span class="p">,</span> <span class="o">*</span><span class="nx">res</span><span class="p">.</span><span class="nx">Events</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
-	<span class="p">}</span>
-
-<span class="p">}</span>
-</code></pre></div><p>可以从上面这段代码看出，watch 是通过 channel 的方式来进行通知的</p>
-<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="c1">// 开启一个 G
-</span><span class="c1">//	go src.WatchKey(&#34;hello&#34;)
-</span></code></pre></div><p>然后我们运行这段程序，在命令行上操作 hello 这个 key，</p>
-<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="p">.</span><span class="o">/</span><span class="nx">etcdctl</span> <span class="nx">lease</span> <span class="nx">grant</span> <span class="mi">30</span>
-<span class="nx">lease</span> <span class="mi">326978</span><span class="nx">bac638651e</span> <span class="nx">granted</span> <span class="nx">with</span> <span class="nf">TTL</span><span class="p">(</span><span class="mi">30</span><span class="nx">s</span><span class="p">)</span>
-<span class="p">.</span><span class="o">/</span><span class="nx">etcdctl</span> <span class="nx">put</span> <span class="nx">hello</span> <span class="nx">world</span><span class="o">-</span><span class="nx">age</span> <span class="o">--</span><span class="nx">lease</span><span class="p">=</span><span class="mi">326978</span><span class="nx">bac638651e</span>
-</code></pre></div><p><img src="https://image.syst.top/image/etcd/watch.png" alt="image">
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="c1">// 监听key 变动
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="kd">func</span> <span class="nf">WatchKey</span><span class="p">(</span><span class="nx">key</span> <span class="kt">string</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">	<span class="kd">var</span> <span class="nx">watch</span> <span class="nx">clientv3</span><span class="p">.</span><span class="nx">WatchChan</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">watch</span> <span class="p">=</span> <span class="nx">cli</span><span class="p">.</span><span class="nf">Watch</span><span class="p">(</span><span class="nx">context</span><span class="p">.</span><span class="nf">Background</span><span class="p">(),</span> <span class="nx">key</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">	<span class="k">for</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">res</span> <span class="o">:=</span> <span class="o">&lt;-</span><span class="nx">watch</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">fmt</span><span class="p">.</span><span class="nf">Printf</span><span class="p">(</span><span class="s">&#34;key:%v变动通知：%+v\n&#34;</span><span class="p">,</span> <span class="nx">key</span><span class="p">,</span> <span class="nx">res</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">fmt</span><span class="p">.</span><span class="nf">Printf</span><span class="p">(</span><span class="s">&#34;值:%+v\n&#34;</span><span class="p">,</span> <span class="o">*</span><span class="nx">res</span><span class="p">.</span><span class="nx">Events</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></div><p>可以从上面这段代码看出，watch 是通过 channel 的方式来进行通知的</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="c1">// 开启一个 G
+</span></span></span><span class="line"><span class="cl"><span class="c1">//	go src.WatchKey(&#34;hello&#34;)
+</span></span></span></code></pre></div><p>然后我们运行这段程序，在命令行上操作 hello 这个 key，</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="p">.</span><span class="o">/</span><span class="nx">etcdctl</span> <span class="nx">lease</span> <span class="nx">grant</span> <span class="mi">30</span>
+</span></span><span class="line"><span class="cl"><span class="nx">lease</span> <span class="mi">326978</span><span class="nx">bac638651e</span> <span class="nx">granted</span> <span class="nx">with</span> <span class="nf">TTL</span><span class="p">(</span><span class="mi">30</span><span class="nx">s</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="p">.</span><span class="o">/</span><span class="nx">etcdctl</span> <span class="nx">put</span> <span class="nx">hello</span> <span class="nx">world</span><span class="o">-</span><span class="nx">age</span> <span class="o">--</span><span class="nx">lease</span><span class="p">=</span><span class="mi">326978</span><span class="nx">bac638651e</span>
+</span></span></code></pre></div><p><img src="https://image.syst.top/image/etcd/watch.png" alt="image">
 可以看到接收到两个事件，一个是 put，一个是租约到期 delete。</p>
 <h3 id="总结">总结<a href="#总结" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h3>
 <p>以下是这篇文章全部代码</p>
-<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kn">package</span> <span class="nx">src</span>
-
-<span class="kn">import</span> <span class="p">(</span>
-	<span class="s">&#34;context&#34;</span>
-	<span class="s">&#34;flag&#34;</span>
-	<span class="s">&#34;fmt&#34;</span>
-	<span class="s">&#34;github.com/coreos/etcd/clientv3&#34;</span>
-	<span class="s">&#34;log&#34;</span>
-	<span class="s">&#34;strings&#34;</span>
-	<span class="s">&#34;time&#34;</span>
-<span class="p">)</span>
-
-<span class="kd">var</span> <span class="nx">addr</span> <span class="p">=</span> <span class="nx">flag</span><span class="p">.</span><span class="nf">String</span><span class="p">(</span><span class="s">&#34;addr&#34;</span><span class="p">,</span> <span class="s">&#34;http://127.0.0.1:2379&#34;</span><span class="p">,</span> <span class="s">&#34;etcd address&#34;</span><span class="p">)</span>
-
-<span class="kd">var</span> <span class="nx">cli</span> <span class="o">*</span><span class="nx">clientv3</span><span class="p">.</span><span class="nx">Client</span>
-
-<span class="c1">// 初始化etcd 客户端
-</span><span class="c1"></span><span class="kd">func</span> <span class="nf">init</span><span class="p">()</span> <span class="p">{</span>
-	<span class="nx">flag</span><span class="p">.</span><span class="nf">Parse</span><span class="p">()</span>
-	<span class="kd">var</span> <span class="nx">err</span> <span class="kt">error</span>
-	<span class="c1">// 解析etcd的地址，编程[]string
-</span><span class="c1"></span>	<span class="nx">endpoints</span> <span class="o">:=</span> <span class="nx">strings</span><span class="p">.</span><span class="nf">Split</span><span class="p">(</span><span class="o">*</span><span class="nx">addr</span><span class="p">,</span> <span class="s">&#34;,&#34;</span><span class="p">)</span>
-	<span class="c1">// 创建一个 etcd 的客户端
-</span><span class="c1"></span>	<span class="nx">cli</span><span class="p">,</span> <span class="nx">err</span> <span class="p">=</span> <span class="nx">clientv3</span><span class="p">.</span><span class="nf">New</span><span class="p">(</span><span class="nx">clientv3</span><span class="p">.</span><span class="nx">Config</span><span class="p">{</span><span class="nx">Endpoints</span><span class="p">:</span> <span class="nx">endpoints</span><span class="p">,</span>
-		<span class="nx">DialTimeout</span><span class="p">:</span> <span class="mi">5</span> <span class="o">*</span> <span class="nx">time</span><span class="p">.</span><span class="nx">Second</span><span class="p">})</span>
-	<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
-		<span class="nx">fmt</span><span class="p">.</span><span class="nf">Printf</span><span class="p">(</span><span class="s">&#34;初始化客户端失败:%v\n&#34;</span><span class="p">,</span> <span class="nx">err</span><span class="p">)</span>
-		<span class="nx">log</span><span class="p">.</span><span class="nf">Fatal</span><span class="p">(</span><span class="nx">err</span><span class="p">)</span>
-	<span class="p">}</span>
-<span class="p">}</span>
-
-<span class="c1">// 设置key
-</span><span class="c1"></span><span class="kd">func</span> <span class="nf">PutKey</span><span class="p">(</span><span class="nx">key</span> <span class="kt">string</span><span class="p">,</span> <span class="nx">value</span> <span class="kt">string</span><span class="p">)</span> <span class="p">{</span>
-	<span class="kd">var</span> <span class="nx">err</span> <span class="kt">error</span>
-	<span class="kd">var</span> <span class="nx">resp</span> <span class="o">*</span><span class="nx">clientv3</span><span class="p">.</span><span class="nx">PutResponse</span>
-	<span class="nx">resp</span><span class="p">,</span> <span class="nx">err</span> <span class="p">=</span> <span class="nx">cli</span><span class="p">.</span><span class="nf">Put</span><span class="p">(</span><span class="nx">context</span><span class="p">.</span><span class="nf">Background</span><span class="p">(),</span> <span class="nx">key</span><span class="p">,</span> <span class="nx">value</span><span class="p">)</span>
-	<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
-		<span class="nx">fmt</span><span class="p">.</span><span class="nf">Printf</span><span class="p">(</span><span class="s">&#34;设置 key 失败:%v\n&#34;</span><span class="p">,</span> <span class="nx">err</span><span class="p">)</span>
-		<span class="k">return</span>
-	<span class="p">}</span>
-	<span class="nx">fmt</span><span class="p">.</span><span class="nf">Printf</span><span class="p">(</span><span class="s">&#34;操作结果：%v\n&#34;</span><span class="p">,</span> <span class="nx">resp</span><span class="p">)</span>
-<span class="p">}</span>
-
-<span class="c1">// 设置会过期的key
-</span><span class="c1"></span><span class="kd">func</span> <span class="nf">PutKeyLease</span><span class="p">(</span><span class="nx">key</span> <span class="kt">string</span><span class="p">,</span> <span class="nx">value</span> <span class="kt">string</span><span class="p">,</span> <span class="nx">ttl</span> <span class="kt">int64</span><span class="p">)</span> <span class="p">{</span>
-	<span class="kd">var</span> <span class="nx">err</span> <span class="kt">error</span>
-	<span class="kd">var</span> <span class="nx">resp</span> <span class="o">*</span><span class="nx">clientv3</span><span class="p">.</span><span class="nx">PutResponse</span>
-
-	<span class="c1">// 创建一个租约对象
-</span><span class="c1"></span>	<span class="kd">var</span> <span class="nx">lease</span> <span class="nx">clientv3</span><span class="p">.</span><span class="nx">Lease</span>
-	<span class="nx">lease</span> <span class="p">=</span> <span class="nx">clientv3</span><span class="p">.</span><span class="nf">NewLease</span><span class="p">(</span><span class="nx">cli</span><span class="p">)</span>
-
-	<span class="kd">var</span> <span class="nx">leaseResp</span> <span class="o">*</span><span class="nx">clientv3</span><span class="p">.</span><span class="nx">LeaseGrantResponse</span>
-	<span class="c1">// 根据时间，生成一个租约
-</span><span class="c1"></span>	<span class="nx">leaseResp</span><span class="p">,</span> <span class="nx">err</span> <span class="p">=</span> <span class="nx">lease</span><span class="p">.</span><span class="nf">Grant</span><span class="p">(</span><span class="nx">context</span><span class="p">.</span><span class="nf">Background</span><span class="p">(),</span> <span class="nx">ttl</span><span class="p">)</span>
-	<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
-		<span class="nx">fmt</span><span class="p">.</span><span class="nf">Printf</span><span class="p">(</span><span class="s">&#34;设置 租约 失败:%v\n&#34;</span><span class="p">,</span> <span class="nx">err</span><span class="p">)</span>
-	<span class="p">}</span>
-
-	<span class="nx">resp</span><span class="p">,</span> <span class="nx">err</span> <span class="p">=</span> <span class="nx">cli</span><span class="p">.</span><span class="nf">Put</span><span class="p">(</span><span class="nx">context</span><span class="p">.</span><span class="nf">Background</span><span class="p">(),</span> <span class="nx">key</span><span class="p">,</span> <span class="nx">value</span><span class="p">,</span> <span class="nx">clientv3</span><span class="p">.</span><span class="nf">WithLease</span><span class="p">(</span><span class="nx">leaseResp</span><span class="p">.</span><span class="nx">ID</span><span class="p">))</span>
-	<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
-		<span class="nx">fmt</span><span class="p">.</span><span class="nf">Printf</span><span class="p">(</span><span class="s">&#34;设置 key 失败:%v\n&#34;</span><span class="p">,</span> <span class="nx">err</span><span class="p">)</span>
-		<span class="k">return</span>
-	<span class="p">}</span>
-	<span class="nx">fmt</span><span class="p">.</span><span class="nf">Printf</span><span class="p">(</span><span class="s">&#34;操作结果：%v\n&#34;</span><span class="p">,</span> <span class="nx">resp</span><span class="p">)</span>
-<span class="p">}</span>
-
-<span class="c1">// 获取key
-</span><span class="c1"></span><span class="kd">func</span> <span class="nf">GetKey</span><span class="p">(</span><span class="nx">key</span> <span class="kt">string</span><span class="p">)</span> <span class="p">{</span>
-	<span class="kd">var</span> <span class="nx">err</span> <span class="kt">error</span>
-	<span class="kd">var</span> <span class="nx">res</span> <span class="o">*</span><span class="nx">clientv3</span><span class="p">.</span><span class="nx">GetResponse</span>
-	<span class="nx">res</span><span class="p">,</span> <span class="nx">err</span> <span class="p">=</span> <span class="nx">cli</span><span class="p">.</span><span class="nf">Get</span><span class="p">(</span><span class="nx">context</span><span class="p">.</span><span class="nf">Background</span><span class="p">(),</span> <span class="nx">key</span><span class="p">)</span>
-	<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
-		<span class="nx">fmt</span><span class="p">.</span><span class="nf">Printf</span><span class="p">(</span><span class="s">&#34;获取 key 失败 :%v\n&#34;</span><span class="p">,</span> <span class="nx">err</span><span class="p">)</span>
-		<span class="k">return</span>
-	<span class="p">}</span>
-	<span class="nx">fmt</span><span class="p">.</span><span class="nf">Printf</span><span class="p">(</span><span class="s">&#34;key %v 的值是：%+v\n&#34;</span><span class="p">,</span> <span class="nx">key</span><span class="p">,</span> <span class="nx">res</span><span class="p">)</span>
-<span class="p">}</span>
-
-<span class="c1">// 获取指定版本的key
-</span><span class="c1"></span><span class="kd">func</span> <span class="nf">GetKeyByVersion</span><span class="p">(</span><span class="nx">key</span> <span class="kt">string</span><span class="p">,</span> <span class="nx">version</span> <span class="kt">int64</span><span class="p">)</span> <span class="p">{</span>
-	<span class="kd">var</span> <span class="nx">err</span> <span class="kt">error</span>
-	<span class="kd">var</span> <span class="nx">res</span> <span class="o">*</span><span class="nx">clientv3</span><span class="p">.</span><span class="nx">GetResponse</span>
-	<span class="nx">res</span><span class="p">,</span> <span class="nx">err</span> <span class="p">=</span> <span class="nx">cli</span><span class="p">.</span><span class="nf">Get</span><span class="p">(</span><span class="nx">context</span><span class="p">.</span><span class="nf">Background</span><span class="p">(),</span> <span class="nx">key</span><span class="p">,</span> <span class="nx">clientv3</span><span class="p">.</span><span class="nf">WithRev</span><span class="p">(</span><span class="nx">version</span><span class="p">))</span>
-	<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
-		<span class="nx">fmt</span><span class="p">.</span><span class="nf">Printf</span><span class="p">(</span><span class="s">&#34;删除 key:%v 失败:%v&#34;</span><span class="p">,</span> <span class="nx">key</span><span class="p">,</span> <span class="nx">err</span><span class="p">)</span>
-		<span class="k">return</span>
-	<span class="p">}</span>
-	<span class="nx">fmt</span><span class="p">.</span><span class="nf">Printf</span><span class="p">(</span><span class="s">&#34;请求key:%v,请求版本:%v,获取结果：%+v\n&#34;</span><span class="p">,</span> <span class="nx">key</span><span class="p">,</span> <span class="nx">version</span><span class="p">,</span> <span class="nx">res</span><span class="p">)</span>
-<span class="p">}</span>
-
-<span class="c1">// 删除key
-</span><span class="c1"></span><span class="kd">func</span> <span class="nf">DeleteKey</span><span class="p">(</span><span class="nx">key</span> <span class="kt">string</span><span class="p">)</span> <span class="p">{</span>
-	<span class="kd">var</span> <span class="nx">err</span> <span class="kt">error</span>
-	<span class="kd">var</span> <span class="nx">res</span> <span class="o">*</span><span class="nx">clientv3</span><span class="p">.</span><span class="nx">DeleteResponse</span>
-	<span class="nx">res</span><span class="p">,</span> <span class="nx">err</span> <span class="p">=</span> <span class="nx">cli</span><span class="p">.</span><span class="nf">Delete</span><span class="p">(</span><span class="nx">context</span><span class="p">.</span><span class="nf">Background</span><span class="p">(),</span> <span class="nx">key</span><span class="p">)</span>
-	<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
-		<span class="nx">fmt</span><span class="p">.</span><span class="nf">Printf</span><span class="p">(</span><span class="s">&#34;删除 key:%v 失败:%v&#34;</span><span class="p">,</span> <span class="nx">key</span><span class="p">,</span> <span class="nx">err</span><span class="p">)</span>
-		<span class="k">return</span>
-	<span class="p">}</span>
-	<span class="nx">fmt</span><span class="p">.</span><span class="nf">Printf</span><span class="p">(</span><span class="s">&#34;操作结果：%+v\n&#34;</span><span class="p">,</span> <span class="nx">res</span><span class="p">)</span>
-<span class="p">}</span>
-
-<span class="c1">// 监听key 变动
-</span><span class="c1"></span><span class="kd">func</span> <span class="nf">WatchKey</span><span class="p">(</span><span class="nx">key</span> <span class="kt">string</span><span class="p">)</span> <span class="p">{</span>
-	<span class="kd">var</span> <span class="nx">watch</span> <span class="nx">clientv3</span><span class="p">.</span><span class="nx">WatchChan</span>
-	<span class="nx">watch</span> <span class="p">=</span> <span class="nx">cli</span><span class="p">.</span><span class="nf">Watch</span><span class="p">(</span><span class="nx">context</span><span class="p">.</span><span class="nf">Background</span><span class="p">(),</span> <span class="nx">key</span><span class="p">,</span> <span class="nx">clientv3</span><span class="p">.</span><span class="nf">WithRev</span><span class="p">(</span><span class="mi">21</span><span class="p">))</span>
-	<span class="k">for</span> <span class="p">{</span>
-		<span class="nx">res</span> <span class="o">:=</span> <span class="o">&lt;-</span><span class="nx">watch</span>
-		<span class="nx">fmt</span><span class="p">.</span><span class="nf">Printf</span><span class="p">(</span><span class="s">&#34;key:%v变动通知：%+v\n&#34;</span><span class="p">,</span> <span class="nx">key</span><span class="p">,</span> <span class="nx">res</span><span class="p">)</span>
-		<span class="nx">fmt</span><span class="p">.</span><span class="nf">Printf</span><span class="p">(</span><span class="s">&#34;值:%+v\n&#34;</span><span class="p">,</span> <span class="o">*</span><span class="nx">res</span><span class="p">.</span><span class="nx">Events</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
-	<span class="p">}</span>
-
-<span class="p">}</span>
-
-</code></pre></div><p>这篇文章主要介绍了etcd这个分布式存储工具，包括它的应用场景以及实战基本的操作。
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="kn">package</span> <span class="nx">src</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="kn">import</span> <span class="p">(</span>
+</span></span><span class="line"><span class="cl">	<span class="s">&#34;context&#34;</span>
+</span></span><span class="line"><span class="cl">	<span class="s">&#34;flag&#34;</span>
+</span></span><span class="line"><span class="cl">	<span class="s">&#34;fmt&#34;</span>
+</span></span><span class="line"><span class="cl">	<span class="s">&#34;github.com/coreos/etcd/clientv3&#34;</span>
+</span></span><span class="line"><span class="cl">	<span class="s">&#34;log&#34;</span>
+</span></span><span class="line"><span class="cl">	<span class="s">&#34;strings&#34;</span>
+</span></span><span class="line"><span class="cl">	<span class="s">&#34;time&#34;</span>
+</span></span><span class="line"><span class="cl"><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="kd">var</span> <span class="nx">addr</span> <span class="p">=</span> <span class="nx">flag</span><span class="p">.</span><span class="nf">String</span><span class="p">(</span><span class="s">&#34;addr&#34;</span><span class="p">,</span> <span class="s">&#34;http://127.0.0.1:2379&#34;</span><span class="p">,</span> <span class="s">&#34;etcd address&#34;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="kd">var</span> <span class="nx">cli</span> <span class="o">*</span><span class="nx">clientv3</span><span class="p">.</span><span class="nx">Client</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1">// 初始化etcd 客户端
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="kd">func</span> <span class="nf">init</span><span class="p">()</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">flag</span><span class="p">.</span><span class="nf">Parse</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">	<span class="kd">var</span> <span class="nx">err</span> <span class="kt">error</span>
+</span></span><span class="line"><span class="cl">	<span class="c1">// 解析etcd的地址，编程[]string
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="nx">endpoints</span> <span class="o">:=</span> <span class="nx">strings</span><span class="p">.</span><span class="nf">Split</span><span class="p">(</span><span class="o">*</span><span class="nx">addr</span><span class="p">,</span> <span class="s">&#34;,&#34;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">	<span class="c1">// 创建一个 etcd 的客户端
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="nx">cli</span><span class="p">,</span> <span class="nx">err</span> <span class="p">=</span> <span class="nx">clientv3</span><span class="p">.</span><span class="nf">New</span><span class="p">(</span><span class="nx">clientv3</span><span class="p">.</span><span class="nx">Config</span><span class="p">{</span><span class="nx">Endpoints</span><span class="p">:</span> <span class="nx">endpoints</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">DialTimeout</span><span class="p">:</span> <span class="mi">5</span> <span class="o">*</span> <span class="nx">time</span><span class="p">.</span><span class="nx">Second</span><span class="p">})</span>
+</span></span><span class="line"><span class="cl">	<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">fmt</span><span class="p">.</span><span class="nf">Printf</span><span class="p">(</span><span class="s">&#34;初始化客户端失败:%v\n&#34;</span><span class="p">,</span> <span class="nx">err</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">log</span><span class="p">.</span><span class="nf">Fatal</span><span class="p">(</span><span class="nx">err</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1">// 设置key
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="kd">func</span> <span class="nf">PutKey</span><span class="p">(</span><span class="nx">key</span> <span class="kt">string</span><span class="p">,</span> <span class="nx">value</span> <span class="kt">string</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">	<span class="kd">var</span> <span class="nx">err</span> <span class="kt">error</span>
+</span></span><span class="line"><span class="cl">	<span class="kd">var</span> <span class="nx">resp</span> <span class="o">*</span><span class="nx">clientv3</span><span class="p">.</span><span class="nx">PutResponse</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">resp</span><span class="p">,</span> <span class="nx">err</span> <span class="p">=</span> <span class="nx">cli</span><span class="p">.</span><span class="nf">Put</span><span class="p">(</span><span class="nx">context</span><span class="p">.</span><span class="nf">Background</span><span class="p">(),</span> <span class="nx">key</span><span class="p">,</span> <span class="nx">value</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">	<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">fmt</span><span class="p">.</span><span class="nf">Printf</span><span class="p">(</span><span class="s">&#34;设置 key 失败:%v\n&#34;</span><span class="p">,</span> <span class="nx">err</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">		<span class="k">return</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">fmt</span><span class="p">.</span><span class="nf">Printf</span><span class="p">(</span><span class="s">&#34;操作结果：%v\n&#34;</span><span class="p">,</span> <span class="nx">resp</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1">// 设置会过期的key
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="kd">func</span> <span class="nf">PutKeyLease</span><span class="p">(</span><span class="nx">key</span> <span class="kt">string</span><span class="p">,</span> <span class="nx">value</span> <span class="kt">string</span><span class="p">,</span> <span class="nx">ttl</span> <span class="kt">int64</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">	<span class="kd">var</span> <span class="nx">err</span> <span class="kt">error</span>
+</span></span><span class="line"><span class="cl">	<span class="kd">var</span> <span class="nx">resp</span> <span class="o">*</span><span class="nx">clientv3</span><span class="p">.</span><span class="nx">PutResponse</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">	<span class="c1">// 创建一个租约对象
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="kd">var</span> <span class="nx">lease</span> <span class="nx">clientv3</span><span class="p">.</span><span class="nx">Lease</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">lease</span> <span class="p">=</span> <span class="nx">clientv3</span><span class="p">.</span><span class="nf">NewLease</span><span class="p">(</span><span class="nx">cli</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">	<span class="kd">var</span> <span class="nx">leaseResp</span> <span class="o">*</span><span class="nx">clientv3</span><span class="p">.</span><span class="nx">LeaseGrantResponse</span>
+</span></span><span class="line"><span class="cl">	<span class="c1">// 根据时间，生成一个租约
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="nx">leaseResp</span><span class="p">,</span> <span class="nx">err</span> <span class="p">=</span> <span class="nx">lease</span><span class="p">.</span><span class="nf">Grant</span><span class="p">(</span><span class="nx">context</span><span class="p">.</span><span class="nf">Background</span><span class="p">(),</span> <span class="nx">ttl</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">	<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">fmt</span><span class="p">.</span><span class="nf">Printf</span><span class="p">(</span><span class="s">&#34;设置 租约 失败:%v\n&#34;</span><span class="p">,</span> <span class="nx">err</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">	<span class="nx">resp</span><span class="p">,</span> <span class="nx">err</span> <span class="p">=</span> <span class="nx">cli</span><span class="p">.</span><span class="nf">Put</span><span class="p">(</span><span class="nx">context</span><span class="p">.</span><span class="nf">Background</span><span class="p">(),</span> <span class="nx">key</span><span class="p">,</span> <span class="nx">value</span><span class="p">,</span> <span class="nx">clientv3</span><span class="p">.</span><span class="nf">WithLease</span><span class="p">(</span><span class="nx">leaseResp</span><span class="p">.</span><span class="nx">ID</span><span class="p">))</span>
+</span></span><span class="line"><span class="cl">	<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">fmt</span><span class="p">.</span><span class="nf">Printf</span><span class="p">(</span><span class="s">&#34;设置 key 失败:%v\n&#34;</span><span class="p">,</span> <span class="nx">err</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">		<span class="k">return</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">fmt</span><span class="p">.</span><span class="nf">Printf</span><span class="p">(</span><span class="s">&#34;操作结果：%v\n&#34;</span><span class="p">,</span> <span class="nx">resp</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1">// 获取key
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="kd">func</span> <span class="nf">GetKey</span><span class="p">(</span><span class="nx">key</span> <span class="kt">string</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">	<span class="kd">var</span> <span class="nx">err</span> <span class="kt">error</span>
+</span></span><span class="line"><span class="cl">	<span class="kd">var</span> <span class="nx">res</span> <span class="o">*</span><span class="nx">clientv3</span><span class="p">.</span><span class="nx">GetResponse</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">res</span><span class="p">,</span> <span class="nx">err</span> <span class="p">=</span> <span class="nx">cli</span><span class="p">.</span><span class="nf">Get</span><span class="p">(</span><span class="nx">context</span><span class="p">.</span><span class="nf">Background</span><span class="p">(),</span> <span class="nx">key</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">	<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">fmt</span><span class="p">.</span><span class="nf">Printf</span><span class="p">(</span><span class="s">&#34;获取 key 失败 :%v\n&#34;</span><span class="p">,</span> <span class="nx">err</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">		<span class="k">return</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">fmt</span><span class="p">.</span><span class="nf">Printf</span><span class="p">(</span><span class="s">&#34;key %v 的值是：%+v\n&#34;</span><span class="p">,</span> <span class="nx">key</span><span class="p">,</span> <span class="nx">res</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1">// 获取指定版本的key
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="kd">func</span> <span class="nf">GetKeyByVersion</span><span class="p">(</span><span class="nx">key</span> <span class="kt">string</span><span class="p">,</span> <span class="nx">version</span> <span class="kt">int64</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">	<span class="kd">var</span> <span class="nx">err</span> <span class="kt">error</span>
+</span></span><span class="line"><span class="cl">	<span class="kd">var</span> <span class="nx">res</span> <span class="o">*</span><span class="nx">clientv3</span><span class="p">.</span><span class="nx">GetResponse</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">res</span><span class="p">,</span> <span class="nx">err</span> <span class="p">=</span> <span class="nx">cli</span><span class="p">.</span><span class="nf">Get</span><span class="p">(</span><span class="nx">context</span><span class="p">.</span><span class="nf">Background</span><span class="p">(),</span> <span class="nx">key</span><span class="p">,</span> <span class="nx">clientv3</span><span class="p">.</span><span class="nf">WithRev</span><span class="p">(</span><span class="nx">version</span><span class="p">))</span>
+</span></span><span class="line"><span class="cl">	<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">fmt</span><span class="p">.</span><span class="nf">Printf</span><span class="p">(</span><span class="s">&#34;删除 key:%v 失败:%v&#34;</span><span class="p">,</span> <span class="nx">key</span><span class="p">,</span> <span class="nx">err</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">		<span class="k">return</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">fmt</span><span class="p">.</span><span class="nf">Printf</span><span class="p">(</span><span class="s">&#34;请求key:%v,请求版本:%v,获取结果：%+v\n&#34;</span><span class="p">,</span> <span class="nx">key</span><span class="p">,</span> <span class="nx">version</span><span class="p">,</span> <span class="nx">res</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1">// 删除key
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="kd">func</span> <span class="nf">DeleteKey</span><span class="p">(</span><span class="nx">key</span> <span class="kt">string</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">	<span class="kd">var</span> <span class="nx">err</span> <span class="kt">error</span>
+</span></span><span class="line"><span class="cl">	<span class="kd">var</span> <span class="nx">res</span> <span class="o">*</span><span class="nx">clientv3</span><span class="p">.</span><span class="nx">DeleteResponse</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">res</span><span class="p">,</span> <span class="nx">err</span> <span class="p">=</span> <span class="nx">cli</span><span class="p">.</span><span class="nf">Delete</span><span class="p">(</span><span class="nx">context</span><span class="p">.</span><span class="nf">Background</span><span class="p">(),</span> <span class="nx">key</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">	<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">fmt</span><span class="p">.</span><span class="nf">Printf</span><span class="p">(</span><span class="s">&#34;删除 key:%v 失败:%v&#34;</span><span class="p">,</span> <span class="nx">key</span><span class="p">,</span> <span class="nx">err</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">		<span class="k">return</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">fmt</span><span class="p">.</span><span class="nf">Printf</span><span class="p">(</span><span class="s">&#34;操作结果：%+v\n&#34;</span><span class="p">,</span> <span class="nx">res</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1">// 监听key 变动
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="kd">func</span> <span class="nf">WatchKey</span><span class="p">(</span><span class="nx">key</span> <span class="kt">string</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">	<span class="kd">var</span> <span class="nx">watch</span> <span class="nx">clientv3</span><span class="p">.</span><span class="nx">WatchChan</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">watch</span> <span class="p">=</span> <span class="nx">cli</span><span class="p">.</span><span class="nf">Watch</span><span class="p">(</span><span class="nx">context</span><span class="p">.</span><span class="nf">Background</span><span class="p">(),</span> <span class="nx">key</span><span class="p">,</span> <span class="nx">clientv3</span><span class="p">.</span><span class="nf">WithRev</span><span class="p">(</span><span class="mi">21</span><span class="p">))</span>
+</span></span><span class="line"><span class="cl">	<span class="k">for</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">res</span> <span class="o">:=</span> <span class="o">&lt;-</span><span class="nx">watch</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">fmt</span><span class="p">.</span><span class="nf">Printf</span><span class="p">(</span><span class="s">&#34;key:%v变动通知：%+v\n&#34;</span><span class="p">,</span> <span class="nx">key</span><span class="p">,</span> <span class="nx">res</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">fmt</span><span class="p">.</span><span class="nf">Printf</span><span class="p">(</span><span class="s">&#34;值:%+v\n&#34;</span><span class="p">,</span> <span class="o">*</span><span class="nx">res</span><span class="p">.</span><span class="nx">Events</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></div><p>这篇文章主要介绍了etcd这个分布式存储工具，包括它的应用场景以及实战基本的操作。
 上面其实还有很多的实例没有写出来，一个是因为懒，没必要一个个演示一遍，另一个原因是留给你们自行实现。
 我们以这个为开始，一步步敲开 etcd 的大门。</p>
 
@@ -437,7 +432,7 @@ key 列表。后面我们分析源码的时候专门讨论这块。</p>
 	</footer>
 
 
-	<script src="https://www.syst.top/js/main.min.784417f5847151f848c339cf0acb13a06cbb648b1483435a28ed4556c4ead69b.js"></script>
+	<script src="https://www.syst.top/js/main.min.c8a831e54547e9c081939713d77308bf58ae5fed99a75acbcaaa14c5ce45bf89.js"></script>
 <script type="application/javascript">
 var doNotTrack = false;
 if (!doNotTrack) {

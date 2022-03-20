@@ -15,15 +15,11 @@ JSON-To-Stuct 这个工具可以把 json 格式的数据转换成 go 的 struct�
 其实这个功能 21 版的 goland 也支持了。在 goland 中你只需要这样,
 Table-To-Stuct 被业务缠身的同学每天免不了 CURD。CURD 之前总得建表吧。建表之后总得在代码中定义模型吧。总不能又一个个字段定义，那么下面这个工具可能管用。
 假设你有一个库 dream，库里有一个表 category，结构如下，
-CREATE TABLE `category` ( `id` int(11) unsigned NOT NULL AUTO_INCREMENT, `name` varchar(20) NOT NULL DEFAULT &#39;&#39;, `parent_id` int(11) unsigned NOT NULL DEFAULT &#39;0&#39;, `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP, `updated_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP, PRIMARY KEY (`id`), UNIQUE KEY `name` (`name`) ) ENGINE=InnoDB AUTO_INCREMENT=23 DEFAULT CHARSET=utf8mb4; 你只需引入包 github.">
-<meta itemprop="datePublished" content="2021-04-25T22:25:52+08:00" />
+CREATETABLE`category`(`id`int(11)unsignedNOTNULLAUTO_INCREMENT,`name`varchar(20)NOTNULLDEFAULT&#39;&#39;,`parent_id`int(11)unsignedNOTNULLDEFAULT&#39;0&#39;,`created_at`timestampNOTNULLDEFAULTCURRENT_TIMESTAMP,`updated_at`timestampNOTNULLDEFAULTCURRENT_TIMESTAMP,PRIMARYKEY(`id`),UNIQUEKEY`name`(`name`))ENGINE=InnoDBAUTO_INCREMENT=23DEFAULTCHARSET=utf8mb4;你只需引入包 github.com/gohouse/converter ,然后写这样的代码，就可以实现 table-to-go 功能。
+package main import ( &#34;fmt&#34; &#34;github.com/gohouse/converter&#34; ) func main() { // 初始化 	t2t := converter.NewTable2Struct() // 个性化配置 	t2t.Config(&amp;converter.T2tConfig{ // 如果字段首字母本来就是大写, 就不添加tag, 默认false添加, true不添加 	RmTagIfUcFirsted: false, // tag的字段名字是否转换为小写, 如果本身有大写字母的话, 默认false不转 	TagToLower: false, // 字段首字母大写的同时, 是否要把其他字母转换为小写,默认false不转换 	UcFirstOnly: false, //// 每个struct放入单独的文件,默认false,放入同一个文件(暂未提供) 	//SeperatFile: false, 	}) // 开始迁移转换 	err := t2t."><meta itemprop="datePublished" content="2021-04-25T22:25:52+08:00" />
 <meta itemprop="dateModified" content="2021-04-25T22:25:52+08:00" />
-<meta itemprop="wordCount" content="212">
-
-
-
-<meta itemprop="keywords" content="go,enum," />
-<meta property="og:title" content="推荐两款go开发中提高效率工具" />
+<meta itemprop="wordCount" content="165">
+<meta itemprop="keywords" content="go,enum," /><meta property="og:title" content="推荐两款go开发中提高效率工具" />
 <meta property="og:description" content="介绍 推荐两款 go 开发中用的还行的工具。
 为什么推荐工具？是为了让评论区的大佬介绍其他更好用的工具，解放我的双手。
 顺便问问，有没有只说话就能自动打完代码的工具？
@@ -31,11 +27,13 @@ JSON-To-Stuct 这个工具可以把 json 格式的数据转换成 go 的 struct�
 其实这个功能 21 版的 goland 也支持了。在 goland 中你只需要这样,
 Table-To-Stuct 被业务缠身的同学每天免不了 CURD。CURD 之前总得建表吧。建表之后总得在代码中定义模型吧。总不能又一个个字段定义，那么下面这个工具可能管用。
 假设你有一个库 dream，库里有一个表 category，结构如下，
-CREATE TABLE `category` ( `id` int(11) unsigned NOT NULL AUTO_INCREMENT, `name` varchar(20) NOT NULL DEFAULT &#39;&#39;, `parent_id` int(11) unsigned NOT NULL DEFAULT &#39;0&#39;, `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP, `updated_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP, PRIMARY KEY (`id`), UNIQUE KEY `name` (`name`) ) ENGINE=InnoDB AUTO_INCREMENT=23 DEFAULT CHARSET=utf8mb4; 你只需引入包 github." />
+CREATETABLE`category`(`id`int(11)unsignedNOTNULLAUTO_INCREMENT,`name`varchar(20)NOTNULLDEFAULT&#39;&#39;,`parent_id`int(11)unsignedNOTNULLDEFAULT&#39;0&#39;,`created_at`timestampNOTNULLDEFAULTCURRENT_TIMESTAMP,`updated_at`timestampNOTNULLDEFAULTCURRENT_TIMESTAMP,PRIMARYKEY(`id`),UNIQUEKEY`name`(`name`))ENGINE=InnoDBAUTO_INCREMENT=23DEFAULTCHARSET=utf8mb4;你只需引入包 github.com/gohouse/converter ,然后写这样的代码，就可以实现 table-to-go 功能。
+package main import ( &#34;fmt&#34; &#34;github.com/gohouse/converter&#34; ) func main() { // 初始化 	t2t := converter.NewTable2Struct() // 个性化配置 	t2t.Config(&amp;converter.T2tConfig{ // 如果字段首字母本来就是大写, 就不添加tag, 默认false添加, true不添加 	RmTagIfUcFirsted: false, // tag的字段名字是否转换为小写, 如果本身有大写字母的话, 默认false不转 	TagToLower: false, // 字段首字母大写的同时, 是否要把其他字母转换为小写,默认false不转换 	UcFirstOnly: false, //// 每个struct放入单独的文件,默认false,放入同一个文件(暂未提供) 	//SeperatFile: false, 	}) // 开始迁移转换 	err := t2t." />
 <meta property="og:type" content="article" />
-<meta property="og:url" content="https://www.syst.top/posts/go/go-tool/" />
+<meta property="og:url" content="https://www.syst.top/posts/go/go-tool/" /><meta property="article:section" content="posts" />
 <meta property="article:published_time" content="2021-04-25T22:25:52+08:00" />
 <meta property="article:modified_time" content="2021-04-25T22:25:52+08:00" />
+
 <meta name="twitter:card" content="summary"/>
 <meta name="twitter:title" content="推荐两款go开发中提高效率工具"/>
 <meta name="twitter:description" content="介绍 推荐两款 go 开发中用的还行的工具。
@@ -45,7 +43,8 @@ JSON-To-Stuct 这个工具可以把 json 格式的数据转换成 go 的 struct�
 其实这个功能 21 版的 goland 也支持了。在 goland 中你只需要这样,
 Table-To-Stuct 被业务缠身的同学每天免不了 CURD。CURD 之前总得建表吧。建表之后总得在代码中定义模型吧。总不能又一个个字段定义，那么下面这个工具可能管用。
 假设你有一个库 dream，库里有一个表 category，结构如下，
-CREATE TABLE `category` ( `id` int(11) unsigned NOT NULL AUTO_INCREMENT, `name` varchar(20) NOT NULL DEFAULT &#39;&#39;, `parent_id` int(11) unsigned NOT NULL DEFAULT &#39;0&#39;, `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP, `updated_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP, PRIMARY KEY (`id`), UNIQUE KEY `name` (`name`) ) ENGINE=InnoDB AUTO_INCREMENT=23 DEFAULT CHARSET=utf8mb4; 你只需引入包 github."/>
+CREATETABLE`category`(`id`int(11)unsignedNOTNULLAUTO_INCREMENT,`name`varchar(20)NOTNULLDEFAULT&#39;&#39;,`parent_id`int(11)unsignedNOTNULLDEFAULT&#39;0&#39;,`created_at`timestampNOTNULLDEFAULTCURRENT_TIMESTAMP,`updated_at`timestampNOTNULLDEFAULTCURRENT_TIMESTAMP,PRIMARYKEY(`id`),UNIQUEKEY`name`(`name`))ENGINE=InnoDBAUTO_INCREMENT=23DEFAULTCHARSET=utf8mb4;你只需引入包 github.com/gohouse/converter ,然后写这样的代码，就可以实现 table-to-go 功能。
+package main import ( &#34;fmt&#34; &#34;github.com/gohouse/converter&#34; ) func main() { // 初始化 	t2t := converter.NewTable2Struct() // 个性化配置 	t2t.Config(&amp;converter.T2tConfig{ // 如果字段首字母本来就是大写, 就不添加tag, 默认false添加, true不添加 	RmTagIfUcFirsted: false, // tag的字段名字是否转换为小写, 如果本身有大写字母的话, 默认false不转 	TagToLower: false, // 字段首字母大写的同时, 是否要把其他字母转换为小写,默认false不转换 	UcFirstOnly: false, //// 每个struct放入单独的文件,默认false,放入同一个文件(暂未提供) 	//SeperatFile: false, 	}) // 开始迁移转换 	err := t2t."/>
 
 	<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
 	<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
@@ -55,7 +54,7 @@ CREATE TABLE `category` ( `id` int(11) unsigned NOT NULL AUTO_INCREMENT, `name` 
 	<link rel="shortcut icon" href="/favicon.ico">
 
 	<title>推荐两款go开发中提高效率工具</title>
-	<link rel="stylesheet" href="https://www.syst.top/css/style.min.d3141168199607bf3a517216ce3c263814eecdbc8fca72a9a88700799a838219.css">
+	<link rel="stylesheet" href="https://www.syst.top/css/style.min.cb0663fd19952012fdb4a1345792a808ae19eb828578bde6eeae217ff1fb1e8b.css">
 	
 </head>
 
@@ -71,7 +70,7 @@ CREATE TABLE `category` ( `id` int(11) unsigned NOT NULL AUTO_INCREMENT, `name` 
 					<a href="https://www.syst.top/posts/">文章</a>
 					<a href="https://www.syst.top/leetcode/">刷题</a>
 					<a href="https://www.syst.top/lives/">生活</a>
-					<a href="https://www.syst.top/translations/">翻译</a>
+					<a href="https://www.syst.top/readings/">读书笔记</a>
 					<a href="https://www.syst.top/friends/">朋友</a>
 					<a href="https://go.aabbccm.com">grpc-shop</a>
 				</nav>
@@ -109,75 +108,75 @@ CREATE TABLE `category` ( `id` int(11) unsigned NOT NULL AUTO_INCREMENT, `name` 
 <h3 id="table-to-stuct">Table-To-Stuct<a href="#table-to-stuct" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h3>
 <p>被业务缠身的同学每天免不了 <code>CURD</code>。<code>CURD</code> 之前总得建表吧。建表之后总得在代码中定义模型吧。总不能又一个个字段定义，那么下面这个工具可能管用。</p>
 <p>假设你有一个库 <code>dream</code>，库里有一个表 <code>category</code>，结构如下，</p>
-<div class="highlight"><pre class="chroma"><code class="language-sql" data-lang="sql"><span class="k">CREATE</span> <span class="k">TABLE</span> <span class="o">`</span><span class="n">category</span><span class="o">`</span> <span class="p">(</span>
-  <span class="o">`</span><span class="n">id</span><span class="o">`</span> <span class="nb">int</span><span class="p">(</span><span class="mi">11</span><span class="p">)</span> <span class="n">unsigned</span> <span class="k">NOT</span> <span class="k">NULL</span> <span class="n">AUTO_INCREMENT</span><span class="p">,</span>
-  <span class="o">`</span><span class="n">name</span><span class="o">`</span> <span class="nb">varchar</span><span class="p">(</span><span class="mi">20</span><span class="p">)</span> <span class="k">NOT</span> <span class="k">NULL</span> <span class="k">DEFAULT</span> <span class="s1">&#39;&#39;</span><span class="p">,</span>
-  <span class="o">`</span><span class="n">parent_id</span><span class="o">`</span> <span class="nb">int</span><span class="p">(</span><span class="mi">11</span><span class="p">)</span> <span class="n">unsigned</span> <span class="k">NOT</span> <span class="k">NULL</span> <span class="k">DEFAULT</span> <span class="s1">&#39;0&#39;</span><span class="p">,</span>
-  <span class="o">`</span><span class="n">created_at</span><span class="o">`</span> <span class="k">timestamp</span> <span class="k">NOT</span> <span class="k">NULL</span> <span class="k">DEFAULT</span> <span class="k">CURRENT_TIMESTAMP</span><span class="p">,</span>
-  <span class="o">`</span><span class="n">updated_at</span><span class="o">`</span> <span class="k">timestamp</span> <span class="k">NOT</span> <span class="k">NULL</span> <span class="k">DEFAULT</span> <span class="k">CURRENT_TIMESTAMP</span><span class="p">,</span>
-  <span class="k">PRIMARY</span> <span class="k">KEY</span> <span class="p">(</span><span class="o">`</span><span class="n">id</span><span class="o">`</span><span class="p">),</span>
-  <span class="k">UNIQUE</span> <span class="k">KEY</span> <span class="o">`</span><span class="n">name</span><span class="o">`</span> <span class="p">(</span><span class="o">`</span><span class="n">name</span><span class="o">`</span><span class="p">)</span>
-<span class="p">)</span> <span class="n">ENGINE</span><span class="o">=</span><span class="n">InnoDB</span> <span class="n">AUTO_INCREMENT</span><span class="o">=</span><span class="mi">23</span> <span class="k">DEFAULT</span> <span class="n">CHARSET</span><span class="o">=</span><span class="n">utf8mb4</span><span class="p">;</span>
-</code></pre></div><p>你只需引入包 <code>github.com/gohouse/converter</code> ,然后写这样的代码，就可以实现 <code>table-to-go</code> 功能。</p>
-<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kn">package</span> <span class="nx">main</span>
-
-<span class="kn">import</span> <span class="p">(</span>
-	<span class="s">&#34;fmt&#34;</span>
-	<span class="s">&#34;github.com/gohouse/converter&#34;</span>
-<span class="p">)</span>
-
-<span class="kd">func</span> <span class="nf">main</span><span class="p">()</span> <span class="p">{</span>
-	<span class="c1">// 初始化
-</span><span class="c1"></span>	<span class="nx">t2t</span> <span class="o">:=</span> <span class="nx">converter</span><span class="p">.</span><span class="nf">NewTable2Struct</span><span class="p">()</span>
-	<span class="c1">// 个性化配置
-</span><span class="c1"></span>	<span class="nx">t2t</span><span class="p">.</span><span class="nf">Config</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">converter</span><span class="p">.</span><span class="nx">T2tConfig</span><span class="p">{</span>
-		<span class="c1">// 如果字段首字母本来就是大写, 就不添加tag, 默认false添加, true不添加
-</span><span class="c1"></span>		<span class="nx">RmTagIfUcFirsted</span><span class="p">:</span> <span class="kc">false</span><span class="p">,</span>
-		<span class="c1">// tag的字段名字是否转换为小写, 如果本身有大写字母的话, 默认false不转
-</span><span class="c1"></span>		<span class="nx">TagToLower</span><span class="p">:</span> <span class="kc">false</span><span class="p">,</span>
-		<span class="c1">// 字段首字母大写的同时, 是否要把其他字母转换为小写,默认false不转换
-</span><span class="c1"></span>		<span class="nx">UcFirstOnly</span><span class="p">:</span> <span class="kc">false</span><span class="p">,</span>
-		<span class="c1">//// 每个struct放入单独的文件,默认false,放入同一个文件(暂未提供)
-</span><span class="c1"></span>		<span class="c1">//SeperatFile: false,
-</span><span class="c1"></span>	<span class="p">})</span>
-	<span class="c1">// 开始迁移转换
-</span><span class="c1"></span>	<span class="nx">err</span> <span class="o">:=</span> <span class="nx">t2t</span><span class="p">.</span>
-		<span class="c1">// 指定某个表,如果不指定,则默认全部表都迁移
-</span><span class="c1"></span>		<span class="nf">Table</span><span class="p">(</span><span class="s">&#34;category&#34;</span><span class="p">).</span>
-		<span class="c1">//// 表前缀
-</span><span class="c1"></span>		<span class="c1">//Prefix(&#34;prefix_&#34;).
-</span><span class="c1"></span>		<span class="c1">// 是否添加json tag
-</span><span class="c1"></span>		<span class="nf">EnableJsonTag</span><span class="p">(</span><span class="kc">true</span><span class="p">).</span>
-		<span class="c1">// 生成struct的包名(默认为空的话, 则取名为: package model)
-</span><span class="c1"></span>		<span class="nf">PackageName</span><span class="p">(</span><span class="s">&#34;model&#34;</span><span class="p">).</span>
-		<span class="c1">// tag字段的key值,默认是orm
-</span><span class="c1"></span>		<span class="nf">TagKey</span><span class="p">(</span><span class="s">&#34;orm&#34;</span><span class="p">).</span>
-		<span class="c1">// 是否添加结构体方法获取表名
-</span><span class="c1"></span>		<span class="nf">RealNameMethod</span><span class="p">(</span><span class="s">&#34;TableName&#34;</span><span class="p">).</span>
-		<span class="c1">// 生成的结构体保存路径
-</span><span class="c1"></span>		<span class="nf">SavePath</span><span class="p">(</span><span class="s">&#34;model/category.go&#34;</span><span class="p">).</span>
-		<span class="c1">// 数据库dsn,这里可以使用 t2t.DB() 代替,参数为 *sql.DB 对象
-</span><span class="c1"></span>		<span class="nf">Dsn</span><span class="p">(</span><span class="s">&#34;root:Passw0rd@tcp(localhost:3306)/dream?charset=utf8&#34;</span><span class="p">).</span>
-		<span class="c1">// 执行
-</span><span class="c1"></span>		<span class="nf">Run</span><span class="p">()</span>
-
-	<span class="nx">fmt</span><span class="p">.</span><span class="nf">Println</span><span class="p">(</span><span class="nx">err</span><span class="p">)</span>
-<span class="p">}</span>
-</code></pre></div><p>运行这段代码，最后会根据设置的 <code>SavePath</code> 里的地址(尚未存在的目录需要先自行创建)，生成 <code>category.go</code> 文件，内容如下，</p>
-<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kn">package</span> <span class="nx">model</span>
-
-<span class="kd">type</span> <span class="nx">Category</span> <span class="kd">struct</span> <span class="p">{</span>
-	<span class="nx">Id</span>        <span class="kt">int</span>    <span class="s">`orm:&#34;id&#34; json:&#34;id&#34;`</span>
-	<span class="nx">Name</span>      <span class="kt">string</span> <span class="s">`orm:&#34;name&#34; json:&#34;name&#34;`</span>
-	<span class="nx">ParentId</span>  <span class="kt">int</span>    <span class="s">`orm:&#34;parent_id&#34; json:&#34;parent_id&#34;`</span>
-	<span class="nx">CreatedAt</span> <span class="kt">string</span> <span class="s">`orm:&#34;created_at&#34; json:&#34;created_at&#34;`</span>
-	<span class="nx">UpdatedAt</span> <span class="kt">string</span> <span class="s">`orm:&#34;updated_at&#34; json:&#34;updated_at&#34;`</span>
-<span class="p">}</span>
-
-<span class="kd">func</span> <span class="p">(</span><span class="o">*</span><span class="nx">Category</span><span class="p">)</span> <span class="nf">TableName</span><span class="p">()</span> <span class="kt">string</span> <span class="p">{</span>
-	<span class="k">return</span> <span class="s">&#34;category&#34;</span>
-<span class="p">}</span>
-</code></pre></div><p>相应的再进行调整即可。</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-sql" data-lang="sql"><span class="line"><span class="cl"><span class="k">CREATE</span><span class="w"> </span><span class="k">TABLE</span><span class="w"> </span><span class="o">`</span><span class="n">category</span><span class="o">`</span><span class="w"> </span><span class="p">(</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="o">`</span><span class="n">id</span><span class="o">`</span><span class="w"> </span><span class="nb">int</span><span class="p">(</span><span class="mi">11</span><span class="p">)</span><span class="w"> </span><span class="n">unsigned</span><span class="w"> </span><span class="k">NOT</span><span class="w"> </span><span class="k">NULL</span><span class="w"> </span><span class="n">AUTO_INCREMENT</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="o">`</span><span class="n">name</span><span class="o">`</span><span class="w"> </span><span class="nb">varchar</span><span class="p">(</span><span class="mi">20</span><span class="p">)</span><span class="w"> </span><span class="k">NOT</span><span class="w"> </span><span class="k">NULL</span><span class="w"> </span><span class="k">DEFAULT</span><span class="w"> </span><span class="s1">&#39;&#39;</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="o">`</span><span class="n">parent_id</span><span class="o">`</span><span class="w"> </span><span class="nb">int</span><span class="p">(</span><span class="mi">11</span><span class="p">)</span><span class="w"> </span><span class="n">unsigned</span><span class="w"> </span><span class="k">NOT</span><span class="w"> </span><span class="k">NULL</span><span class="w"> </span><span class="k">DEFAULT</span><span class="w"> </span><span class="s1">&#39;0&#39;</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="o">`</span><span class="n">created_at</span><span class="o">`</span><span class="w"> </span><span class="k">timestamp</span><span class="w"> </span><span class="k">NOT</span><span class="w"> </span><span class="k">NULL</span><span class="w"> </span><span class="k">DEFAULT</span><span class="w"> </span><span class="k">CURRENT_TIMESTAMP</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="o">`</span><span class="n">updated_at</span><span class="o">`</span><span class="w"> </span><span class="k">timestamp</span><span class="w"> </span><span class="k">NOT</span><span class="w"> </span><span class="k">NULL</span><span class="w"> </span><span class="k">DEFAULT</span><span class="w"> </span><span class="k">CURRENT_TIMESTAMP</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="k">PRIMARY</span><span class="w"> </span><span class="k">KEY</span><span class="w"> </span><span class="p">(</span><span class="o">`</span><span class="n">id</span><span class="o">`</span><span class="p">),</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="k">UNIQUE</span><span class="w"> </span><span class="k">KEY</span><span class="w"> </span><span class="o">`</span><span class="n">name</span><span class="o">`</span><span class="w"> </span><span class="p">(</span><span class="o">`</span><span class="n">name</span><span class="o">`</span><span class="p">)</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="p">)</span><span class="w"> </span><span class="n">ENGINE</span><span class="o">=</span><span class="n">InnoDB</span><span class="w"> </span><span class="n">AUTO_INCREMENT</span><span class="o">=</span><span class="mi">23</span><span class="w"> </span><span class="k">DEFAULT</span><span class="w"> </span><span class="n">CHARSET</span><span class="o">=</span><span class="n">utf8mb4</span><span class="p">;</span><span class="w">
+</span></span></span></code></pre></div><p>你只需引入包 <code>github.com/gohouse/converter</code> ,然后写这样的代码，就可以实现 <code>table-to-go</code> 功能。</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="kn">package</span> <span class="nx">main</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="kn">import</span> <span class="p">(</span>
+</span></span><span class="line"><span class="cl">	<span class="s">&#34;fmt&#34;</span>
+</span></span><span class="line"><span class="cl">	<span class="s">&#34;github.com/gohouse/converter&#34;</span>
+</span></span><span class="line"><span class="cl"><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="kd">func</span> <span class="nf">main</span><span class="p">()</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">	<span class="c1">// 初始化
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="nx">t2t</span> <span class="o">:=</span> <span class="nx">converter</span><span class="p">.</span><span class="nf">NewTable2Struct</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">	<span class="c1">// 个性化配置
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="nx">t2t</span><span class="p">.</span><span class="nf">Config</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">converter</span><span class="p">.</span><span class="nx">T2tConfig</span><span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="c1">// 如果字段首字母本来就是大写, 就不添加tag, 默认false添加, true不添加
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>		<span class="nx">RmTagIfUcFirsted</span><span class="p">:</span> <span class="kc">false</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">		<span class="c1">// tag的字段名字是否转换为小写, 如果本身有大写字母的话, 默认false不转
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>		<span class="nx">TagToLower</span><span class="p">:</span> <span class="kc">false</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">		<span class="c1">// 字段首字母大写的同时, 是否要把其他字母转换为小写,默认false不转换
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>		<span class="nx">UcFirstOnly</span><span class="p">:</span> <span class="kc">false</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">		<span class="c1">//// 每个struct放入单独的文件,默认false,放入同一个文件(暂未提供)
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>		<span class="c1">//SeperatFile: false,
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="p">})</span>
+</span></span><span class="line"><span class="cl">	<span class="c1">// 开始迁移转换
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="nx">err</span> <span class="o">:=</span> <span class="nx">t2t</span><span class="p">.</span>
+</span></span><span class="line"><span class="cl">		<span class="c1">// 指定某个表,如果不指定,则默认全部表都迁移
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>		<span class="nf">Table</span><span class="p">(</span><span class="s">&#34;category&#34;</span><span class="p">).</span>
+</span></span><span class="line"><span class="cl">		<span class="c1">//// 表前缀
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>		<span class="c1">//Prefix(&#34;prefix_&#34;).
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>		<span class="c1">// 是否添加json tag
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>		<span class="nf">EnableJsonTag</span><span class="p">(</span><span class="kc">true</span><span class="p">).</span>
+</span></span><span class="line"><span class="cl">		<span class="c1">// 生成struct的包名(默认为空的话, 则取名为: package model)
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>		<span class="nf">PackageName</span><span class="p">(</span><span class="s">&#34;model&#34;</span><span class="p">).</span>
+</span></span><span class="line"><span class="cl">		<span class="c1">// tag字段的key值,默认是orm
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>		<span class="nf">TagKey</span><span class="p">(</span><span class="s">&#34;orm&#34;</span><span class="p">).</span>
+</span></span><span class="line"><span class="cl">		<span class="c1">// 是否添加结构体方法获取表名
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>		<span class="nf">RealNameMethod</span><span class="p">(</span><span class="s">&#34;TableName&#34;</span><span class="p">).</span>
+</span></span><span class="line"><span class="cl">		<span class="c1">// 生成的结构体保存路径
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>		<span class="nf">SavePath</span><span class="p">(</span><span class="s">&#34;model/category.go&#34;</span><span class="p">).</span>
+</span></span><span class="line"><span class="cl">		<span class="c1">// 数据库dsn,这里可以使用 t2t.DB() 代替,参数为 *sql.DB 对象
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>		<span class="nf">Dsn</span><span class="p">(</span><span class="s">&#34;root:Passw0rd@tcp(localhost:3306)/dream?charset=utf8&#34;</span><span class="p">).</span>
+</span></span><span class="line"><span class="cl">		<span class="c1">// 执行
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>		<span class="nf">Run</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">	<span class="nx">fmt</span><span class="p">.</span><span class="nf">Println</span><span class="p">(</span><span class="nx">err</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></div><p>运行这段代码，最后会根据设置的 <code>SavePath</code> 里的地址(尚未存在的目录需要先自行创建)，生成 <code>category.go</code> 文件，内容如下，</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="kn">package</span> <span class="nx">model</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="kd">type</span> <span class="nx">Category</span> <span class="kd">struct</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">Id</span>        <span class="kt">int</span>    <span class="s">`orm:&#34;id&#34; json:&#34;id&#34;`</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">Name</span>      <span class="kt">string</span> <span class="s">`orm:&#34;name&#34; json:&#34;name&#34;`</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">ParentId</span>  <span class="kt">int</span>    <span class="s">`orm:&#34;parent_id&#34; json:&#34;parent_id&#34;`</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">CreatedAt</span> <span class="kt">string</span> <span class="s">`orm:&#34;created_at&#34; json:&#34;created_at&#34;`</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">UpdatedAt</span> <span class="kt">string</span> <span class="s">`orm:&#34;updated_at&#34; json:&#34;updated_at&#34;`</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="kd">func</span> <span class="p">(</span><span class="o">*</span><span class="nx">Category</span><span class="p">)</span> <span class="nf">TableName</span><span class="p">()</span> <span class="kt">string</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">	<span class="k">return</span> <span class="s">&#34;category&#34;</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></div><p>相应的再进行调整即可。</p>
 <h3 id="总结">总结<a href="#总结" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h3>
 <p>今天主要分享的是 <code>json-to-stuct</code>、<code>table-to-stuct</code> 这两款日常会用上的工具。</p>
 <p>好了，现在开始你们给我介绍趁手的工具了。</p>
@@ -189,7 +188,7 @@ CREATE TABLE `category` ( `id` int(11) unsigned NOT NULL AUTO_INCREMENT, `name` 
 				<p>
 					<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-tag meta-icon"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"></path><line x1="7" y1="7" x2="7" y2="7"></line></svg><span class="tag"><a href="https://www.syst.top/tags/go">go</a></span><span class="tag"><a href="https://www.syst.top/tags/enum">enum</a></span>
 				</p>
-				<p><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-file-text"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>212 Words</p>
+				<p><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-file-text"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>165 Words</p>
 				<p><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-calendar"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>2021-04-25 22:25 &#43;0800</p>
 			</footer>
 		</article>
@@ -235,7 +234,7 @@ CREATE TABLE `category` ( `id` int(11) unsigned NOT NULL AUTO_INCREMENT, `name` 
 	</footer>
 
 
-	<script src="https://www.syst.top/js/main.min.784417f5847151f848c339cf0acb13a06cbb648b1483435a28ed4556c4ead69b.js"></script>
+	<script src="https://www.syst.top/js/main.min.c8a831e54547e9c081939713d77308bf58ae5fed99a75acbcaaa14c5ce45bf89.js"></script>
 <script type="application/javascript">
 var doNotTrack = false;
 if (!doNotTrack) {
