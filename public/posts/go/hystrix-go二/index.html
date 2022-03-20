@@ -14,10 +14,15 @@
 Doc 函数第一个参数是上下文 context.Context。context.Context 一般出现在不同 Goroutine 之间同步指定数据。如果你使用过 gin 框架，经常和它打交道。
 第三和第四的参数即 Do 中进一步包装的两个闭包函数。所谓闭包，我的理解是:存在自由的变量。这个自由的变量取决于运行闭包函数时的环境，在 DoC中, runFunc 和 fallbackFuncC 类型 也就是说这两个闭包的自由变量是 context.Context。
 Doc函数中 变量 r 和 f 不再解释。由于我们在调用 Do函数时传递了第三个参数,因此执行 errChan = GoC(ctx, name, r, f)。最下面使用select 可以监控多 channel。当某个 channel 有数据时，从其中读取。我们接着往下看 GoC。
-Goc是核心代码块。它是真正执行你的核心业务函数的地方。我先大体介绍一些这个函数核心功能。 它会先去验证一些规则，比如判断熔断器是否开启，决定当前是否可以执行你的业务。判断是否可以获取访问令牌。如果可以，执行你的业务逻辑，成功了上报成功的状态，失败了，除了上报状态，如果传入了异常处理的函数，那么执行异常处理的函数。另外还有一些归还令牌等操作。我们来看代码。 这段代码就不解释了吧。但是我们可以来看看 command 结构体中还有啥参数。 command 里面，关键的两个字段是 events 和 circuit。其实 events 主要是存储事件类型信息，比如执行成功的 success，或者失败的 timeout、context_canceled 等。 circuit 是指针类型 CircuitBreaker, CircuitBreaker就是真正的熔断器 。command 主要是记录单个执行的状态以及和熔断器进行一些运行交互。交互什么?"><meta itemprop="datePublished" content="2021-04-21T23:54:52+08:00" />
+Goc是核心代码块。它是真正执行你的核心业务函数的地方。我先大体介绍一些这个函数核心功能。 它会先去验证一些规则，比如判断熔断器是否开启，决定当前是否可以执行你的业务。判断是否可以获取访问令牌。如果可以，执行你的业务逻辑，成功了上报成功的状态，失败了，除了上报状态，如果传入了异常处理的函数，那么执行异常处理的函数。另外还有一些归还令牌等操作。我们来看代码。 这段代码就不解释了吧。但是我们可以来看看 command 结构体中还有啥参数。 command 里面，关键的两个字段是 events 和 circuit。其实 events 主要是存储事件类型信息，比如执行成功的 success，或者失败的 timeout、context_canceled 等。 circuit 是指针类型 CircuitBreaker, CircuitBreaker就是真正的熔断器 。command 主要是记录单个执行的状态以及和熔断器进行一些运行交互。交互什么?">
+<meta itemprop="datePublished" content="2021-04-21T23:54:52+08:00" />
 <meta itemprop="dateModified" content="2021-04-21T23:54:52+08:00" />
 <meta itemprop="wordCount" content="306">
-<meta itemprop="keywords" content="go," /><meta property="og:title" content="hystrix-go使用与原理(二)" />
+
+
+
+<meta itemprop="keywords" content="go," />
+<meta property="og:title" content="hystrix-go使用与原理(二)" />
 <meta property="og:description" content="开篇 上篇文章主要介绍了 hystrix-go 的使用以及原理，这篇文章让我们全面的解析源码。本文很长，请耐心看完。另外，由于直接放源码很是影响手机阅读体验，我把源码都截成图片了。
 还是上篇的例子
 大部分文章只是说明每个模块的职责和功能，考虑到如果只是单纯说明，读者还是很难把整体的流程连接起来。因此我打算从这个例子一步步解析。 就直接从开头 hystrix.ConfigureCommand 开始吧。 上篇文章提过，这个操作主要是为每个 commandName 自定义自己的规则配置。如果未自定义，那么会使用默认值。 最终会把配置值存储在 circuitSettings 这个 map类型中，它的初始化操作是在 init()执行的。 接下来执行 hystrix.Do，	Do 是一个同步的操作，它会阻塞等待，直到执行函数结束或者熔断器返回错误，如:断路器开启、超出最大并发数。 此函数需要三个参数，第一个参数表示 commandName 的名称，第二个参数就是正常的业务的匿名函数，比如在函数中进行外部服务调用。如果调用失败，那么就会执行第三个参数的操作，我们可以称之为保底操作，当熔断器开启的时候，系统也是会直接调用此函数。这两个参数的类型分别是匿名函数和闭包函数。 从图中可以看出，Do 函数只是把传入的后两个参数进一步封装成函数。然后调用 DoC。
@@ -26,10 +31,9 @@ Doc 函数第一个参数是上下文 context.Context。context.Context 一般�
 Doc函数中 变量 r 和 f 不再解释。由于我们在调用 Do函数时传递了第三个参数,因此执行 errChan = GoC(ctx, name, r, f)。最下面使用select 可以监控多 channel。当某个 channel 有数据时，从其中读取。我们接着往下看 GoC。
 Goc是核心代码块。它是真正执行你的核心业务函数的地方。我先大体介绍一些这个函数核心功能。 它会先去验证一些规则，比如判断熔断器是否开启，决定当前是否可以执行你的业务。判断是否可以获取访问令牌。如果可以，执行你的业务逻辑，成功了上报成功的状态，失败了，除了上报状态，如果传入了异常处理的函数，那么执行异常处理的函数。另外还有一些归还令牌等操作。我们来看代码。 这段代码就不解释了吧。但是我们可以来看看 command 结构体中还有啥参数。 command 里面，关键的两个字段是 events 和 circuit。其实 events 主要是存储事件类型信息，比如执行成功的 success，或者失败的 timeout、context_canceled 等。 circuit 是指针类型 CircuitBreaker, CircuitBreaker就是真正的熔断器 。command 主要是记录单个执行的状态以及和熔断器进行一些运行交互。交互什么?" />
 <meta property="og:type" content="article" />
-<meta property="og:url" content="https://www.syst.top/posts/go/hystrix-go%E4%BA%8C/" /><meta property="article:section" content="posts" />
+<meta property="og:url" content="https://www.syst.top/posts/go/hystrix-go%E4%BA%8C/" />
 <meta property="article:published_time" content="2021-04-21T23:54:52+08:00" />
 <meta property="article:modified_time" content="2021-04-21T23:54:52+08:00" />
-
 <meta name="twitter:card" content="summary"/>
 <meta name="twitter:title" content="hystrix-go使用与原理(二)"/>
 <meta name="twitter:description" content="开篇 上篇文章主要介绍了 hystrix-go 的使用以及原理，这篇文章让我们全面的解析源码。本文很长，请耐心看完。另外，由于直接放源码很是影响手机阅读体验，我把源码都截成图片了。
@@ -48,7 +52,7 @@ Goc是核心代码块。它是真正执行你的核心业务函数的地方。�
 	<link rel="shortcut icon" href="/favicon.ico">
 
 	<title>hystrix-go使用与原理(二)</title>
-	<link rel="stylesheet" href="https://www.syst.top/css/style.min.cb0663fd19952012fdb4a1345792a808ae19eb828578bde6eeae217ff1fb1e8b.css">
+	<link rel="stylesheet" href="https://www.syst.top/css/style.min.d3141168199607bf3a517216ce3c263814eecdbc8fca72a9a88700799a838219.css">
 	
 </head>
 
@@ -64,7 +68,7 @@ Goc是核心代码块。它是真正执行你的核心业务函数的地方。�
 					<a href="https://www.syst.top/posts/">文章</a>
 					<a href="https://www.syst.top/leetcode/">刷题</a>
 					<a href="https://www.syst.top/lives/">生活</a>
-					<a href="https://www.syst.top/readings/">读书笔记</a>
+					<a href="https://www.syst.top/translations/">翻译</a>
 					<a href="https://www.syst.top/friends/">朋友</a>
 					<a href="https://go.aabbccm.com">grpc-shop</a>
 				</nav>
@@ -250,7 +254,7 @@ Goc是核心代码块。它是真正执行你的核心业务函数的地方。�
 	</footer>
 
 
-	<script src="https://www.syst.top/js/main.min.c8a831e54547e9c081939713d77308bf58ae5fed99a75acbcaaa14c5ce45bf89.js"></script>
+	<script src="https://www.syst.top/js/main.min.784417f5847151f848c339cf0acb13a06cbb648b1483435a28ed4556c4ead69b.js"></script>
 <script type="application/javascript">
 var doNotTrack = false;
 if (!doNotTrack) {
