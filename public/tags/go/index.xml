@@ -7,7 +7,37 @@
     <generator>Hugo -- gohugo.io</generator>
     <language>zh-hans</language>
     <copyright>This work is licensed under a Creative Commons Attribution-NonCommercial 4.0 International License.</copyright>
-    <lastBuildDate>Sun, 06 Mar 2022 17:37:22 +0800</lastBuildDate><atom:link href="https://www.syst.top/tags/go/index.xml" rel="self" type="application/rss+xml" />
+    <lastBuildDate>Thu, 14 Apr 2022 10:23:51 +0800</lastBuildDate><atom:link href="https://www.syst.top/tags/go/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>Go netpoll大解析</title>
+      <link>https://www.syst.top/posts/go/io/</link>
+      <pubDate>Thu, 14 Apr 2022 10:23:51 +0800</pubDate>
+      
+      <guid>https://www.syst.top/posts/go/io/</guid>
+      <description>开篇 之前简单看过一点go原生netpoll，没注意太多细节。最近从头到尾看了一遍，特写篇文章记录下。文章很长，请耐心看完，一定有所收获。
+用户空间和内核空间 在linux中，经常能看到两个词语:User space(用户空间)和Kernel space (内核空间)。
+简单的说， Kernel space是linux内核运行的空间，User space是用户程序运行的空间。它们之间是相互隔离的。
+现代操作系统都是采用虚拟存储器。那么对32位操作系统而言，它的寻址空间（虚拟存储空间）为4G（2的32次方）。操作系统的核心是内核，独立于普通的应用程序，可以访问受保护的内存空间，也有访问底层硬件设备的所有权限。为了保证用户进程不能直接操作内核，保证内核的安全，操心系统将虚拟空间划分为两部分，一部分为内核空间，一部分为用户空间。针对linux操作系统而言，将最高的1G字节（从虚拟地址0xC0000000到0xFFFFFFFF），供内核使用，称为内核空间，而将较低的3G字节（从虚拟地址0x00000000到0xBFFFFFFF），供各个进程使用，称为用户空间。空间分配如下图所示：
+Kernel space可以调用系统的一切资源。User space 不能直接调用系统资源，在 Linux系统中，所有的系统资源管理都是在内核空间中完成的。比如读写磁盘文件、分配回收内存、从网络接口读写数据等等。应用程序无法直接进行这样的操作，但是用户程序可以通过内核提供的接口来完成这样的任务。比如像下面这样，
+![截屏2022-04-14 下午11.51.47](https://cdn.syst.top/截屏2022-04-14 下午11.51.47.png)
+应用程序要读取磁盘上的一个文件，它可以向内核发起一个 “系统调用” 告诉内核：”我要读取磁盘上的某某文件”。其实就是通过一个特殊的指令让进程从用户态进入到内核态，在内核空间中，CPU 可以执行任何的指令，当然也包括从磁盘上读取数据。具体过程是先把数据读取到内核空间中，然后再把数据拷贝到用户空间并从内核态切换到用户态。此时应用程序已经从系统调用中返回并且拿到了想要的数据，继续往下执行用户空间执行逻辑。
+这样的话，一旦涉及到对I/O的处理，就必然会涉及到在用户态和内核态之间来回切换。
+io模型 网上有太多关于I/O模型的文章，看着看着有可能就跑偏了，所以我还是从 &amp;laquo;UNIX 网络编程&amp;raquo; 中总结的5中I/O模型说起吧。
+Unix可用的5种I/O模型。
+ 阻塞I/O 非阻塞I/O I/O复用 信号驱动式I/O(SIGIO) 异步I/O(POSIX的aio_系列函数)  阻塞I/O ![截屏2022-04-09 上午10.29.31](https://cdn.syst.top/截屏2022-04-09 上午10.29.31.png)
+阻塞式I/O下，进程调用recvfrom，直到数据到达且被复制到应用程序的缓冲区中或者发生错误才返回，在整个过程进程都是被阻塞的。
+非阻塞I/O ![截屏2022-04-09 上午10.39.42](https://cdn.syst.top/截屏2022-04-09 上午10.39.42.png)
+从图中可以看出，前三次调用recvfrom中没有数据可返回，因此内核转而立即返回一个EWOULDBLOCK错误。第四次调用recvfrom时已有一个数据报准备好，它被复制到应用程序缓冲区，于是recvfrom成功返回。
+当一个应用程序像这样对一个非阻塞描述符循环调用recvfrom时，我们通常称为轮询(polling)，持续轮询内核，以这种方式查看某个操作是否就绪。
+I/O多路复用 ![截屏2022-04-09 上午10.39.48](https://cdn.syst.top/截屏2022-04-09 上午10.39.48.png)
+有了I/O多路复用(I/O multiplexing)，我们就可以调用 select 或者 poll，阻塞在这两个系统调用中的某一个之上，而不是阻塞在真正的I/O系统调用上。
+上面这句话难理解是吧，说白了这里指的是，在第一步中，我们只是阻塞在select调用上，直到数据报套接字变为可读，返回可读条件，这里并没有发生I/O事件，所以说这一步，并没有阻塞在真正的I/O系统调用上。
+其他两种就不过多介绍了。
+还有一点，我们会经常提到同步I/O和异步I/O。
+POSIX 把这两种术语定义如下:
+ 同步I/O操作(synchronous I/O opetation) 导致请求进程被阻塞，直到I/O操作完成。 异步I/O(asynchronous opetation) 不导致请求进程被阻塞。  基于上面的定义，</description>
+    </item>
+    
     <item>
       <title>一个用go实现的有限状态机 </title>
       <link>https://www.syst.top/posts/go/easyfsm/</link>
@@ -263,19 +293,6 @@ $ brew tap ktr0731/evans $ brew install evans 我们来操作一下 REPL 模式�
 下图能清晰表达整体流程了。 顺便说一句，这篇文章实现的代码比 Handling 1 Million Requests per Minute with Go 的代码简单多了。
 首先看 job。
 package wpool import ( &amp;#34;context&amp;#34; ) type JobID string type jobType string type jobMetadata map[string]interface{} type ExecutionFn func(ctx context.Context, args interface{}) (interface{}, error) type JobDescriptor struct { ID JobID JType jobType Metadata map[string]interface{} } type Result struct { Value interface{} Err error Descriptor JobDescriptor } type Job struct { Descriptor JobDescriptor ExecFn ExecutionFn Args interface{} } // 处理 job 逻辑,处理结果包装成 Result 结果 func (j Job) execute(ctx context.</description>
-    </item>
-    
-    <item>
-      <title>leetcode 337 House Robber III</title>
-      <link>https://www.syst.top/leetcode/337-house-robbe-riil/</link>
-      <pubDate>Mon, 31 May 2021 00:36:26 +0800</pubDate>
-      
-      <guid>https://www.syst.top/leetcode/337-house-robbe-riil/</guid>
-      <description>题目介绍 这是 House Robber III。
-这道题和之前两个版本最大不同在于引入了二叉树。 树的每个节点(具体的房子)都有对应的值(金额)。每个节点有两种状态，偷或者不偷。 规则是不能同时偷父子节点， 比如上图，如果选择偷 A 节点，那么 B 和 C 就不能偷，既然 B 和 C 不能偷，那么 DEFG 就可以偷的。 因为 DEFG 和 A 是子孙关系，而不是父子关系。
-这样的背景下，求小偷能偷的最大金额?
-暴力递归 我们还是用上图的那个例子。我们可以直接求出最大金额,伪代码如下
-/** * Definition for a binary tree node. * type TreeNode struct { * Val int * Left *TreeNode * Right *TreeNode * } */ // 求当前A节点能偷的最大金额res // 伪代码 item := node.Val + node.Left.Left.Val + node.Left.Right.Val + node.Right.Left.Val + node.Right.Right.Val res := max(item, node.</description>
     </item>
     
   </channel>

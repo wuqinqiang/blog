@@ -6,8 +6,247 @@
 		<generator>Hugo -- gohugo.io</generator>
 		<language>zh-hans</language>
 		<copyright>This work is licensed under a Creative Commons Attribution-NonCommercial 4.0 International License.</copyright>
-		<lastBuildDate>Sun, 06 Mar 2022 17:37:22 +0800</lastBuildDate>
+		<lastBuildDate>Thu, 14 Apr 2022 10:23:51 +0800</lastBuildDate>
 		<atom:link href="https://www.syst.top/posts/index.xml" rel="self" type="application/rss+xml" />
+		
+		<item>
+			<title>Go netpoll大解析</title>
+			<link>https://www.syst.top/posts/go/io/</link>
+			<pubDate>Thu, 14 Apr 2022 10:23:51 +0800</pubDate>
+			
+			<guid>https://www.syst.top/posts/go/io/</guid>
+			<description>开篇 之前简单看过一点go原生netpoll，没注意太多细节。最近从头到尾看了一遍，特写篇文章记录下。文章很长，请耐心看完，一定有所收获。
+用户空间和内核空间 在linux中，经常能看到两个词语:User space(用户空间)和Kernel space (内核空间)。
+简单的说， Kernel space是linux内核运行的空间，User space是用户程序运行的空间。它们之间是相互隔离的。
+现代操作系统都是采用虚拟存储器。那么对32位操作系统而言，它的寻址空间（虚拟存储空间）为4G（2的32次方）。操作系统的核心是内核，独立于普通的应用程序，可以访问受保护的内存空间，也有访问底层硬件设备的所有权限。为了保证用户进程不能直接操作内核，保证内核的安全，操心系统将虚拟空间划分为两部分，一部分为内核空间，一部分为用户空间。针对linux操作系统而言，将最高的1G字节（从虚拟地址0xC0000000到0xFFFFFFFF），供内核使用，称为内核空间，而将较低的3G字节（从虚拟地址0x00000000到0xBFFFFFFF），供各个进程使用，称为用户空间。空间分配如下图所示：
+Kernel space可以调用系统的一切资源。User space 不能直接调用系统资源，在 Linux系统中，所有的系统资源管理都是在内核空间中完成的。比如读写磁盘文件、分配回收内存、从网络接口读写数据等等。应用程序无法直接进行这样的操作，但是用户程序可以通过内核提供的接口来完成这样的任务。比如像下面这样，
+![截屏2022-04-14 下午11.51.47](https://cdn.syst.top/截屏2022-04-14 下午11.51.47.png)
+应用程序要读取磁盘上的一个文件，它可以向内核发起一个 “系统调用” 告诉内核：”我要读取磁盘上的某某文件”。其实就是通过一个特殊的指令让进程从用户态进入到内核态，在内核空间中，CPU 可以执行任何的指令，当然也包括从磁盘上读取数据。具体过程是先把数据读取到内核空间中，然后再把数据拷贝到用户空间并从内核态切换到用户态。此时应用程序已经从系统调用中返回并且拿到了想要的数据，继续往下执行用户空间执行逻辑。
+这样的话，一旦涉及到对I/O的处理，就必然会涉及到在用户态和内核态之间来回切换。
+io模型 网上有太多关于I/O模型的文章，看着看着有可能就跑偏了，所以我还是从 &amp;laquo;UNIX 网络编程&amp;raquo; 中总结的5中I/O模型说起吧。
+Unix可用的5种I/O模型。
+ 阻塞I/O 非阻塞I/O I/O复用 信号驱动式I/O(SIGIO) 异步I/O(POSIX的aio_系列函数)  阻塞I/O ![截屏2022-04-09 上午10.29.31](https://cdn.syst.top/截屏2022-04-09 上午10.29.31.png)
+阻塞式I/O下，进程调用recvfrom，直到数据到达且被复制到应用程序的缓冲区中或者发生错误才返回，在整个过程进程都是被阻塞的。
+非阻塞I/O ![截屏2022-04-09 上午10.39.42](https://cdn.syst.top/截屏2022-04-09 上午10.39.42.png)
+从图中可以看出，前三次调用recvfrom中没有数据可返回，因此内核转而立即返回一个EWOULDBLOCK错误。第四次调用recvfrom时已有一个数据报准备好，它被复制到应用程序缓冲区，于是recvfrom成功返回。
+当一个应用程序像这样对一个非阻塞描述符循环调用recvfrom时，我们通常称为轮询(polling)，持续轮询内核，以这种方式查看某个操作是否就绪。
+I/O多路复用 ![截屏2022-04-09 上午10.39.48](https://cdn.syst.top/截屏2022-04-09 上午10.39.48.png)
+有了I/O多路复用(I/O multiplexing)，我们就可以调用 select 或者 poll，阻塞在这两个系统调用中的某一个之上，而不是阻塞在真正的I/O系统调用上。
+上面这句话难理解是吧，说白了这里指的是，在第一步中，我们只是阻塞在select调用上，直到数据报套接字变为可读，返回可读条件，这里并没有发生I/O事件，所以说这一步，并没有阻塞在真正的I/O系统调用上。
+其他两种就不过多介绍了。
+还有一点，我们会经常提到同步I/O和异步I/O。
+POSIX 把这两种术语定义如下:
+ 同步I/O操作(synchronous I/O opetation) 导致请求进程被阻塞，直到I/O操作完成。 异步I/O(asynchronous opetation) 不导致请求进程被阻塞。  基于上面的定义，</description>
+			<content type="html"><![CDATA[<h4 id="开篇">开篇</h4>
+<p>之前简单看过一点go原生netpoll，没注意太多细节。最近从头到尾看了一遍，特写篇文章记录下。文章很长，请耐心看完，一定有所收获。</p>
+<h4 id="用户空间和内核空间">用户空间和内核空间</h4>
+<p>在linux中，经常能看到两个词语:User space(用户空间)和Kernel space (内核空间)。</p>
+<p>简单的说， Kernel space是linux内核运行的空间，User space是用户程序运行的空间。它们之间是相互隔离的。</p>
+<p>现代操作系统都是采用虚拟存储器。那么对32位操作系统而言，它的寻址空间（虚拟存储空间）为4G（2的32次方）。操作系统的核心是内核，独立于普通的应用程序，可以访问受保护的内存空间，也有访问底层硬件设备的所有权限。为了保证用户进程不能直接操作内核，保证内核的安全，操心系统将虚拟空间划分为两部分，一部分为内核空间，一部分为用户空间。针对linux操作系统而言，将最高的1G字节（从虚拟地址0xC0000000到0xFFFFFFFF），供内核使用，称为内核空间，而将较低的3G字节（从虚拟地址0x00000000到0xBFFFFFFF），供各个进程使用，称为用户空间。空间分配如下图所示：</p>
+<p><img src="https://cdn.syst.top/19223008-e9e63cbdacf24562a462656c7985f638.png" alt="19223008-e9e63cbdacf24562a462656c7985f638"></p>
+<p>Kernel space可以调用系统的一切资源。User space 不能直接调用系统资源，在 Linux系统中，所有的系统资源管理都是在内核空间中完成的。比如读写磁盘文件、分配回收内存、从网络接口读写数据等等。应用程序无法直接进行这样的操作，但是用户程序可以通过内核提供的接口来完成这样的任务。<img src="https://cdn.syst.top/bg2016120201-2.png" alt="bg2016120201-2"></p>
+<p>比如像下面这样，</p>
+<p>![截屏2022-04-14 下午11.51.47](<a href="https://cdn.syst.top/">https://cdn.syst.top/</a>截屏2022-04-14 下午11.51.47.png)</p>
+<p>应用程序要读取磁盘上的一个文件，它可以向内核发起一个 “系统调用” 告诉内核：”我要读取磁盘上的某某文件”。其实就是通过一个特殊的指令让进程从用户态进入到内核态，在内核空间中，CPU 可以执行任何的指令，当然也包括从磁盘上读取数据。具体过程是先把数据读取到内核空间中，然后再把数据拷贝到用户空间并从内核态切换到用户态。此时应用程序已经从系统调用中返回并且拿到了想要的数据，继续往下执行用户空间执行逻辑。</p>
+<p>这样的话，一旦涉及到对I/O的处理，就必然会涉及到在用户态和内核态之间来回切换。</p>
+<h4 id="io模型">io模型</h4>
+<p>网上有太多关于I/O模型的文章，看着看着有可能就跑偏了，所以我还是从 &laquo;UNIX 网络编程&raquo; 中总结的5中I/O模型说起吧。</p>
+<p>Unix可用的5种I/O模型。</p>
+<ul>
+<li>阻塞I/O</li>
+<li>非阻塞I/O</li>
+<li>I/O复用</li>
+<li>信号驱动式I/O(SIGIO)</li>
+<li>异步I/O(POSIX的aio_系列函数)</li>
+</ul>
+<h5 id="阻塞io">阻塞I/O</h5>
+<p>![截屏2022-04-09 上午10.29.31](<a href="https://cdn.syst.top/">https://cdn.syst.top/</a>截屏2022-04-09 上午10.29.31.png)</p>
+<p>阻塞式I/O下，进程调用recvfrom，直到数据到达且被复制到应用程序的缓冲区中或者发生错误才返回，在整个过程进程都是被阻塞的。</p>
+<h5 id="非阻塞io">非阻塞I/O</h5>
+<p>![截屏2022-04-09 上午10.39.42](<a href="https://cdn.syst.top/">https://cdn.syst.top/</a>截屏2022-04-09 上午10.39.42.png)</p>
+<p>从图中可以看出，前三次调用recvfrom中没有数据可返回，因此内核转而立即返回一个EWOULDBLOCK错误。第四次调用recvfrom时已有一个数据报准备好，它被复制到应用程序缓冲区，于是recvfrom成功返回。</p>
+<p>当一个应用程序像这样对一个非阻塞描述符循环调用recvfrom时，我们通常称为轮询(polling)，持续轮询内核，以这种方式查看某个操作是否就绪。</p>
+<h5 id="io多路复用">I/O多路复用</h5>
+<p>![截屏2022-04-09 上午10.39.48](<a href="https://cdn.syst.top/">https://cdn.syst.top/</a>截屏2022-04-09 上午10.39.48.png)</p>
+<p>有了I/O多路复用(I/O multiplexing)，我们就可以调用 select 或者 poll，阻塞在这两个系统调用中的某一个之上，而不是阻塞在真正的I/O系统调用上。</p>
+<p>上面这句话难理解是吧，说白了这里指的是，在第一步中，我们只是阻塞在select调用上，直到数据报套接字变为可读，返回可读条件，这里并没有发生I/O事件，所以说这一步，并没有阻塞在真正的I/O系统调用上。</p>
+<p>其他两种就不过多介绍了。</p>
+<p>还有一点，我们会经常提到同步I/O和异步I/O。</p>
+<p>POSIX 把这两种术语定义如下:</p>
+<ul>
+<li>同步I/O操作(synchronous I/O opetation) 导致请求进程被阻塞，直到I/O操作完成。</li>
+<li>异步I/O(asynchronous opetation) 不导致请求进程被阻塞。</li>
+</ul>
+<p>基于上面的定义，</p>
+<p>![截屏2022-04-09 上午11.06.43](<a href="https://cdn.syst.top/">https://cdn.syst.top/</a>截屏2022-04-09 上午11.06.43.png)</p>
+<p>异步I/O的关键在于第二步的recrfrom是否会阻塞住用户进程，如果不阻塞，那它就是异步I/O。从上面汇总图中可以看出，只有异步I/O满足POSIX中对异步I/O的定义。</p>
+<h4 id="go-netpoller">Go netpoller</h4>
+<p>Go netpoller 底层就是对I/O多路复用的封装。不同平台对I/O多路复用有不同的实现方式。比如Linux的select、poll和epoll(具体差别不是很明白可以看这篇)。在MacOS则是kqueue,而Windows是基于异步I/O实现的icop&hellip;&hellip;，基于这些背景，Go针对不同的平台调用实现了多版本的netpoller。</p>
+<p>![截屏2022-04-09 下午8.39.28](<a href="https://cdn.syst.top/">https://cdn.syst.top/</a>截屏2022-04-09 下午8.39.28.png)</p>
+<p>下面我们通过一个demo开始讲解。</p>
+<p><img src="https://cdn.syst.top/demo.png" alt="demo"></p>
+<p>很简单一个demo，开启一个tcp服务。然后每来一个连接，就启动一个g去处理连接。处理完毕，关闭连接。</p>
+<p>而且我们使用的是同步的模式去编写异步的逻辑，一个连接对应一个g处理，极其简单和易于理解。go标准库中的http.server也是这么干的。</p>
+<p>![carbon (14)](<a href="https://cdn.syst.top/carbon">https://cdn.syst.top/carbon</a> (14).png)</p>
+<p>针对上面的tcp服务demo，我们需要关注这段代码底层都发生了什么。</p>
+<p>上面代码中主要涉及底层的一些结构。</p>
+<p>![截屏2022-04-09 下午8.24.29](<a href="https://cdn.syst.top/">https://cdn.syst.top/</a>截屏2022-04-09 下午8.24.29.png)</p>
+<p>先简单解释一波。</p>
+<ul>
+<li>TCPListener:我们开启的是一个TCP服务，那当然就是TCP服务的网络监听器。</li>
+<li>netFD:网络描述符。Go中所有的网络操作都是以netFD实现的，它和底层FD做绑定。</li>
+<li>FD:文件描述符。net和os包把这个类型作为一个网络连接或者操作系统文件。其中里面一个字段Sysfd就是具体文件描述符值。</li>
+<li>pollDesc:I/O轮询器。说白了它就是底层事件驱动的封装。其中的runtimeCtx是一个指针类型，具体指向runtime/netpoll 中的pollDesc.</li>
+</ul>
+<p>当然图上面结构字段都是阉割版的，但是不影响我们这篇文章。</p>
+<p>还有一个问题，为什么结构上需要一层一层嵌入呢？</p>
+<p>我的理解是每下一层都是更加抽象的一层。它是可以作为上一层具体的一种应用体现。</p>
+<p>是不是跟没说一样？哈哈。</p>
+<p>举例，比如这里的netFD表示网络描述符。</p>
+<p>它的上一层可以是用于TCP的网络监听器TCPListener，那么对应的接口我们能想到的有两个Accept以及close。</p>
+<p>对于Accept 动作，一定是返回一个连接类型 Conn ，针对这个连接，它本身也存在一个自己的netFD，那么可想而知一定会有 Write和Read两个操作。</p>
+<p>而所有的网络操作都是以netFD实现的。这样，netFD在这里就有两种不用的上层应用体现了。</p>
+<p>好了,我们需要搞清楚几件事：</p>
+<ul>
+<li>一般我们用其他语言写一个tcp服务，必然会写这几步：socket-&gt;bind-&gt;listen，但是Go就一个Listen，那就意味着底层包装了这些操作。它是在哪一步完成的？</li>
+<li>Go是在什么时候初始化netpoll的，比如linux下初始化epoll实例。</li>
+<li>当对应fd没有可读或者可写的IO事件而对应被挂起的g，是如何知道fd上的I/O事件已ready，又是如何唤醒对应的g的？</li>
+</ul>
+<h5 id="listen解析">Listen解析</h5>
+<p>带着这些问题，我们接着看流程。</p>
+<p><img src="https://cdn.syst.top/Xnip2022-04-11_22-02-31.jpg" alt="Xnip2022-04-11_22-02-31"></p>
+<p>上图已经把当你调用Listen操作的完整流程全部罗列出来了。就像我上面列出的结构关系一样，从结构层次来说，每调用下一层，都是为了创建并获取下一层的依赖，因为内部的高度抽象与封装，才使得使用者往往只需调用极少数简单的API接口。</p>
+<p>现在我们已经知道事例代码涉及到的结构以及对应流程了。</p>
+<p>在传统印象中，创建一个网络服务。需要经过:创建一个socket、bind 、listen这基本的三大步。</p>
+<p>前面我们说过，Go中所有的网络操作都是以netFD实现的。go也是在这一层封装这三大步的。所以我们直接从netFD逻辑开始说。</p>
+<p>上图是在调用socket函数这一步返回的netFD，可想而之核心逻辑都在这里面。</p>
+<p>![截屏2022-04-12 下午9.49.36](<a href="https://cdn.syst.top/">https://cdn.syst.top/</a>截屏2022-04-12 下午9.49.36.png)</p>
+<p>我们可以把这个函数核心点看成三步。</p>
+<ul>
+<li>调用sysSocket函数创建一个socket，返回一个文件描述符(file descriptor)，简称fd下文。</li>
+<li>通过sysSocket返回的fd，调用newFD函数创建一个新的netFD。</li>
+<li>调用netFD自身的方法listenStream函数，做初始化动作，具体详情下面再说。</li>
+</ul>
+<p>在sysSocket函数中，首先会通过socketFunc来创建一个socket，通过层层查看，最终是通过system call来完成这一步。当获取到对应fd时，会通过syscall.SetNonblock函数把当前这个fd设置成非阻塞模式，这样当这个Listener调用accept函数就不会被阻塞了。</p>
+<p><img src="https://cdn.syst.top/Xnip2022-04-12_21-38-10.jpg" alt="Xnip2022-04-12_21-38-10"></p>
+<p>第二步，通过第一步创建socket拿到的fd，创建一个新的netFD。这段代码没啥好解释的。</p>
+<p>第三步，也就是最核心的一步，调用netFD自身的listenStream方法。</p>
+<p>![截屏2022-04-12 下午10.12.07](<a href="https://cdn.syst.top/">https://cdn.syst.top/</a>截屏2022-04-12 下午10.12.07.png)</p>
+<p>listenStream里面也有核心的三步:</p>
+<ul>
+<li>通过syscall.Bind 完成绑定</li>
+<li>通过listenFunc 完成监听</li>
+<li>调用netFD自身init完成初始化操作:netFD.init -&gt;poll.FD.init-&gt;FD.pollDesc.init</li>
+</ul>
+<p>我们主要看fd.init逻辑。</p>
+<p><img src="https://cdn.syst.top/Xnip2022-04-12_22-32-11.jpg" alt="Xnip2022-04-12_22-32-11"></p>
+<p>最终是调用的pollDesc的init函数。这个函数有重要的两步。</p>
+<ul>
+<li>runtime_pollServerInit：主要会根据不同的平台去调用对应平台的netpollInit函数来创建I/O多路复用的实例。比如linux下创建epoll。</li>
+<li>runtime_pollOpen(uintptr(fd.Sysfd))：主要将已经创建完的Listener fd注册到上述实例当中，比如将fd注册到epoll中，底层通过syscall调用epoll_ctl。</li>
+</ul>
+<p>更具体的流程，</p>
+<p>首先serviceInit.Do 保证当中的runtime_pollServerInit只会初始化一次。这很好理解，类似epoll实例全局初始化一次即可。</p>
+<p>接着我们看下runtime_pollServerInit函数，</p>
+<p>![截屏2022-04-12 下午10.40.34](<a href="https://cdn.syst.top/">https://cdn.syst.top/</a>截屏2022-04-12 下午10.40.34.png)</p>
+<p>这是咋回事，和我们平常看过的函数长的不太一样，执行体呢？</p>
+<p>其实这个函数是通过 <strong>go:linkname</strong>连接到具体实现的函数poll_runtime_pollServerInit。找起来也很简单，</p>
+<p>![截屏2022-04-12 下午10.42.57](<a href="https://cdn.syst.top/">https://cdn.syst.top/</a>截屏2022-04-12 下午10.42.57.png)</p>
+<p>看到poll_runtime_pollServerInit()上面的 <strong>//go:linkname xxx</strong> 了吗？不了解的可以看看Go官方文档`go:linkname。</p>
+<p>所以最终runtime_pollServerInit调用的是，</p>
+<p>![截屏2022-04-12 下午10.47.19](<a href="https://cdn.syst.top/">https://cdn.syst.top/</a>截屏2022-04-12 下午10.47.19.png)</p>
+<p>通过调用poll_runtime_pollServerInit-&gt;netpollGenericInit，netpollGenericInit里调用netpollinit函数完成初始化。</p>
+<p>注意。这里的netpollinit，是基于当前系统来调用对应系统的netpollinit函数的。</p>
+<p>什么意思？</p>
+<p>文章开始有提到Go底层网络模型是基于I/O多路复用。</p>
+<p>不同平台对I/O多路复用有不同的实现方式。比如Linux的epoll，MacOS的kqueue,而Windows的icop。</p>
+<p>所以对应，如果你当前是Linux，那么最终调用的是<code>src/runtime/netpoll_epoll.go</code>下的 netpollinit函数，然后会创建一个epoll实例，并把值赋给epfd，作为整个runtime中唯一的event-loop使用。</p>
+<p>![截屏2022-04-13 下午9.32.22](<a href="https://cdn.syst.top/">https://cdn.syst.top/</a>截屏2022-04-13 下午9.32.22.png)</p>
+<p>其他的，比如MacOS下的kqueue,也存在netpollinit函数。</p>
+<p>![截屏2022-04-12 下午11.03.31](<a href="https://cdn.syst.top/">https://cdn.syst.top/</a>截屏2022-04-12 下午11.03.31.png)</p>
+<p>以及Windows下的icop。</p>
+<p>![截屏2022-04-12 下午11.04.41](<a href="https://cdn.syst.top/">https://cdn.syst.top/</a>截屏2022-04-12 下午11.04.41.png)</p>
+<p>我们回到pollDesc.init 操作，</p>
+<!-- raw HTML omitted -->
+<p>完成第一步初始化操作后，第二步就是调用runtime_pollOpen。</p>
+<p>老套路通过**//go:linkname**找到对应的实现，实际上是调用的poll_runtime_pollOpen函数，这个函数里面再调用netpollopen函数，netpollopen函数和上面的netpollinit函数一样，不同平台都有它的实现。linux平台下，</p>
+<p>![截屏2022-04-13 下午9.45.40 2](<a href="https://cdn.syst.top/">https://cdn.syst.top/</a>截屏2022-04-13 下午9.45.40 2.png)</p>
+<p>netpollopen函数，首先会通过指针把pollDesc保存到epollevent的一个字节数组data里。</p>
+<p>然后会把传递进来的fd(刚才初始化完成的那个Listener监听器)注册到epoll当中，且通过指定 _EPOLLET将epoll设置为边缘触发(Edge Triggered)模式。如果让我用一句话来说明epoll水平触发和边缘触发的区别，那就是,</p>
+<p>水平触发下epoll_wait在文件描述符没有读写完会一直触发，而边缘触发只在是在变成可读写时触发一次。</p>
+<p>到这里整个Listen 动作也就结束了，然后层层返回。最终到业务返回的是一个 Listener，按照本篇的例子，本质上还是一个TCPListener。</p>
+<h5 id="accept解析">Accept解析</h5>
+<p>接着当我们调用listen.Accept的时候，</p>
+<p><img src="https://cdn.syst.top/Xnip2022-04-13_22-50-09.jpg" alt="Xnip2022-04-13_22-50-09"></p>
+<p>最终netFD的accept函数。netFD中通过调用fd.pfd(实际上是FD)的Accept函数获取到socket fd。通过这个fd创建新的netFD表示这是一个新连接的fd。并且会和Listen时一样调用netFD.init做初始化，因为当前epoll已经初始化一次了，所以这次只是把这个新连接的fd也加入到epoll事件队列当中，用于监听conn fd的读写I/O事件。</p>
+<p>具体我们看FD.Accept是咋么执行的。</p>
+<p><img src="https://cdn.syst.top/Xnip2022-04-13_22-57-56.jpg" alt="Xnip2022-04-13_22-57-56"></p>
+<p>首先是一个死循环for，死循环里调用了accept函数，本质上通过systcall调用系统accept接收新连接。当有新连接时，最终返回一个文件描述符fd。当accept获取到一个fd，会调用systcall.SetNonblock把这个fd设置成非阻塞的I/O。然后返回这个连接fd。</p>
+<p>因为我们在Listen的时候已经把对应的Listener fd设置成非阻塞I/O了。所以调用accept这一步是不会阻塞的。只是下面会进行判断，根据判断 err ==syscall.EAGAIN 来调用fd.pd.waitRead阻塞住用户程序。</p>
+<p>直到I/O事件ready，被阻塞在fd.pd.waitRead的代码会继续执行continue，重新一轮的accept, 此时对应fd上的 I/O已然ready，最终就返回一个conn类型的fd。</p>
+<p>我刚才说的调用fd.pd.waitRead会被阻塞，直到对应I/O事件ready。我们来看它具体逻辑，</p>
+<p>![carbon (15)](<a href="https://cdn.syst.top/carbon">https://cdn.syst.top/carbon</a> (15).png)</p>
+<p>最终到runtime_pollWait函数，老套路了，我们找到具体的实现函数。</p>
+<p>![carbon (3)](<a href="https://cdn.syst.top/carbon">https://cdn.syst.top/carbon</a> (5).png)</p>
+<p>poll_runtime_pollWait 里的for循环就是为了等待对应的I/O ready才会返回，否则的话一直调用netpollblock函数。pollDesc结构我们之前提到，它就是底层事件驱动的封装。其中有两个重要字段: rg和wg，都是指针类型，实际这两个字段存储的就是Go底层的g，更具体点是等待i/O ready的g。</p>
+<p>比如当创建完一个Listener，调用Accept开始接收客户端连接。如果没有对应的请求，那么最终会把g放入到pollDesc的rg。</p>
+<p>如果是一个conn类型的fd等待可写I/O，那么会把g放入到pollDesc的wg中。</p>
+<p>具体就是根据mode来判断当前是什么类型的等待事件。</p>
+<p>netpollblock里也有一个for循环，如果已经ready了，那么直接返回给上一层就行了。否则的话，设置gpp为等待状态pdWait。</p>
+<p>这里还有一点atomic.Loaduintptr(gpp)，这是为了防止异常情况下出现死循环问题。比如如果gpp的值不是pdReady也不是0，那么意味着值是pdWait，那就成了double wait，必然导致死循环。</p>
+<p>如果gpp未ready且成功设置成pdWait，正常情况下，最终会调用gopark，会挂起g且把对应的g放入到pollDesc 的wg|rg 当中。</p>
+<p>进入gopark。</p>
+<p>![carbon (6)](<a href="https://cdn.syst.top/carbon">https://cdn.syst.top/carbon</a> (6).png)</p>
+<p>这一块代码不是很难懂，基本的字段打了备注，核心还是要看park_m这个函数。</p>
+<p>![carbon (8)](<a href="https://cdn.syst.top/carbon">https://cdn.syst.top/carbon</a> (9).png)</p>
+<p>park_m函数中，首先会通过CAS并发安全的修改g的状态。然后调用dropg解绑g和m的关系，也就是m把当前运行的g置空，g把当前绑定的m置空。</p>
+<p>后面的代码是根据当前场景来解释的。我们知道此时m的waitunlockf 其实就是netpollblockcommit。</p>
+<p>![carbon (7)](<a href="https://cdn.syst.top/carbon">https://cdn.syst.top/carbon</a> (7).png)</p>
+<p>netpollblockcommit会把当前已经是_Gwaiting状态下的g赋值给gpp。如果赋值成功，netpollWaiters会加1。这个全局变量表示当前等待I/O事件ready的g数量，调度器再进行调度的时候可以根据此变量判断是否存在等待I/O事件的g。</p>
+<p>如果此时当前gpp下的fd的I/O已经ready。那么gpp的状态必然已不是pdWait，赋值失败。返回false。</p>
+<p>回到park_m，</p>
+<p>如果netpollblockcommit返回true，那么直接触发新一轮的调度。</p>
+<p>如果netpollblockcommit返回false，意味着当前g已经不需要被挂起了，所以需要把状态调整为_Grunnable，然后安排g还是在当前m上执行。</p>
+<p>当I/O事件ready，会一层层返回，获取到新的socket fd，创建conn类型的netFD，初始化netFD(其实就是把这个conn类型的fd也加入epoll事件队列，用于监听)，最终最上游会获取到一个Conn类型的网络连接，就可以基于这个连接做Read、Write等操作了。</p>
+<p>![carbon (10)](<a href="https://cdn.syst.top/carbon">https://cdn.syst.top/carbon</a> (10).png)</p>
+<h5 id="readwrite-解析">Read/Write 解析</h5>
+<p>后续的Conn.Read 和 Conn.Write 原理和Accept 类似。</p>
+<p>![carbon (11)](<a href="https://cdn.syst.top/carbon">https://cdn.syst.top/carbon</a> (11).png)</p>
+<p>给出了Write操作，可以看出核心部分和accept操作时一样的。对于Read操作，就不再重复了。</p>
+<p>从上面的分析中我们已经知道，Go的netpoller底层通过对epoll|kqueue|iocp的封装，使用同步的编程手法达到异步执行的效果，无论是一个Listener还是一个Conn，它的核心都是netFD，netFD又和底层的PollDesc结构绑定，当读写出现EAGAIN错误时，会通过调用gopark把当前g给park住，同时会将当前的g存储到对应netFD的PollDesc的wg|rg当中， 直到这个netFD再次发生对应的读写事件，才会重新把当前g放入到调度系统进行调度。</p>
+<p>还有最后一个问题，我们咋么知道哪些FD发生读写事件了？</p>
+<h4 id="io已就绪">I/O已就绪</h4>
+<p>答案就是netpoll()函数。</p>
+<p>![carbon (12)](<a href="https://cdn.syst.top/carbon">https://cdn.syst.top/carbon</a> (12).png)</p>
+<p>此函数会调用epollwait函数，本质上就是Linux中epoll_wait(int epfd, struct epoll_event * events, int maxevents, int timeout)。</p>
+<p>在之前调用epoll_ctl，注册fd对应的I/O事件到epoll实例当中。这里的epoll_wait实际上会阻塞监听epoll实例上所有fd的I/O事件，通过传入的第二个参数(用户内存地址events)。</p>
+<p>当有对应的I/O事件到来时，内核就会把发生事件对应的fd复制到这块用户内存地址(events)。解除阻塞，然后我们遍历这个events，去获取到对应的事件类型、pollDesc，再通过调用netpollready函数获取到pollDesc对应被gopark的g，最终把这些g加入到一个链表当中，返回。</p>
+<p>也就是说只要调用这个函数，我们就能获取到之前因为I/O未ready而被gopark挂起，现在I/O已ready的g链表了。</p>
+<p>我们可以找到四个调用处，如下，</p>
+<ul>
+<li>startTheWorldWithSema</li>
+<li>findrunnable</li>
+<li>pollWork</li>
+<li>sysmon</li>
+</ul>
+<p>这和go的调度有关，当然这不是本章的内容。当这四种方法调用netpoll函数得到一个可运行的g链表时，都会调用同一个函数injectglist。这个函数本质上就是把链表中所有g的状态从_Gwaiting-&gt;_Grunnable。然后按照策略，把这些g推送到本地处理器p或者全家运行队列中等待被调度器执行。</p>
+<p>![carbon (13)](<a href="https://cdn.syst.top/carbon">https://cdn.syst.top/carbon</a> (13).png)</p>
+<p>到这里，整个流程就已经剖析完毕。不能再写了。</p>
+<h4 id="最后">最后</h4>
+<p>Go netpoller通过在底层对epoll/kqueue/iocp这些不同平台下对I/O多路复用实现的封装，加上自带的goroutine(上文我一直用g表达)，从而实现了使用同步编程模式达到异步执行的效果。 代码很长，涉及到的模块也很多，整体看完代码还是非常爽的。</p>
+<p>另外早有人提出，由于一个连接对应一个goroutine，瞬时并发场景下，大量的goroutine会被不断创建。且原生netpoller无法提供足够的性能和控制力，如无法感知连接状态、连接数量多导致利用率低、无法控制协程数量等。针对这些问题，可以参考下gnet以及 KiteX 这两个项目的网络模型。</p>
+<h4 id="参考资料">参考资料</h4>
+<ul>
+<li><a href="http://man7.org/linux/man-pages/man7/epoll.7.html">http://man7.org/linux/man-pages/man7/epoll.7.html</a></li>
+<li>&laquo;UNIX网络编程:卷1&raquo;</li>
+<li><a href="https://github.com/panjf2000/gnet">https://github.com/panjf2000/gnet</a></li>
+<li><a href="https://strikefreedom.top/go-netpoll-io-multiplexing-reactor">https://strikefreedom.top/go-netpoll-io-multiplexing-reactor</a></li>
+<li><a href="https://mp.weixin.qq.com/s/wSaJYg-HqnYY4SdLA2Zzaw">https://mp.weixin.qq.com/s/wSaJYg-HqnYY4SdLA2Zzaw</a></li>
+<li><a href="https://ninokop.github.io/2018/02/18/go-net/">https://ninokop.github.io/2018/02/18/go-net/</a></li>
+<li><a href="https://github.com/cloudwego/kitex">https://github.com/cloudwego/kitex</a></li>
+</ul>
+]]></content>
+		</item>
 		
 		<item>
 			<title>一个用go实现的有限状态机 </title>
@@ -31,9 +270,9 @@ package main import ( &amp;#34;fmt&amp;#34; &amp;#34;github.com/wuqinqiang/easyf
 <p>为什么不使用looplab/fsm，star挺多的啊。</p>
 <p>不是特别喜欢，每次实例化fsm都需要重新传递对应events(虽然我们可以统一封装)，我更期望在项目启动时把此项目涉及到不同业务状态机流转注册到fsm，对应:不同业务-&gt;[状态]-&gt;[事件]-&gt;处理事件主体(包含handler、params、hooks、observers等)。</p>
 <p>当你开始进行状态流转时，只需要</p>
-<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="nx">fsm</span><span class="o">:=</span><span class="nf">NewFsm</span><span class="p">(</span><span class="s">&#34;业务名称&#34;</span><span class="p">,</span><span class="s">&#34;当前状态&#34;</span><span class="p">)</span>
-<span class="nx">currentState</span><span class="p">,</span><span class="nx">err</span><span class="o">:=</span><span class="nx">fsm</span><span class="p">.</span><span class="nf">Call</span><span class="p">(</span><span class="s">&#34;事件名称&#34;</span><span class="p">,</span><span class="s">&#34;对应事件所需参数可选项&#34;</span><span class="p">)</span>
-</code></pre></div><p>为什么需要区分业务？</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="nx">fsm</span><span class="o">:=</span><span class="nf">NewFsm</span><span class="p">(</span><span class="s">&#34;业务名称&#34;</span><span class="p">,</span><span class="s">&#34;当前状态&#34;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="nx">currentState</span><span class="p">,</span><span class="nx">err</span><span class="o">:=</span><span class="nx">fsm</span><span class="p">.</span><span class="nf">Call</span><span class="p">(</span><span class="s">&#34;事件名称&#34;</span><span class="p">,</span><span class="s">&#34;对应事件所需参数可选项&#34;</span><span class="p">)</span>
+</span></span></code></pre></div><p>为什么需要区分业务？</p>
 <p>因为绝大多数业务的状态值都是从数据库中获取的，比如订单表的订单状态，商品表中的商品状态，有可能值是相同的。</p>
 <p>同一个业务同一属性对应状态值表达单一，不同业务下属性状态可能会出现值相同，但所表达的含义是不同的。</p>
 <p>整体设计:</p>
@@ -46,307 +285,307 @@ package main import ( &amp;#34;fmt&amp;#34; &amp;#34;github.com/wuqinqiang/easyf
 <li>执行事件主体：执行自定义的事件函数,如果有需要，还可以自定义执行事件前后hook，事件订阅者(比如支付事件发生后，异步通知用户等)</li>
 </ul>
 <h3 id="使用姿势">使用姿势</h3>
-<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="k">go</span> <span class="nx">get</span> <span class="o">-</span><span class="nx">u</span>  <span class="nx">github</span><span class="p">.</span><span class="nx">com</span><span class="o">/</span><span class="nx">wuqinqiang</span><span class="o">/</span><span class="nx">easyfsm</span>
-</code></pre></div><p>首先自定义业务、状态、事件。</p>
-<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kn">package</span> <span class="nx">main</span>
-
-<span class="kn">import</span> <span class="p">(</span>
-	<span class="s">&#34;fmt&#34;</span>
-	<span class="s">&#34;github.com/wuqinqiang/easyfsm&#34;</span>
-<span class="p">)</span>
-
-<span class="kd">var</span> <span class="p">(</span>
-	<span class="c1">// 业务
-</span><span class="c1"></span>	<span class="nx">businessName</span> <span class="nx">easyfsm</span><span class="p">.</span><span class="nx">BusinessName</span> <span class="p">=</span> <span class="s">&#34;order&#34;</span>
-
-	<span class="c1">// 对应状态
-</span><span class="c1"></span>	<span class="nx">initState</span> <span class="nx">easyfsm</span><span class="p">.</span><span class="nx">State</span> <span class="p">=</span> <span class="mi">1</span> <span class="c1">// 初始化
-</span><span class="c1"></span>	<span class="nx">paidState</span> <span class="nx">easyfsm</span><span class="p">.</span><span class="nx">State</span> <span class="p">=</span> <span class="mi">2</span> <span class="c1">// 已付款
-</span><span class="c1"></span>	<span class="nx">canceled</span>  <span class="nx">easyfsm</span><span class="p">.</span><span class="nx">State</span> <span class="p">=</span> <span class="mi">3</span> <span class="c1">// 已取消
-</span><span class="c1"></span>
-	<span class="c1">//对应事件
-</span><span class="c1"></span>	<span class="nx">paymentOrderEvent</span> <span class="nx">easyfsm</span><span class="p">.</span><span class="nx">EventName</span> <span class="p">=</span> <span class="s">&#34;paymentOrderEvent&#34;</span>
-	<span class="nx">cancelOrderEvent</span>  <span class="nx">easyfsm</span><span class="p">.</span><span class="nx">EventName</span> <span class="p">=</span> <span class="s">&#34;cancelOrderEvent&#34;</span>
-<span class="p">)</span>
-</code></pre></div><p>自定义事件主体，</p>
-<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kd">type</span> <span class="p">(</span>
-  <span class="c1">// 订单业务所需参数
-</span><span class="c1"></span>	<span class="nx">orderParam</span> <span class="kd">struct</span> <span class="p">{</span>
-		<span class="nx">OrderNo</span> <span class="kt">string</span>
-    <span class="c1">//....
-</span><span class="c1"></span>	<span class="p">}</span>
-  
-  <span class="c1">// 支付订单事件
-</span><span class="c1"></span>	<span class="nx">entity</span> <span class="o">:=</span> <span class="nx">easyfsm</span><span class="p">.</span><span class="nf">NewEventEntity</span><span class="p">(</span><span class="nx">paymentOrderEvent</span><span class="p">,</span>
-		<span class="kd">func</span><span class="p">(</span><span class="nx">opt</span> <span class="o">*</span><span class="nx">easyfsm</span><span class="p">.</span><span class="nx">Param</span><span class="p">)</span> <span class="p">(</span><span class="nx">easyfsm</span><span class="p">.</span><span class="nx">State</span><span class="p">,</span> <span class="kt">error</span><span class="p">)</span> <span class="p">{</span>
-			<span class="nx">param</span><span class="p">,</span> <span class="nx">ok</span> <span class="o">:=</span> <span class="nx">opt</span><span class="p">.</span><span class="nx">Data</span><span class="p">.(</span><span class="nx">orderParam</span><span class="p">)</span>
-			<span class="k">if</span> <span class="p">!</span><span class="nx">ok</span> <span class="p">{</span>
-				<span class="nb">panic</span><span class="p">(</span><span class="s">&#34;param err&#34;</span><span class="p">)</span>
-			<span class="p">}</span>
-			<span class="nx">fmt</span><span class="p">.</span><span class="nf">Printf</span><span class="p">(</span><span class="s">&#34;param:%+v\n&#34;</span><span class="p">,</span> <span class="nx">param</span><span class="p">)</span>
-			<span class="c1">// 处理核心业务
-</span><span class="c1"></span>			<span class="k">return</span> <span class="nx">paidState</span><span class="p">,</span> <span class="kc">nil</span>
-		<span class="p">})</span>
-
-	<span class="c1">// 取消订单事件
-</span><span class="c1"></span>	<span class="nx">cancelEntity</span> <span class="o">:=</span> <span class="nx">easyfsm</span><span class="p">.</span><span class="nf">NewEventEntity</span><span class="p">(</span><span class="nx">cancelOrderEvent</span><span class="p">,</span>
-		<span class="kd">func</span><span class="p">(</span><span class="nx">opt</span> <span class="o">*</span><span class="nx">easyfsm</span><span class="p">.</span><span class="nx">Param</span><span class="p">)</span> <span class="p">(</span><span class="nx">easyfsm</span><span class="p">.</span><span class="nx">State</span><span class="p">,</span> <span class="kt">error</span><span class="p">)</span> <span class="p">{</span>
-			<span class="c1">// 处理核心业务
-</span><span class="c1"></span>			<span class="nx">param</span><span class="p">,</span> <span class="nx">ok</span> <span class="o">:=</span> <span class="nx">opt</span><span class="p">.</span><span class="nx">Data</span><span class="p">.(</span><span class="nx">orderParam</span><span class="p">)</span>
-			<span class="k">if</span> <span class="p">!</span><span class="nx">ok</span> <span class="p">{</span>
-				<span class="nb">panic</span><span class="p">(</span><span class="s">&#34;param err&#34;</span><span class="p">)</span>
-			<span class="p">}</span>
-			<span class="nx">fmt</span><span class="p">.</span><span class="nf">Printf</span><span class="p">(</span><span class="s">&#34;param:%+v\n&#34;</span><span class="p">,</span> <span class="nx">param</span><span class="p">)</span>
-			<span class="k">return</span> <span class="nx">canceled</span><span class="p">,</span> <span class="kc">nil</span>
-		<span class="p">})</span>
-
-
-  
-</code></pre></div><p>注册到easyfsm。</p>
-<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go">	<span class="c1">// 注册到fsm
-</span><span class="c1"></span>	<span class="nx">easyfsm</span><span class="p">.</span><span class="nf">RegisterStateMachine</span><span class="p">(</span><span class="nx">businessName</span><span class="p">,</span>
-		<span class="nx">initState</span><span class="p">,</span>
-		<span class="nx">entity</span><span class="p">,</span> <span class="nx">cancelEntity</span><span class="p">)</span>
-</code></pre></div><p>开始使用。</p>
-<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go">  <span class="c1">// 正常操作
-</span><span class="c1"></span>
-  <span class="c1">// 第一步根据业务，以及当前状态生成fsm
-</span><span class="c1"></span>	<span class="nx">fsm</span> <span class="o">:=</span> <span class="nx">easyfsm</span><span class="p">.</span><span class="nf">NewFSM</span><span class="p">(</span><span class="nx">businessName</span><span class="p">,</span> <span class="nx">easyfsm</span><span class="p">.</span><span class="nf">State</span><span class="p">(</span><span class="mi">1</span><span class="p">))</span>
-
-	<span class="c1">// 第二步 调用具体事件
-</span><span class="c1"></span>	<span class="nx">currentState</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">fsm</span><span class="p">.</span><span class="nf">Call</span><span class="p">(</span><span class="nx">cancelOrderEvent</span><span class="p">,</span>
-		<span class="nx">easyfsm</span><span class="p">.</span><span class="nf">WithData</span><span class="p">(</span><span class="nx">orderParam</span><span class="p">{</span><span class="nx">OrderNo</span><span class="p">:</span> <span class="s">&#34;wuqinqiang050@gmail.com&#34;</span><span class="p">}))</span>
-
-	<span class="nx">fmt</span><span class="p">.</span><span class="nf">Printf</span><span class="p">(</span><span class="s">&#34;[Success]call cancelOrderEvent err:%v\n&#34;</span><span class="p">,</span> <span class="nx">err</span><span class="p">)</span>
-	<span class="nx">fmt</span><span class="p">.</span><span class="nf">Printf</span><span class="p">(</span><span class="s">&#34;[Success]call cancelOrderEvent state:%v\n&#34;</span><span class="p">,</span> <span class="nx">currentState</span><span class="p">)</span>
- 
-  <span class="c1">// 结束
-</span></code></pre></div><p>示例代码如下，</p>
-<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kn">package</span> <span class="nx">main</span>
-
-<span class="kn">import</span> <span class="p">(</span>
-	<span class="s">&#34;fmt&#34;</span>
-	<span class="s">&#34;github.com/wuqinqiang/easyfsm&#34;</span>
-<span class="p">)</span>
-
-<span class="kd">var</span> <span class="p">(</span>
-	<span class="c1">// 业务
-</span><span class="c1"></span>	<span class="nx">businessName</span> <span class="nx">easyfsm</span><span class="p">.</span><span class="nx">BusinessName</span> <span class="p">=</span> <span class="s">&#34;order&#34;</span>
-
-	<span class="c1">// 对应状态
-</span><span class="c1"></span>	<span class="nx">initState</span> <span class="nx">easyfsm</span><span class="p">.</span><span class="nx">State</span> <span class="p">=</span> <span class="mi">1</span> <span class="c1">// 初始化
-</span><span class="c1"></span>	<span class="nx">paidState</span> <span class="nx">easyfsm</span><span class="p">.</span><span class="nx">State</span> <span class="p">=</span> <span class="mi">2</span> <span class="c1">// 已付款
-</span><span class="c1"></span>	<span class="nx">canceled</span>  <span class="nx">easyfsm</span><span class="p">.</span><span class="nx">State</span> <span class="p">=</span> <span class="mi">3</span> <span class="c1">// 已取消
-</span><span class="c1"></span>
-	<span class="c1">//对应事件
-</span><span class="c1"></span>	<span class="nx">paymentOrderEventName</span> <span class="nx">easyfsm</span><span class="p">.</span><span class="nx">EventName</span> <span class="p">=</span> <span class="s">&#34;paymentOrderEventName&#34;</span>
-	<span class="nx">cancelOrderEventName</span>  <span class="nx">easyfsm</span><span class="p">.</span><span class="nx">EventName</span> <span class="p">=</span> <span class="s">&#34;cancelOrderEventName&#34;</span>
-<span class="p">)</span>
-
-<span class="kd">type</span> <span class="p">(</span>
-	<span class="nx">orderParam</span> <span class="kd">struct</span> <span class="p">{</span>
-		<span class="nx">OrderNo</span> <span class="kt">string</span>
-	<span class="p">}</span>
-<span class="p">)</span>
-
-<span class="kd">func</span> <span class="nf">init</span><span class="p">()</span> <span class="p">{</span>
-	<span class="c1">// 支付订单事件
-</span><span class="c1"></span>	<span class="nx">entity</span> <span class="o">:=</span> <span class="nx">easyfsm</span><span class="p">.</span><span class="nf">NewEventEntity</span><span class="p">(</span><span class="nx">paymentOrderEventName</span><span class="p">,</span>
-		<span class="kd">func</span><span class="p">(</span><span class="nx">opt</span> <span class="o">*</span><span class="nx">easyfsm</span><span class="p">.</span><span class="nx">Param</span><span class="p">)</span> <span class="p">(</span><span class="nx">easyfsm</span><span class="p">.</span><span class="nx">State</span><span class="p">,</span> <span class="kt">error</span><span class="p">)</span> <span class="p">{</span>
-			<span class="nx">param</span><span class="p">,</span> <span class="nx">ok</span> <span class="o">:=</span> <span class="nx">opt</span><span class="p">.</span><span class="nx">Data</span><span class="p">.(</span><span class="nx">orderParam</span><span class="p">)</span>
-			<span class="k">if</span> <span class="p">!</span><span class="nx">ok</span> <span class="p">{</span>
-				<span class="nb">panic</span><span class="p">(</span><span class="s">&#34;param err&#34;</span><span class="p">)</span>
-			<span class="p">}</span>
-			<span class="nx">fmt</span><span class="p">.</span><span class="nf">Printf</span><span class="p">(</span><span class="s">&#34;param:%+v\n&#34;</span><span class="p">,</span> <span class="nx">param</span><span class="p">)</span>
-			<span class="c1">// 处理核心业务
-</span><span class="c1"></span>			<span class="k">return</span> <span class="nx">paidState</span><span class="p">,</span> <span class="kc">nil</span>
-		<span class="p">})</span>
-
-	<span class="c1">// 取消订单事件
-</span><span class="c1"></span>	<span class="nx">cancelEntity</span> <span class="o">:=</span> <span class="nx">easyfsm</span><span class="p">.</span><span class="nf">NewEventEntity</span><span class="p">(</span><span class="nx">cancelOrderEventName</span><span class="p">,</span>
-		<span class="kd">func</span><span class="p">(</span><span class="nx">opt</span> <span class="o">*</span><span class="nx">easyfsm</span><span class="p">.</span><span class="nx">Param</span><span class="p">)</span> <span class="p">(</span><span class="nx">easyfsm</span><span class="p">.</span><span class="nx">State</span><span class="p">,</span> <span class="kt">error</span><span class="p">)</span> <span class="p">{</span>
-			<span class="c1">// 处理核心业务
-</span><span class="c1"></span>			<span class="nx">param</span><span class="p">,</span> <span class="nx">ok</span> <span class="o">:=</span> <span class="nx">opt</span><span class="p">.</span><span class="nx">Data</span><span class="p">.(</span><span class="nx">orderParam</span><span class="p">)</span>
-			<span class="k">if</span> <span class="p">!</span><span class="nx">ok</span> <span class="p">{</span>
-				<span class="nb">panic</span><span class="p">(</span><span class="s">&#34;param err&#34;</span><span class="p">)</span>
-			<span class="p">}</span>
-			<span class="nx">fmt</span><span class="p">.</span><span class="nf">Printf</span><span class="p">(</span><span class="s">&#34;param:%+v\n&#34;</span><span class="p">,</span> <span class="nx">param</span><span class="p">)</span>
-			<span class="k">return</span> <span class="nx">canceled</span><span class="p">,</span> <span class="kc">nil</span>
-		<span class="p">})</span>
-
-	<span class="c1">// 注册订单状态机
-</span><span class="c1"></span>	<span class="nx">easyfsm</span><span class="p">.</span><span class="nf">RegisterStateMachine</span><span class="p">(</span><span class="nx">businessName</span><span class="p">,</span>
-		<span class="nx">initState</span><span class="p">,</span>
-		<span class="nx">entity</span><span class="p">,</span> <span class="nx">cancelEntity</span><span class="p">)</span>
-<span class="p">}</span>
-
-<span class="kd">func</span> <span class="nf">main</span><span class="p">()</span> <span class="p">{</span>
-
-	<span class="c1">// 正常操作
-</span><span class="c1"></span>
-	<span class="c1">// 第一步根据业务，以及当前状态生成fsm
-</span><span class="c1"></span>	<span class="nx">fsm</span> <span class="o">:=</span> <span class="nx">easyfsm</span><span class="p">.</span><span class="nf">NewFSM</span><span class="p">(</span><span class="nx">businessName</span><span class="p">,</span> <span class="nx">initState</span><span class="p">)</span>
-
-	<span class="c1">// 第二步 调用具体
-</span><span class="c1"></span>	<span class="nx">currentState</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">fsm</span><span class="p">.</span><span class="nf">Call</span><span class="p">(</span><span class="nx">cancelOrderEventName</span><span class="p">,</span>
-		<span class="nx">easyfsm</span><span class="p">.</span><span class="nf">WithData</span><span class="p">(</span><span class="nx">orderParam</span><span class="p">{</span><span class="nx">OrderNo</span><span class="p">:</span> <span class="s">&#34;wuqinqiang050@gmail.com&#34;</span><span class="p">}))</span>
-
-	<span class="nx">fmt</span><span class="p">.</span><span class="nf">Printf</span><span class="p">(</span><span class="s">&#34;[Success]call cancelOrderEventName err:%v\n&#34;</span><span class="p">,</span> <span class="nx">err</span><span class="p">)</span>
-	<span class="nx">fmt</span><span class="p">.</span><span class="nf">Printf</span><span class="p">(</span><span class="s">&#34;[Success]call cancelOrderEventName state:%v\n&#34;</span><span class="p">,</span> <span class="nx">currentState</span><span class="p">)</span>
-
-	<span class="c1">//异常情况1，没有定义goods业务
-</span><span class="c1"></span>	<span class="nx">fsm</span> <span class="p">=</span> <span class="nx">easyfsm</span><span class="p">.</span><span class="nf">NewFSM</span><span class="p">(</span><span class="s">&#34;goods&#34;</span><span class="p">,</span> <span class="nx">paidState</span><span class="p">)</span>
-	<span class="nx">currentState</span><span class="p">,</span> <span class="nx">err</span> <span class="p">=</span> <span class="nx">fsm</span><span class="p">.</span><span class="nf">Call</span><span class="p">(</span><span class="nx">cancelOrderEventName</span><span class="p">,</span>
-		<span class="nx">easyfsm</span><span class="p">.</span><span class="nf">WithData</span><span class="p">(</span><span class="nx">orderParam</span><span class="p">{</span><span class="nx">OrderNo</span><span class="p">:</span> <span class="s">&#34;wuqinqiang050@gmail.com&#34;</span><span class="p">}))</span>
-	<span class="nx">fmt</span><span class="p">.</span><span class="nf">Printf</span><span class="p">(</span><span class="s">&#34;[UnKnowBusiness]faild :%v\n&#34;</span><span class="p">,</span> <span class="nx">err</span><span class="p">)</span>
-	<span class="nx">fmt</span><span class="p">.</span><span class="nf">Printf</span><span class="p">(</span><span class="s">&#34;[UnKnowBusiness]faild state:%v\n&#34;</span><span class="p">,</span> <span class="nx">currentState</span><span class="p">)</span>
-
-	<span class="c1">//异常情况1,没有定义状态:2
-</span><span class="c1"></span>	<span class="nx">fsm</span> <span class="p">=</span> <span class="nx">easyfsm</span><span class="p">.</span><span class="nf">NewFSM</span><span class="p">(</span><span class="nx">businessName</span><span class="p">,</span> <span class="nx">easyfsm</span><span class="p">.</span><span class="nf">State</span><span class="p">(</span><span class="mi">2</span><span class="p">))</span>
-	<span class="nx">currentState</span><span class="p">,</span> <span class="nx">err</span> <span class="p">=</span> <span class="nx">fsm</span><span class="p">.</span><span class="nf">Call</span><span class="p">(</span><span class="nx">cancelOrderEventName</span><span class="p">,</span>
-		<span class="nx">easyfsm</span><span class="p">.</span><span class="nf">WithData</span><span class="p">(</span><span class="nx">orderParam</span><span class="p">{</span><span class="nx">OrderNo</span><span class="p">:</span> <span class="s">&#34;wuqinqiang050@gmail.com&#34;</span><span class="p">}))</span>
-	<span class="nx">fmt</span><span class="p">.</span><span class="nf">Printf</span><span class="p">(</span><span class="s">&#34;[UnKnowState]faild :%v\n&#34;</span><span class="p">,</span> <span class="nx">err</span><span class="p">)</span>
-	<span class="nx">fmt</span><span class="p">.</span><span class="nf">Printf</span><span class="p">(</span><span class="s">&#34;[UnKnowState]faild state:%v\n&#34;</span><span class="p">,</span> <span class="nx">currentState</span><span class="p">)</span>
-
-	<span class="c1">//异常情况2:没有定义状态1对应的发货事件
-</span><span class="c1"></span>	<span class="nx">fsm</span> <span class="p">=</span> <span class="nx">easyfsm</span><span class="p">.</span><span class="nf">NewFSM</span><span class="p">(</span><span class="nx">businessName</span><span class="p">,</span> <span class="nx">initState</span><span class="p">)</span>
-	<span class="nx">currentState</span><span class="p">,</span> <span class="nx">err</span> <span class="p">=</span> <span class="nx">fsm</span><span class="p">.</span><span class="nf">Call</span><span class="p">(</span><span class="s">&#34;shippingEvent&#34;</span><span class="p">,</span>
-		<span class="nx">easyfsm</span><span class="p">.</span><span class="nf">WithData</span><span class="p">(</span><span class="nx">orderParam</span><span class="p">{</span><span class="nx">OrderNo</span><span class="p">:</span> <span class="s">&#34;wuqinqiang050@gmail.com&#34;</span><span class="p">}))</span>
-	<span class="nx">fmt</span><span class="p">.</span><span class="nf">Printf</span><span class="p">(</span><span class="s">&#34;[UnKnowEvent]faild :%v\n&#34;</span><span class="p">,</span> <span class="nx">err</span><span class="p">)</span>
-	<span class="nx">fmt</span><span class="p">.</span><span class="nf">Printf</span><span class="p">(</span><span class="s">&#34;[UnKnowEvent]faild state:%v\n&#34;</span><span class="p">,</span> <span class="nx">currentState</span><span class="p">)</span>
-
-<span class="p">}</span>
-</code></pre></div><h3 id="hook">Hook</h3>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="k">go</span> <span class="nx">get</span> <span class="o">-</span><span class="nx">u</span>  <span class="nx">github</span><span class="p">.</span><span class="nx">com</span><span class="o">/</span><span class="nx">wuqinqiang</span><span class="o">/</span><span class="nx">easyfsm</span>
+</span></span></code></pre></div><p>首先自定义业务、状态、事件。</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="kn">package</span> <span class="nx">main</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="kn">import</span> <span class="p">(</span>
+</span></span><span class="line"><span class="cl">	<span class="s">&#34;fmt&#34;</span>
+</span></span><span class="line"><span class="cl">	<span class="s">&#34;github.com/wuqinqiang/easyfsm&#34;</span>
+</span></span><span class="line"><span class="cl"><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="kd">var</span> <span class="p">(</span>
+</span></span><span class="line"><span class="cl">	<span class="c1">// 业务
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="nx">businessName</span> <span class="nx">easyfsm</span><span class="p">.</span><span class="nx">BusinessName</span> <span class="p">=</span> <span class="s">&#34;order&#34;</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">	<span class="c1">// 对应状态
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="nx">initState</span> <span class="nx">easyfsm</span><span class="p">.</span><span class="nx">State</span> <span class="p">=</span> <span class="mi">1</span> <span class="c1">// 初始化
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="nx">paidState</span> <span class="nx">easyfsm</span><span class="p">.</span><span class="nx">State</span> <span class="p">=</span> <span class="mi">2</span> <span class="c1">// 已付款
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="nx">canceled</span>  <span class="nx">easyfsm</span><span class="p">.</span><span class="nx">State</span> <span class="p">=</span> <span class="mi">3</span> <span class="c1">// 已取消
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>
+</span></span><span class="line"><span class="cl">	<span class="c1">//对应事件
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="nx">paymentOrderEvent</span> <span class="nx">easyfsm</span><span class="p">.</span><span class="nx">EventName</span> <span class="p">=</span> <span class="s">&#34;paymentOrderEvent&#34;</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">cancelOrderEvent</span>  <span class="nx">easyfsm</span><span class="p">.</span><span class="nx">EventName</span> <span class="p">=</span> <span class="s">&#34;cancelOrderEvent&#34;</span>
+</span></span><span class="line"><span class="cl"><span class="p">)</span>
+</span></span></code></pre></div><p>自定义事件主体，</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="kd">type</span> <span class="p">(</span>
+</span></span><span class="line"><span class="cl">  <span class="c1">// 订单业务所需参数
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="nx">orderParam</span> <span class="kd">struct</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">OrderNo</span> <span class="kt">string</span>
+</span></span><span class="line"><span class="cl">    <span class="c1">//....
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="p">}</span>
+</span></span><span class="line"><span class="cl">  
+</span></span><span class="line"><span class="cl">  <span class="c1">// 支付订单事件
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="nx">entity</span> <span class="o">:=</span> <span class="nx">easyfsm</span><span class="p">.</span><span class="nf">NewEventEntity</span><span class="p">(</span><span class="nx">paymentOrderEvent</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">		<span class="kd">func</span><span class="p">(</span><span class="nx">opt</span> <span class="o">*</span><span class="nx">easyfsm</span><span class="p">.</span><span class="nx">Param</span><span class="p">)</span> <span class="p">(</span><span class="nx">easyfsm</span><span class="p">.</span><span class="nx">State</span><span class="p">,</span> <span class="kt">error</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">			<span class="nx">param</span><span class="p">,</span> <span class="nx">ok</span> <span class="o">:=</span> <span class="nx">opt</span><span class="p">.</span><span class="nx">Data</span><span class="p">.(</span><span class="nx">orderParam</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">			<span class="k">if</span> <span class="p">!</span><span class="nx">ok</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">				<span class="nb">panic</span><span class="p">(</span><span class="s">&#34;param err&#34;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">			<span class="p">}</span>
+</span></span><span class="line"><span class="cl">			<span class="nx">fmt</span><span class="p">.</span><span class="nf">Printf</span><span class="p">(</span><span class="s">&#34;param:%+v\n&#34;</span><span class="p">,</span> <span class="nx">param</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">			<span class="c1">// 处理核心业务
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>			<span class="k">return</span> <span class="nx">paidState</span><span class="p">,</span> <span class="kc">nil</span>
+</span></span><span class="line"><span class="cl">		<span class="p">})</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">	<span class="c1">// 取消订单事件
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="nx">cancelEntity</span> <span class="o">:=</span> <span class="nx">easyfsm</span><span class="p">.</span><span class="nf">NewEventEntity</span><span class="p">(</span><span class="nx">cancelOrderEvent</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">		<span class="kd">func</span><span class="p">(</span><span class="nx">opt</span> <span class="o">*</span><span class="nx">easyfsm</span><span class="p">.</span><span class="nx">Param</span><span class="p">)</span> <span class="p">(</span><span class="nx">easyfsm</span><span class="p">.</span><span class="nx">State</span><span class="p">,</span> <span class="kt">error</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">			<span class="c1">// 处理核心业务
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>			<span class="nx">param</span><span class="p">,</span> <span class="nx">ok</span> <span class="o">:=</span> <span class="nx">opt</span><span class="p">.</span><span class="nx">Data</span><span class="p">.(</span><span class="nx">orderParam</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">			<span class="k">if</span> <span class="p">!</span><span class="nx">ok</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">				<span class="nb">panic</span><span class="p">(</span><span class="s">&#34;param err&#34;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">			<span class="p">}</span>
+</span></span><span class="line"><span class="cl">			<span class="nx">fmt</span><span class="p">.</span><span class="nf">Printf</span><span class="p">(</span><span class="s">&#34;param:%+v\n&#34;</span><span class="p">,</span> <span class="nx">param</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">			<span class="k">return</span> <span class="nx">canceled</span><span class="p">,</span> <span class="kc">nil</span>
+</span></span><span class="line"><span class="cl">		<span class="p">})</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">  
+</span></span></code></pre></div><p>注册到easyfsm。</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl">	<span class="c1">// 注册到fsm
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="nx">easyfsm</span><span class="p">.</span><span class="nf">RegisterStateMachine</span><span class="p">(</span><span class="nx">businessName</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">initState</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">entity</span><span class="p">,</span> <span class="nx">cancelEntity</span><span class="p">)</span>
+</span></span></code></pre></div><p>开始使用。</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl">  <span class="c1">// 正常操作
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>
+</span></span><span class="line"><span class="cl">  <span class="c1">// 第一步根据业务，以及当前状态生成fsm
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="nx">fsm</span> <span class="o">:=</span> <span class="nx">easyfsm</span><span class="p">.</span><span class="nf">NewFSM</span><span class="p">(</span><span class="nx">businessName</span><span class="p">,</span> <span class="nx">easyfsm</span><span class="p">.</span><span class="nf">State</span><span class="p">(</span><span class="mi">1</span><span class="p">))</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">	<span class="c1">// 第二步 调用具体事件
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="nx">currentState</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">fsm</span><span class="p">.</span><span class="nf">Call</span><span class="p">(</span><span class="nx">cancelOrderEvent</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">easyfsm</span><span class="p">.</span><span class="nf">WithData</span><span class="p">(</span><span class="nx">orderParam</span><span class="p">{</span><span class="nx">OrderNo</span><span class="p">:</span> <span class="s">&#34;wuqinqiang050@gmail.com&#34;</span><span class="p">}))</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">	<span class="nx">fmt</span><span class="p">.</span><span class="nf">Printf</span><span class="p">(</span><span class="s">&#34;[Success]call cancelOrderEvent err:%v\n&#34;</span><span class="p">,</span> <span class="nx">err</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">fmt</span><span class="p">.</span><span class="nf">Printf</span><span class="p">(</span><span class="s">&#34;[Success]call cancelOrderEvent state:%v\n&#34;</span><span class="p">,</span> <span class="nx">currentState</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"> 
+</span></span><span class="line"><span class="cl">  <span class="c1">// 结束
+</span></span></span></code></pre></div><p>示例代码如下，</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="kn">package</span> <span class="nx">main</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="kn">import</span> <span class="p">(</span>
+</span></span><span class="line"><span class="cl">	<span class="s">&#34;fmt&#34;</span>
+</span></span><span class="line"><span class="cl">	<span class="s">&#34;github.com/wuqinqiang/easyfsm&#34;</span>
+</span></span><span class="line"><span class="cl"><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="kd">var</span> <span class="p">(</span>
+</span></span><span class="line"><span class="cl">	<span class="c1">// 业务
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="nx">businessName</span> <span class="nx">easyfsm</span><span class="p">.</span><span class="nx">BusinessName</span> <span class="p">=</span> <span class="s">&#34;order&#34;</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">	<span class="c1">// 对应状态
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="nx">initState</span> <span class="nx">easyfsm</span><span class="p">.</span><span class="nx">State</span> <span class="p">=</span> <span class="mi">1</span> <span class="c1">// 初始化
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="nx">paidState</span> <span class="nx">easyfsm</span><span class="p">.</span><span class="nx">State</span> <span class="p">=</span> <span class="mi">2</span> <span class="c1">// 已付款
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="nx">canceled</span>  <span class="nx">easyfsm</span><span class="p">.</span><span class="nx">State</span> <span class="p">=</span> <span class="mi">3</span> <span class="c1">// 已取消
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>
+</span></span><span class="line"><span class="cl">	<span class="c1">//对应事件
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="nx">paymentOrderEventName</span> <span class="nx">easyfsm</span><span class="p">.</span><span class="nx">EventName</span> <span class="p">=</span> <span class="s">&#34;paymentOrderEventName&#34;</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">cancelOrderEventName</span>  <span class="nx">easyfsm</span><span class="p">.</span><span class="nx">EventName</span> <span class="p">=</span> <span class="s">&#34;cancelOrderEventName&#34;</span>
+</span></span><span class="line"><span class="cl"><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="kd">type</span> <span class="p">(</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">orderParam</span> <span class="kd">struct</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">OrderNo</span> <span class="kt">string</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}</span>
+</span></span><span class="line"><span class="cl"><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="kd">func</span> <span class="nf">init</span><span class="p">()</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">	<span class="c1">// 支付订单事件
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="nx">entity</span> <span class="o">:=</span> <span class="nx">easyfsm</span><span class="p">.</span><span class="nf">NewEventEntity</span><span class="p">(</span><span class="nx">paymentOrderEventName</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">		<span class="kd">func</span><span class="p">(</span><span class="nx">opt</span> <span class="o">*</span><span class="nx">easyfsm</span><span class="p">.</span><span class="nx">Param</span><span class="p">)</span> <span class="p">(</span><span class="nx">easyfsm</span><span class="p">.</span><span class="nx">State</span><span class="p">,</span> <span class="kt">error</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">			<span class="nx">param</span><span class="p">,</span> <span class="nx">ok</span> <span class="o">:=</span> <span class="nx">opt</span><span class="p">.</span><span class="nx">Data</span><span class="p">.(</span><span class="nx">orderParam</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">			<span class="k">if</span> <span class="p">!</span><span class="nx">ok</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">				<span class="nb">panic</span><span class="p">(</span><span class="s">&#34;param err&#34;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">			<span class="p">}</span>
+</span></span><span class="line"><span class="cl">			<span class="nx">fmt</span><span class="p">.</span><span class="nf">Printf</span><span class="p">(</span><span class="s">&#34;param:%+v\n&#34;</span><span class="p">,</span> <span class="nx">param</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">			<span class="c1">// 处理核心业务
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>			<span class="k">return</span> <span class="nx">paidState</span><span class="p">,</span> <span class="kc">nil</span>
+</span></span><span class="line"><span class="cl">		<span class="p">})</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">	<span class="c1">// 取消订单事件
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="nx">cancelEntity</span> <span class="o">:=</span> <span class="nx">easyfsm</span><span class="p">.</span><span class="nf">NewEventEntity</span><span class="p">(</span><span class="nx">cancelOrderEventName</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">		<span class="kd">func</span><span class="p">(</span><span class="nx">opt</span> <span class="o">*</span><span class="nx">easyfsm</span><span class="p">.</span><span class="nx">Param</span><span class="p">)</span> <span class="p">(</span><span class="nx">easyfsm</span><span class="p">.</span><span class="nx">State</span><span class="p">,</span> <span class="kt">error</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">			<span class="c1">// 处理核心业务
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>			<span class="nx">param</span><span class="p">,</span> <span class="nx">ok</span> <span class="o">:=</span> <span class="nx">opt</span><span class="p">.</span><span class="nx">Data</span><span class="p">.(</span><span class="nx">orderParam</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">			<span class="k">if</span> <span class="p">!</span><span class="nx">ok</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">				<span class="nb">panic</span><span class="p">(</span><span class="s">&#34;param err&#34;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">			<span class="p">}</span>
+</span></span><span class="line"><span class="cl">			<span class="nx">fmt</span><span class="p">.</span><span class="nf">Printf</span><span class="p">(</span><span class="s">&#34;param:%+v\n&#34;</span><span class="p">,</span> <span class="nx">param</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">			<span class="k">return</span> <span class="nx">canceled</span><span class="p">,</span> <span class="kc">nil</span>
+</span></span><span class="line"><span class="cl">		<span class="p">})</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">	<span class="c1">// 注册订单状态机
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="nx">easyfsm</span><span class="p">.</span><span class="nf">RegisterStateMachine</span><span class="p">(</span><span class="nx">businessName</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">initState</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">entity</span><span class="p">,</span> <span class="nx">cancelEntity</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="kd">func</span> <span class="nf">main</span><span class="p">()</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">	<span class="c1">// 正常操作
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>
+</span></span><span class="line"><span class="cl">	<span class="c1">// 第一步根据业务，以及当前状态生成fsm
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="nx">fsm</span> <span class="o">:=</span> <span class="nx">easyfsm</span><span class="p">.</span><span class="nf">NewFSM</span><span class="p">(</span><span class="nx">businessName</span><span class="p">,</span> <span class="nx">initState</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">	<span class="c1">// 第二步 调用具体
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="nx">currentState</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">fsm</span><span class="p">.</span><span class="nf">Call</span><span class="p">(</span><span class="nx">cancelOrderEventName</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">easyfsm</span><span class="p">.</span><span class="nf">WithData</span><span class="p">(</span><span class="nx">orderParam</span><span class="p">{</span><span class="nx">OrderNo</span><span class="p">:</span> <span class="s">&#34;wuqinqiang050@gmail.com&#34;</span><span class="p">}))</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">	<span class="nx">fmt</span><span class="p">.</span><span class="nf">Printf</span><span class="p">(</span><span class="s">&#34;[Success]call cancelOrderEventName err:%v\n&#34;</span><span class="p">,</span> <span class="nx">err</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">fmt</span><span class="p">.</span><span class="nf">Printf</span><span class="p">(</span><span class="s">&#34;[Success]call cancelOrderEventName state:%v\n&#34;</span><span class="p">,</span> <span class="nx">currentState</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">	<span class="c1">//异常情况1，没有定义goods业务
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="nx">fsm</span> <span class="p">=</span> <span class="nx">easyfsm</span><span class="p">.</span><span class="nf">NewFSM</span><span class="p">(</span><span class="s">&#34;goods&#34;</span><span class="p">,</span> <span class="nx">paidState</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">currentState</span><span class="p">,</span> <span class="nx">err</span> <span class="p">=</span> <span class="nx">fsm</span><span class="p">.</span><span class="nf">Call</span><span class="p">(</span><span class="nx">cancelOrderEventName</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">easyfsm</span><span class="p">.</span><span class="nf">WithData</span><span class="p">(</span><span class="nx">orderParam</span><span class="p">{</span><span class="nx">OrderNo</span><span class="p">:</span> <span class="s">&#34;wuqinqiang050@gmail.com&#34;</span><span class="p">}))</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">fmt</span><span class="p">.</span><span class="nf">Printf</span><span class="p">(</span><span class="s">&#34;[UnKnowBusiness]faild :%v\n&#34;</span><span class="p">,</span> <span class="nx">err</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">fmt</span><span class="p">.</span><span class="nf">Printf</span><span class="p">(</span><span class="s">&#34;[UnKnowBusiness]faild state:%v\n&#34;</span><span class="p">,</span> <span class="nx">currentState</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">	<span class="c1">//异常情况1,没有定义状态:2
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="nx">fsm</span> <span class="p">=</span> <span class="nx">easyfsm</span><span class="p">.</span><span class="nf">NewFSM</span><span class="p">(</span><span class="nx">businessName</span><span class="p">,</span> <span class="nx">easyfsm</span><span class="p">.</span><span class="nf">State</span><span class="p">(</span><span class="mi">2</span><span class="p">))</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">currentState</span><span class="p">,</span> <span class="nx">err</span> <span class="p">=</span> <span class="nx">fsm</span><span class="p">.</span><span class="nf">Call</span><span class="p">(</span><span class="nx">cancelOrderEventName</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">easyfsm</span><span class="p">.</span><span class="nf">WithData</span><span class="p">(</span><span class="nx">orderParam</span><span class="p">{</span><span class="nx">OrderNo</span><span class="p">:</span> <span class="s">&#34;wuqinqiang050@gmail.com&#34;</span><span class="p">}))</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">fmt</span><span class="p">.</span><span class="nf">Printf</span><span class="p">(</span><span class="s">&#34;[UnKnowState]faild :%v\n&#34;</span><span class="p">,</span> <span class="nx">err</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">fmt</span><span class="p">.</span><span class="nf">Printf</span><span class="p">(</span><span class="s">&#34;[UnKnowState]faild state:%v\n&#34;</span><span class="p">,</span> <span class="nx">currentState</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">	<span class="c1">//异常情况2:没有定义状态1对应的发货事件
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="nx">fsm</span> <span class="p">=</span> <span class="nx">easyfsm</span><span class="p">.</span><span class="nf">NewFSM</span><span class="p">(</span><span class="nx">businessName</span><span class="p">,</span> <span class="nx">initState</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">currentState</span><span class="p">,</span> <span class="nx">err</span> <span class="p">=</span> <span class="nx">fsm</span><span class="p">.</span><span class="nf">Call</span><span class="p">(</span><span class="s">&#34;shippingEvent&#34;</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">easyfsm</span><span class="p">.</span><span class="nf">WithData</span><span class="p">(</span><span class="nx">orderParam</span><span class="p">{</span><span class="nx">OrderNo</span><span class="p">:</span> <span class="s">&#34;wuqinqiang050@gmail.com&#34;</span><span class="p">}))</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">fmt</span><span class="p">.</span><span class="nf">Printf</span><span class="p">(</span><span class="s">&#34;[UnKnowEvent]faild :%v\n&#34;</span><span class="p">,</span> <span class="nx">err</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">fmt</span><span class="p">.</span><span class="nf">Printf</span><span class="p">(</span><span class="s">&#34;[UnKnowEvent]faild state:%v\n&#34;</span><span class="p">,</span> <span class="nx">currentState</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></div><h3 id="hook">Hook</h3>
 <p>如果想在处理事件函数的前后执行一些hook，或者在事件执行完毕，异步执行一些其他业务，easyfsm定义了这两个接口，</p>
-<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kd">type</span> <span class="p">(</span>
-	<span class="nx">EventObserver</span> <span class="kd">interface</span> <span class="p">{</span>
-		<span class="nf">Receive</span><span class="p">(</span><span class="nx">opt</span> <span class="o">*</span><span class="nx">Param</span><span class="p">)</span>
-	<span class="p">}</span>
-
-	<span class="nx">EventHook</span> <span class="kd">interface</span> <span class="p">{</span>
-		<span class="nf">Before</span><span class="p">(</span><span class="nx">opt</span> <span class="o">*</span><span class="nx">Param</span><span class="p">)</span>
-		<span class="nf">After</span><span class="p">(</span><span class="nx">opt</span> <span class="nx">Param</span><span class="p">,</span> <span class="nx">state</span> <span class="nx">State</span><span class="p">,</span> <span class="nx">err</span> <span class="kt">error</span><span class="p">)</span>
-	<span class="p">}</span>
-<span class="p">)</span>
-</code></pre></div><p>我们可以实现这两个接口，</p>
-<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kd">type</span> <span class="p">(</span>
-	<span class="nx">NotifyExample</span> <span class="kd">struct</span> <span class="p">{</span>
-	<span class="p">}</span>
-	<span class="nx">HookExample</span> <span class="kd">struct</span> <span class="p">{</span>
-	<span class="p">}</span>
-<span class="p">)</span>
-
-<span class="kd">func</span> <span class="p">(</span><span class="nx">h</span> <span class="nx">HookExample</span><span class="p">)</span> <span class="nf">Before</span><span class="p">(</span><span class="nx">opt</span> <span class="o">*</span><span class="nx">easyfsm</span><span class="p">.</span><span class="nx">Param</span><span class="p">)</span> <span class="p">{</span>
-	<span class="nb">println</span><span class="p">(</span><span class="s">&#34;事件执行前&#34;</span><span class="p">)</span>
-<span class="p">}</span>
-
-<span class="kd">func</span> <span class="p">(</span><span class="nx">h</span> <span class="nx">HookExample</span><span class="p">)</span> <span class="nf">After</span><span class="p">(</span><span class="nx">opt</span> <span class="nx">easyfsm</span><span class="p">.</span><span class="nx">Param</span><span class="p">,</span> <span class="nx">state</span> <span class="nx">easyfsm</span><span class="p">.</span><span class="nx">State</span><span class="p">,</span> <span class="nx">err</span> <span class="kt">error</span><span class="p">)</span> <span class="p">{</span>
-	<span class="nb">println</span><span class="p">(</span><span class="s">&#34;事件执行后&#34;</span><span class="p">)</span>
-<span class="p">}</span>
-
-<span class="kd">func</span> <span class="p">(</span><span class="nx">o</span> <span class="nx">NotifyExample</span><span class="p">)</span> <span class="nf">Receive</span><span class="p">(</span><span class="nx">opt</span> <span class="o">*</span><span class="nx">easyfsm</span><span class="p">.</span><span class="nx">Param</span><span class="p">)</span> <span class="p">{</span>
-	<span class="nb">println</span><span class="p">(</span><span class="s">&#34;接收到事件变动,发送消息&#34;</span><span class="p">)</span>
-<span class="p">}</span>
-</code></pre></div><p>完整代码：</p>
-<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kn">package</span> <span class="nx">main</span>
-
-<span class="kn">import</span> <span class="p">(</span>
-	<span class="s">&#34;fmt&#34;</span>
-	<span class="s">&#34;github.com/wuqinqiang/easyfsm&#34;</span>
-	<span class="s">&#34;time&#34;</span>
-<span class="p">)</span>
-
-<span class="kd">var</span> <span class="p">(</span>
-	<span class="c1">// 业务
-</span><span class="c1"></span>	<span class="nx">businessName</span> <span class="nx">easyfsm</span><span class="p">.</span><span class="nx">BusinessName</span> <span class="p">=</span> <span class="s">&#34;order&#34;</span>
-
-	<span class="c1">// 对应状态
-</span><span class="c1"></span>	<span class="nx">initState</span> <span class="nx">easyfsm</span><span class="p">.</span><span class="nx">State</span> <span class="p">=</span> <span class="mi">1</span> <span class="c1">// 初始化
-</span><span class="c1"></span>	<span class="nx">paidState</span> <span class="nx">easyfsm</span><span class="p">.</span><span class="nx">State</span> <span class="p">=</span> <span class="mi">2</span> <span class="c1">// 已付款
-</span><span class="c1"></span>	<span class="nx">canceled</span>  <span class="nx">easyfsm</span><span class="p">.</span><span class="nx">State</span> <span class="p">=</span> <span class="mi">3</span> <span class="c1">// 已取消
-</span><span class="c1"></span>
-	<span class="c1">//对应事件
-</span><span class="c1"></span>	<span class="nx">paymentOrderEventName</span> <span class="nx">easyfsm</span><span class="p">.</span><span class="nx">EventName</span> <span class="p">=</span> <span class="s">&#34;paymentOrderEventName&#34;</span>
-	<span class="nx">cancelOrderEventName</span>  <span class="nx">easyfsm</span><span class="p">.</span><span class="nx">EventName</span> <span class="p">=</span> <span class="s">&#34;cancelOrderEventName&#34;</span>
-<span class="p">)</span>
-
-<span class="kd">type</span> <span class="p">(</span>
-	<span class="nx">orderParam</span> <span class="kd">struct</span> <span class="p">{</span>
-		<span class="nx">OrderNo</span> <span class="kt">string</span>
-	<span class="p">}</span>
-<span class="p">)</span>
-
-<span class="kd">var</span> <span class="p">(</span>
-	<span class="nx">_</span> <span class="nx">easyfsm</span><span class="p">.</span><span class="nx">EventObserver</span> <span class="p">=</span> <span class="p">(</span><span class="o">*</span><span class="nx">NotifyExample</span><span class="p">)(</span><span class="kc">nil</span><span class="p">)</span>
-	<span class="nx">_</span> <span class="nx">easyfsm</span><span class="p">.</span><span class="nx">EventHook</span>     <span class="p">=</span> <span class="p">(</span><span class="o">*</span><span class="nx">HookExample</span><span class="p">)(</span><span class="kc">nil</span><span class="p">)</span>
-<span class="p">)</span>
-
-<span class="kd">type</span> <span class="p">(</span>
-	<span class="nx">NotifyExample</span> <span class="kd">struct</span> <span class="p">{</span>
-	<span class="p">}</span>
-	<span class="nx">HookExample</span> <span class="kd">struct</span> <span class="p">{</span>
-	<span class="p">}</span>
-<span class="p">)</span>
-
-<span class="kd">func</span> <span class="p">(</span><span class="nx">h</span> <span class="nx">HookExample</span><span class="p">)</span> <span class="nf">Before</span><span class="p">(</span><span class="nx">opt</span> <span class="o">*</span><span class="nx">easyfsm</span><span class="p">.</span><span class="nx">Param</span><span class="p">)</span> <span class="p">{</span>
-	<span class="nb">println</span><span class="p">(</span><span class="s">&#34;事件执行前&#34;</span><span class="p">)</span>
-<span class="p">}</span>
-
-<span class="kd">func</span> <span class="p">(</span><span class="nx">h</span> <span class="nx">HookExample</span><span class="p">)</span> <span class="nf">After</span><span class="p">(</span><span class="nx">opt</span> <span class="nx">easyfsm</span><span class="p">.</span><span class="nx">Param</span><span class="p">,</span> <span class="nx">state</span> <span class="nx">easyfsm</span><span class="p">.</span><span class="nx">State</span><span class="p">,</span> <span class="nx">err</span> <span class="kt">error</span><span class="p">)</span> <span class="p">{</span>
-	<span class="nb">println</span><span class="p">(</span><span class="s">&#34;事件执行后&#34;</span><span class="p">)</span>
-<span class="p">}</span>
-
-<span class="kd">func</span> <span class="p">(</span><span class="nx">o</span> <span class="nx">NotifyExample</span><span class="p">)</span> <span class="nf">Receive</span><span class="p">(</span><span class="nx">opt</span> <span class="o">*</span><span class="nx">easyfsm</span><span class="p">.</span><span class="nx">Param</span><span class="p">)</span> <span class="p">{</span>
-	<span class="nb">println</span><span class="p">(</span><span class="s">&#34;接收到事件变动,发送消息&#34;</span><span class="p">)</span>
-<span class="p">}</span>
-
-<span class="kd">func</span> <span class="nf">init</span><span class="p">()</span> <span class="p">{</span>
-	<span class="c1">// 支付订单事件
-</span><span class="c1"></span>	<span class="nx">entity</span> <span class="o">:=</span> <span class="nx">easyfsm</span><span class="p">.</span><span class="nf">NewEventEntity</span><span class="p">(</span><span class="nx">paymentOrderEventName</span><span class="p">,</span>
-		<span class="kd">func</span><span class="p">(</span><span class="nx">opt</span> <span class="o">*</span><span class="nx">easyfsm</span><span class="p">.</span><span class="nx">Param</span><span class="p">)</span> <span class="p">(</span><span class="nx">easyfsm</span><span class="p">.</span><span class="nx">State</span><span class="p">,</span> <span class="kt">error</span><span class="p">)</span> <span class="p">{</span>
-			<span class="nx">param</span><span class="p">,</span> <span class="nx">ok</span> <span class="o">:=</span> <span class="nx">opt</span><span class="p">.</span><span class="nx">Data</span><span class="p">.(</span><span class="nx">orderParam</span><span class="p">)</span>
-			<span class="k">if</span> <span class="p">!</span><span class="nx">ok</span> <span class="p">{</span>
-				<span class="nb">panic</span><span class="p">(</span><span class="s">&#34;param err&#34;</span><span class="p">)</span>
-			<span class="p">}</span>
-			<span class="nx">fmt</span><span class="p">.</span><span class="nf">Printf</span><span class="p">(</span><span class="s">&#34;param:%+v\n&#34;</span><span class="p">,</span> <span class="nx">param</span><span class="p">)</span>
-			<span class="c1">// 处理核心业务
-</span><span class="c1"></span>			<span class="k">return</span> <span class="nx">paidState</span><span class="p">,</span> <span class="kc">nil</span>
-		<span class="p">},</span> <span class="nx">easyfsm</span><span class="p">.</span><span class="nf">WithHook</span><span class="p">(</span><span class="nx">HookExample</span><span class="p">{}),</span> <span class="nx">easyfsm</span><span class="p">.</span><span class="nf">WithObservers</span><span class="p">(</span><span class="nx">NotifyExample</span><span class="p">{}))</span>
-
-	<span class="c1">// 取消订单事件
-</span><span class="c1"></span>	<span class="nx">cancelEntity</span> <span class="o">:=</span> <span class="nx">easyfsm</span><span class="p">.</span><span class="nf">NewEventEntity</span><span class="p">(</span><span class="nx">cancelOrderEventName</span><span class="p">,</span>
-		<span class="kd">func</span><span class="p">(</span><span class="nx">opt</span> <span class="o">*</span><span class="nx">easyfsm</span><span class="p">.</span><span class="nx">Param</span><span class="p">)</span> <span class="p">(</span><span class="nx">easyfsm</span><span class="p">.</span><span class="nx">State</span><span class="p">,</span> <span class="kt">error</span><span class="p">)</span> <span class="p">{</span>
-			<span class="c1">// 处理核心业务
-</span><span class="c1"></span>			<span class="nx">param</span><span class="p">,</span> <span class="nx">ok</span> <span class="o">:=</span> <span class="nx">opt</span><span class="p">.</span><span class="nx">Data</span><span class="p">.(</span><span class="nx">orderParam</span><span class="p">)</span>
-			<span class="k">if</span> <span class="p">!</span><span class="nx">ok</span> <span class="p">{</span>
-				<span class="nb">panic</span><span class="p">(</span><span class="s">&#34;param err&#34;</span><span class="p">)</span>
-			<span class="p">}</span>
-			<span class="nx">fmt</span><span class="p">.</span><span class="nf">Printf</span><span class="p">(</span><span class="s">&#34;param:%+v\n&#34;</span><span class="p">,</span> <span class="nx">param</span><span class="p">)</span>
-			<span class="k">return</span> <span class="nx">canceled</span><span class="p">,</span> <span class="kc">nil</span>
-		<span class="p">},</span> <span class="nx">easyfsm</span><span class="p">.</span><span class="nf">WithHook</span><span class="p">(</span><span class="nx">HookExample</span><span class="p">{}))</span>
-
-	<span class="c1">// 注册订单状态机
-</span><span class="c1"></span>	<span class="nx">easyfsm</span><span class="p">.</span><span class="nf">RegisterStateMachine</span><span class="p">(</span><span class="nx">businessName</span><span class="p">,</span>
-		<span class="nx">initState</span><span class="p">,</span>
-		<span class="nx">entity</span><span class="p">,</span> <span class="nx">cancelEntity</span><span class="p">)</span>
-<span class="p">}</span>
-
-<span class="kd">func</span> <span class="nf">main</span><span class="p">()</span> <span class="p">{</span>
-
-	<span class="c1">// 正常操作
-</span><span class="c1"></span>
-	<span class="c1">// 第一步根据业务，以及当前状态生成fsm
-</span><span class="c1"></span>	<span class="nx">fsm</span> <span class="o">:=</span> <span class="nx">easyfsm</span><span class="p">.</span><span class="nf">NewFSM</span><span class="p">(</span><span class="nx">businessName</span><span class="p">,</span> <span class="nx">initState</span><span class="p">)</span>
-
-	<span class="c1">// 第二步 调用具体
-</span><span class="c1"></span>	<span class="nx">currentState</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">fsm</span><span class="p">.</span><span class="nf">Call</span><span class="p">(</span><span class="nx">paymentOrderEventName</span><span class="p">,</span>
-		<span class="nx">easyfsm</span><span class="p">.</span><span class="nf">WithData</span><span class="p">(</span><span class="nx">orderParam</span><span class="p">{</span><span class="nx">OrderNo</span><span class="p">:</span> <span class="s">&#34;wuqinqiang050@gmail.com&#34;</span><span class="p">}))</span>
-
-	<span class="nx">fmt</span><span class="p">.</span><span class="nf">Printf</span><span class="p">(</span><span class="s">&#34;[Success]call paymentOrderEventName err:%v\n&#34;</span><span class="p">,</span> <span class="nx">err</span><span class="p">)</span>
-	<span class="nx">fmt</span><span class="p">.</span><span class="nf">Printf</span><span class="p">(</span><span class="s">&#34;[Success]call paymentOrderEventName state:%v\n&#34;</span><span class="p">,</span> <span class="nx">currentState</span><span class="p">)</span>
-	<span class="nx">time</span><span class="p">.</span><span class="nf">Sleep</span><span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="nx">time</span><span class="p">.</span><span class="nx">Second</span><span class="p">)</span>
-<span class="p">}</span>
-</code></pre></div><h3 id="结束">结束</h3>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="kd">type</span> <span class="p">(</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">EventObserver</span> <span class="kd">interface</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="nf">Receive</span><span class="p">(</span><span class="nx">opt</span> <span class="o">*</span><span class="nx">Param</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">	<span class="nx">EventHook</span> <span class="kd">interface</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="nf">Before</span><span class="p">(</span><span class="nx">opt</span> <span class="o">*</span><span class="nx">Param</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">		<span class="nf">After</span><span class="p">(</span><span class="nx">opt</span> <span class="nx">Param</span><span class="p">,</span> <span class="nx">state</span> <span class="nx">State</span><span class="p">,</span> <span class="nx">err</span> <span class="kt">error</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}</span>
+</span></span><span class="line"><span class="cl"><span class="p">)</span>
+</span></span></code></pre></div><p>我们可以实现这两个接口，</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="kd">type</span> <span class="p">(</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">NotifyExample</span> <span class="kd">struct</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">HookExample</span> <span class="kd">struct</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}</span>
+</span></span><span class="line"><span class="cl"><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="kd">func</span> <span class="p">(</span><span class="nx">h</span> <span class="nx">HookExample</span><span class="p">)</span> <span class="nf">Before</span><span class="p">(</span><span class="nx">opt</span> <span class="o">*</span><span class="nx">easyfsm</span><span class="p">.</span><span class="nx">Param</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">	<span class="nb">println</span><span class="p">(</span><span class="s">&#34;事件执行前&#34;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="kd">func</span> <span class="p">(</span><span class="nx">h</span> <span class="nx">HookExample</span><span class="p">)</span> <span class="nf">After</span><span class="p">(</span><span class="nx">opt</span> <span class="nx">easyfsm</span><span class="p">.</span><span class="nx">Param</span><span class="p">,</span> <span class="nx">state</span> <span class="nx">easyfsm</span><span class="p">.</span><span class="nx">State</span><span class="p">,</span> <span class="nx">err</span> <span class="kt">error</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">	<span class="nb">println</span><span class="p">(</span><span class="s">&#34;事件执行后&#34;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="kd">func</span> <span class="p">(</span><span class="nx">o</span> <span class="nx">NotifyExample</span><span class="p">)</span> <span class="nf">Receive</span><span class="p">(</span><span class="nx">opt</span> <span class="o">*</span><span class="nx">easyfsm</span><span class="p">.</span><span class="nx">Param</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">	<span class="nb">println</span><span class="p">(</span><span class="s">&#34;接收到事件变动,发送消息&#34;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></div><p>完整代码：</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="kn">package</span> <span class="nx">main</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="kn">import</span> <span class="p">(</span>
+</span></span><span class="line"><span class="cl">	<span class="s">&#34;fmt&#34;</span>
+</span></span><span class="line"><span class="cl">	<span class="s">&#34;github.com/wuqinqiang/easyfsm&#34;</span>
+</span></span><span class="line"><span class="cl">	<span class="s">&#34;time&#34;</span>
+</span></span><span class="line"><span class="cl"><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="kd">var</span> <span class="p">(</span>
+</span></span><span class="line"><span class="cl">	<span class="c1">// 业务
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="nx">businessName</span> <span class="nx">easyfsm</span><span class="p">.</span><span class="nx">BusinessName</span> <span class="p">=</span> <span class="s">&#34;order&#34;</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">	<span class="c1">// 对应状态
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="nx">initState</span> <span class="nx">easyfsm</span><span class="p">.</span><span class="nx">State</span> <span class="p">=</span> <span class="mi">1</span> <span class="c1">// 初始化
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="nx">paidState</span> <span class="nx">easyfsm</span><span class="p">.</span><span class="nx">State</span> <span class="p">=</span> <span class="mi">2</span> <span class="c1">// 已付款
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="nx">canceled</span>  <span class="nx">easyfsm</span><span class="p">.</span><span class="nx">State</span> <span class="p">=</span> <span class="mi">3</span> <span class="c1">// 已取消
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>
+</span></span><span class="line"><span class="cl">	<span class="c1">//对应事件
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="nx">paymentOrderEventName</span> <span class="nx">easyfsm</span><span class="p">.</span><span class="nx">EventName</span> <span class="p">=</span> <span class="s">&#34;paymentOrderEventName&#34;</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">cancelOrderEventName</span>  <span class="nx">easyfsm</span><span class="p">.</span><span class="nx">EventName</span> <span class="p">=</span> <span class="s">&#34;cancelOrderEventName&#34;</span>
+</span></span><span class="line"><span class="cl"><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="kd">type</span> <span class="p">(</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">orderParam</span> <span class="kd">struct</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">OrderNo</span> <span class="kt">string</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}</span>
+</span></span><span class="line"><span class="cl"><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="kd">var</span> <span class="p">(</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">_</span> <span class="nx">easyfsm</span><span class="p">.</span><span class="nx">EventObserver</span> <span class="p">=</span> <span class="p">(</span><span class="o">*</span><span class="nx">NotifyExample</span><span class="p">)(</span><span class="kc">nil</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">_</span> <span class="nx">easyfsm</span><span class="p">.</span><span class="nx">EventHook</span>     <span class="p">=</span> <span class="p">(</span><span class="o">*</span><span class="nx">HookExample</span><span class="p">)(</span><span class="kc">nil</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="kd">type</span> <span class="p">(</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">NotifyExample</span> <span class="kd">struct</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">HookExample</span> <span class="kd">struct</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}</span>
+</span></span><span class="line"><span class="cl"><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="kd">func</span> <span class="p">(</span><span class="nx">h</span> <span class="nx">HookExample</span><span class="p">)</span> <span class="nf">Before</span><span class="p">(</span><span class="nx">opt</span> <span class="o">*</span><span class="nx">easyfsm</span><span class="p">.</span><span class="nx">Param</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">	<span class="nb">println</span><span class="p">(</span><span class="s">&#34;事件执行前&#34;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="kd">func</span> <span class="p">(</span><span class="nx">h</span> <span class="nx">HookExample</span><span class="p">)</span> <span class="nf">After</span><span class="p">(</span><span class="nx">opt</span> <span class="nx">easyfsm</span><span class="p">.</span><span class="nx">Param</span><span class="p">,</span> <span class="nx">state</span> <span class="nx">easyfsm</span><span class="p">.</span><span class="nx">State</span><span class="p">,</span> <span class="nx">err</span> <span class="kt">error</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">	<span class="nb">println</span><span class="p">(</span><span class="s">&#34;事件执行后&#34;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="kd">func</span> <span class="p">(</span><span class="nx">o</span> <span class="nx">NotifyExample</span><span class="p">)</span> <span class="nf">Receive</span><span class="p">(</span><span class="nx">opt</span> <span class="o">*</span><span class="nx">easyfsm</span><span class="p">.</span><span class="nx">Param</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">	<span class="nb">println</span><span class="p">(</span><span class="s">&#34;接收到事件变动,发送消息&#34;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="kd">func</span> <span class="nf">init</span><span class="p">()</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">	<span class="c1">// 支付订单事件
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="nx">entity</span> <span class="o">:=</span> <span class="nx">easyfsm</span><span class="p">.</span><span class="nf">NewEventEntity</span><span class="p">(</span><span class="nx">paymentOrderEventName</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">		<span class="kd">func</span><span class="p">(</span><span class="nx">opt</span> <span class="o">*</span><span class="nx">easyfsm</span><span class="p">.</span><span class="nx">Param</span><span class="p">)</span> <span class="p">(</span><span class="nx">easyfsm</span><span class="p">.</span><span class="nx">State</span><span class="p">,</span> <span class="kt">error</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">			<span class="nx">param</span><span class="p">,</span> <span class="nx">ok</span> <span class="o">:=</span> <span class="nx">opt</span><span class="p">.</span><span class="nx">Data</span><span class="p">.(</span><span class="nx">orderParam</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">			<span class="k">if</span> <span class="p">!</span><span class="nx">ok</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">				<span class="nb">panic</span><span class="p">(</span><span class="s">&#34;param err&#34;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">			<span class="p">}</span>
+</span></span><span class="line"><span class="cl">			<span class="nx">fmt</span><span class="p">.</span><span class="nf">Printf</span><span class="p">(</span><span class="s">&#34;param:%+v\n&#34;</span><span class="p">,</span> <span class="nx">param</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">			<span class="c1">// 处理核心业务
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>			<span class="k">return</span> <span class="nx">paidState</span><span class="p">,</span> <span class="kc">nil</span>
+</span></span><span class="line"><span class="cl">		<span class="p">},</span> <span class="nx">easyfsm</span><span class="p">.</span><span class="nf">WithHook</span><span class="p">(</span><span class="nx">HookExample</span><span class="p">{}),</span> <span class="nx">easyfsm</span><span class="p">.</span><span class="nf">WithObservers</span><span class="p">(</span><span class="nx">NotifyExample</span><span class="p">{}))</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">	<span class="c1">// 取消订单事件
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="nx">cancelEntity</span> <span class="o">:=</span> <span class="nx">easyfsm</span><span class="p">.</span><span class="nf">NewEventEntity</span><span class="p">(</span><span class="nx">cancelOrderEventName</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">		<span class="kd">func</span><span class="p">(</span><span class="nx">opt</span> <span class="o">*</span><span class="nx">easyfsm</span><span class="p">.</span><span class="nx">Param</span><span class="p">)</span> <span class="p">(</span><span class="nx">easyfsm</span><span class="p">.</span><span class="nx">State</span><span class="p">,</span> <span class="kt">error</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">			<span class="c1">// 处理核心业务
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>			<span class="nx">param</span><span class="p">,</span> <span class="nx">ok</span> <span class="o">:=</span> <span class="nx">opt</span><span class="p">.</span><span class="nx">Data</span><span class="p">.(</span><span class="nx">orderParam</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">			<span class="k">if</span> <span class="p">!</span><span class="nx">ok</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">				<span class="nb">panic</span><span class="p">(</span><span class="s">&#34;param err&#34;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">			<span class="p">}</span>
+</span></span><span class="line"><span class="cl">			<span class="nx">fmt</span><span class="p">.</span><span class="nf">Printf</span><span class="p">(</span><span class="s">&#34;param:%+v\n&#34;</span><span class="p">,</span> <span class="nx">param</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">			<span class="k">return</span> <span class="nx">canceled</span><span class="p">,</span> <span class="kc">nil</span>
+</span></span><span class="line"><span class="cl">		<span class="p">},</span> <span class="nx">easyfsm</span><span class="p">.</span><span class="nf">WithHook</span><span class="p">(</span><span class="nx">HookExample</span><span class="p">{}))</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">	<span class="c1">// 注册订单状态机
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="nx">easyfsm</span><span class="p">.</span><span class="nf">RegisterStateMachine</span><span class="p">(</span><span class="nx">businessName</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">initState</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">entity</span><span class="p">,</span> <span class="nx">cancelEntity</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="kd">func</span> <span class="nf">main</span><span class="p">()</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">	<span class="c1">// 正常操作
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>
+</span></span><span class="line"><span class="cl">	<span class="c1">// 第一步根据业务，以及当前状态生成fsm
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="nx">fsm</span> <span class="o">:=</span> <span class="nx">easyfsm</span><span class="p">.</span><span class="nf">NewFSM</span><span class="p">(</span><span class="nx">businessName</span><span class="p">,</span> <span class="nx">initState</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">	<span class="c1">// 第二步 调用具体
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="nx">currentState</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">fsm</span><span class="p">.</span><span class="nf">Call</span><span class="p">(</span><span class="nx">paymentOrderEventName</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">easyfsm</span><span class="p">.</span><span class="nf">WithData</span><span class="p">(</span><span class="nx">orderParam</span><span class="p">{</span><span class="nx">OrderNo</span><span class="p">:</span> <span class="s">&#34;wuqinqiang050@gmail.com&#34;</span><span class="p">}))</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">	<span class="nx">fmt</span><span class="p">.</span><span class="nf">Printf</span><span class="p">(</span><span class="s">&#34;[Success]call paymentOrderEventName err:%v\n&#34;</span><span class="p">,</span> <span class="nx">err</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">fmt</span><span class="p">.</span><span class="nf">Printf</span><span class="p">(</span><span class="s">&#34;[Success]call paymentOrderEventName state:%v\n&#34;</span><span class="p">,</span> <span class="nx">currentState</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">time</span><span class="p">.</span><span class="nf">Sleep</span><span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="nx">time</span><span class="p">.</span><span class="nx">Second</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></div><h3 id="结束">结束</h3>
 <p>如果有其他不一样的需求，欢迎大家在issue留言。</p>
 <p>GitHub:<a href="https://github.com/wuqinqiang/easyfsm">easyfsm</a></p>
 ]]></content>
@@ -3765,40 +4004,40 @@ _ = hystrix.Do(&amp;#34;wuqq&amp;#34;, func() error { // talk to other services 
 <p>虽然导致雪崩的发生不仅仅这一种，但是我们需要采取一定的措施，来保证不让这个噩梦发生。而 <code>hystrix-go</code>就很好的提供了 熔断和降级的措施。它的主要思想在于，设置一些阀值，比如最大并发数(当并发数大于设置的并发数，拦截)，错误率百分比(请求数量大于等于设置 的阀值，并且错误率达到设置的百分比时，触发熔断)以及熔断尝试恢复时间等 。</p>
 <h3 id="使用">使用</h3>
 <p><code>hystrix-go</code> 的使用非常简单，你可以调用它的 <code>Go</code> 或者 <code>Do</code>方法，只是 <code>Go</code> 方法是异步的方式。而 <code>Do</code>  方法是同步方式。我们从一个简单的例子开启。</p>
-<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="nx">_</span> <span class="p">=</span> <span class="nx">hystrix</span><span class="p">.</span><span class="nf">Do</span><span class="p">(</span><span class="s">&#34;wuqq&#34;</span><span class="p">,</span> <span class="kd">func</span><span class="p">()</span> <span class="kt">error</span> <span class="p">{</span>
-		<span class="c1">// talk to other services
-</span><span class="c1"></span>		<span class="nx">_</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">http</span><span class="p">.</span><span class="nf">Get</span><span class="p">(</span><span class="s">&#34;https://www.baidu.com/&#34;</span><span class="p">)</span>
-		<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
-			<span class="nx">fmt</span><span class="p">.</span><span class="nf">Println</span><span class="p">(</span><span class="s">&#34;get error:%v&#34;</span><span class="p">,</span><span class="nx">err</span><span class="p">)</span>
-			<span class="k">return</span> <span class="nx">err</span>
-		<span class="p">}</span>
-		<span class="k">return</span> <span class="kc">nil</span>
-	<span class="p">},</span> <span class="kd">func</span><span class="p">(</span><span class="nx">err</span> <span class="kt">error</span><span class="p">)</span> <span class="kt">error</span> <span class="p">{</span>
-		<span class="nx">fmt</span><span class="p">.</span><span class="nf">Printf</span><span class="p">(</span><span class="s">&#34;handle  error:%v\n&#34;</span><span class="p">,</span> <span class="nx">err</span><span class="p">)</span>
-		<span class="k">return</span> <span class="kc">nil</span>
-	<span class="p">})</span>
-</code></pre></div><p><code>Do</code> 函数需要三个参数，第一个参数 <code>commmand</code> 名称，你可以把每个名称当成一个独立当服务，第二个参数是处理正常的逻辑，比如 <code>http</code> 调用服务，返回参数是 <code>err</code>。如果处理|调用失败，那么就执行第三个参数逻辑， 我们称为保底操作。由于服务错误率过高导致熔断器开启，那么之后的请求也直接回调此函数。</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="nx">_</span> <span class="p">=</span> <span class="nx">hystrix</span><span class="p">.</span><span class="nf">Do</span><span class="p">(</span><span class="s">&#34;wuqq&#34;</span><span class="p">,</span> <span class="kd">func</span><span class="p">()</span> <span class="kt">error</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="c1">// talk to other services
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>		<span class="nx">_</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">http</span><span class="p">.</span><span class="nf">Get</span><span class="p">(</span><span class="s">&#34;https://www.baidu.com/&#34;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">		<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">			<span class="nx">fmt</span><span class="p">.</span><span class="nf">Println</span><span class="p">(</span><span class="s">&#34;get error:%v&#34;</span><span class="p">,</span><span class="nx">err</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">			<span class="k">return</span> <span class="nx">err</span>
+</span></span><span class="line"><span class="cl">		<span class="p">}</span>
+</span></span><span class="line"><span class="cl">		<span class="k">return</span> <span class="kc">nil</span>
+</span></span><span class="line"><span class="cl">	<span class="p">},</span> <span class="kd">func</span><span class="p">(</span><span class="nx">err</span> <span class="kt">error</span><span class="p">)</span> <span class="kt">error</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">fmt</span><span class="p">.</span><span class="nf">Printf</span><span class="p">(</span><span class="s">&#34;handle  error:%v\n&#34;</span><span class="p">,</span> <span class="nx">err</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">		<span class="k">return</span> <span class="kc">nil</span>
+</span></span><span class="line"><span class="cl">	<span class="p">})</span>
+</span></span></code></pre></div><p><code>Do</code> 函数需要三个参数，第一个参数 <code>commmand</code> 名称，你可以把每个名称当成一个独立当服务，第二个参数是处理正常的逻辑，比如 <code>http</code> 调用服务，返回参数是 <code>err</code>。如果处理|调用失败，那么就执行第三个参数逻辑， 我们称为保底操作。由于服务错误率过高导致熔断器开启，那么之后的请求也直接回调此函数。</p>
 <p>既然熔断器是按照配置的规则而进行是否开启的操作，那么我们当然可以设置我们想要的值。</p>
-<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="nx">hystrix</span><span class="p">.</span><span class="nf">ConfigureCommand</span><span class="p">(</span><span class="s">&#34;wuqq&#34;</span><span class="p">,</span> <span class="nx">hystrix</span><span class="p">.</span><span class="nx">CommandConfig</span><span class="p">{</span>
-		<span class="nx">Timeout</span><span class="p">:</span>                <span class="nb">int</span><span class="p">(</span><span class="mi">3</span> <span class="o">*</span> <span class="nx">time</span><span class="p">.</span><span class="nx">Second</span><span class="p">),</span>
-		<span class="nx">MaxConcurrentRequests</span><span class="p">:</span>  <span class="mi">10</span><span class="p">,</span>
-		<span class="nx">SleepWindow</span><span class="p">:</span>            <span class="mi">5000</span><span class="p">,</span>
-		<span class="nx">RequestVolumeThreshold</span><span class="p">:</span> <span class="mi">10</span><span class="p">,</span>
-		<span class="nx">ErrorPercentThreshold</span><span class="p">:</span>  <span class="mi">30</span><span class="p">,</span>
-	<span class="p">})</span>
-	<span class="nx">_</span> <span class="p">=</span> <span class="nx">hystrix</span><span class="p">.</span><span class="nf">Do</span><span class="p">(</span><span class="s">&#34;wuqq&#34;</span><span class="p">,</span> <span class="kd">func</span><span class="p">()</span> <span class="kt">error</span> <span class="p">{</span>
-		<span class="c1">// talk to other services
-</span><span class="c1"></span>		<span class="nx">_</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">http</span><span class="p">.</span><span class="nf">Get</span><span class="p">(</span><span class="s">&#34;https://www.baidu.com/&#34;</span><span class="p">)</span>
-		<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
-			<span class="nx">fmt</span><span class="p">.</span><span class="nf">Println</span><span class="p">(</span><span class="s">&#34;get error:%v&#34;</span><span class="p">,</span><span class="nx">err</span><span class="p">)</span>
-			<span class="k">return</span> <span class="nx">err</span>
-		<span class="p">}</span>
-		<span class="k">return</span> <span class="kc">nil</span>
-	<span class="p">},</span> <span class="kd">func</span><span class="p">(</span><span class="nx">err</span> <span class="kt">error</span><span class="p">)</span> <span class="kt">error</span> <span class="p">{</span>
-		<span class="nx">fmt</span><span class="p">.</span><span class="nf">Printf</span><span class="p">(</span><span class="s">&#34;handle  error:%v\n&#34;</span><span class="p">,</span> <span class="nx">err</span><span class="p">)</span>
-		<span class="k">return</span> <span class="kc">nil</span>
-	<span class="p">})</span>
-</code></pre></div><p>稍微解释一下上面配置的值含义:</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="nx">hystrix</span><span class="p">.</span><span class="nf">ConfigureCommand</span><span class="p">(</span><span class="s">&#34;wuqq&#34;</span><span class="p">,</span> <span class="nx">hystrix</span><span class="p">.</span><span class="nx">CommandConfig</span><span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">Timeout</span><span class="p">:</span>                <span class="nb">int</span><span class="p">(</span><span class="mi">3</span> <span class="o">*</span> <span class="nx">time</span><span class="p">.</span><span class="nx">Second</span><span class="p">),</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">MaxConcurrentRequests</span><span class="p">:</span>  <span class="mi">10</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">SleepWindow</span><span class="p">:</span>            <span class="mi">5000</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">RequestVolumeThreshold</span><span class="p">:</span> <span class="mi">10</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">ErrorPercentThreshold</span><span class="p">:</span>  <span class="mi">30</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">	<span class="p">})</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">_</span> <span class="p">=</span> <span class="nx">hystrix</span><span class="p">.</span><span class="nf">Do</span><span class="p">(</span><span class="s">&#34;wuqq&#34;</span><span class="p">,</span> <span class="kd">func</span><span class="p">()</span> <span class="kt">error</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="c1">// talk to other services
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>		<span class="nx">_</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">http</span><span class="p">.</span><span class="nf">Get</span><span class="p">(</span><span class="s">&#34;https://www.baidu.com/&#34;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">		<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">			<span class="nx">fmt</span><span class="p">.</span><span class="nf">Println</span><span class="p">(</span><span class="s">&#34;get error:%v&#34;</span><span class="p">,</span><span class="nx">err</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">			<span class="k">return</span> <span class="nx">err</span>
+</span></span><span class="line"><span class="cl">		<span class="p">}</span>
+</span></span><span class="line"><span class="cl">		<span class="k">return</span> <span class="kc">nil</span>
+</span></span><span class="line"><span class="cl">	<span class="p">},</span> <span class="kd">func</span><span class="p">(</span><span class="nx">err</span> <span class="kt">error</span><span class="p">)</span> <span class="kt">error</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">fmt</span><span class="p">.</span><span class="nf">Printf</span><span class="p">(</span><span class="s">&#34;handle  error:%v\n&#34;</span><span class="p">,</span> <span class="nx">err</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">		<span class="k">return</span> <span class="kc">nil</span>
+</span></span><span class="line"><span class="cl">	<span class="p">})</span>
+</span></span></code></pre></div><p>稍微解释一下上面配置的值含义:</p>
 <ul>
 <li>Timeout: 执行 <code>command</code> 的超时时间。</li>
 <li>MaxConcurrentRequests：<code>command</code> 的最大并发量 。</li>
@@ -3809,105 +4048,103 @@ _ = hystrix.Do(&amp;#34;wuqq&amp;#34;, func() error { // talk to other services 
 <p>当然你不设置的话，那么自动走的默认值。
 <img src="https://cdn.learnku.com/uploads/images/202012/27/26855/VX87CNHDs1.png!large" alt=""></p>
 <p>我们再来看一个简单的例子:</p>
-<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kn">package</span> <span class="nx">main</span>
-
-<span class="kn">import</span> <span class="p">(</span>
-   <span class="s">&#34;fmt&#34;</span>
- <span class="s">&#34;github.com/afex/hystrix-go/hystrix&#34;</span> <span class="s">&#34;net/http&#34;</span> <span class="s">&#34;time&#34;</span><span class="p">)</span>
-
-<span class="kd">type</span> <span class="nx">Handle</span> <span class="kd">struct</span><span class="p">{}</span>
-
-<span class="kd">func</span> <span class="p">(</span><span class="nx">h</span> <span class="o">*</span><span class="nx">Handle</span><span class="p">)</span> <span class="nf">ServeHTTP</span><span class="p">(</span><span class="nx">r</span> <span class="nx">http</span><span class="p">.</span><span class="nx">ResponseWriter</span><span class="p">,</span> <span class="nx">request</span> <span class="o">*</span><span class="nx">http</span><span class="p">.</span><span class="nx">Request</span><span class="p">)</span> <span class="p">{</span>
-   <span class="nx">h</span><span class="p">.</span><span class="nf">Common</span><span class="p">(</span><span class="nx">r</span><span class="p">,</span> <span class="nx">request</span><span class="p">)</span>
-<span class="p">}</span>
-
-<span class="kd">func</span> <span class="p">(</span><span class="nx">h</span> <span class="o">*</span><span class="nx">Handle</span><span class="p">)</span> <span class="nf">Common</span><span class="p">(</span><span class="nx">r</span> <span class="nx">http</span><span class="p">.</span><span class="nx">ResponseWriter</span><span class="p">,</span> <span class="nx">request</span> <span class="o">*</span><span class="nx">http</span><span class="p">.</span><span class="nx">Request</span><span class="p">)</span> <span class="p">{</span>
-   <span class="nx">hystrix</span><span class="p">.</span><span class="nf">ConfigureCommand</span><span class="p">(</span><span class="s">&#34;mycommand&#34;</span><span class="p">,</span> <span class="nx">hystrix</span><span class="p">.</span><span class="nx">CommandConfig</span><span class="p">{</span>
-      <span class="nx">Timeout</span><span class="p">:</span>                <span class="nb">int</span><span class="p">(</span><span class="mi">3</span> <span class="o">*</span> <span class="nx">time</span><span class="p">.</span><span class="nx">Second</span><span class="p">),</span>
-      <span class="nx">MaxConcurrentRequests</span><span class="p">:</span>  <span class="mi">10</span><span class="p">,</span>
-      <span class="nx">SleepWindow</span><span class="p">:</span>            <span class="mi">5000</span><span class="p">,</span>
-      <span class="nx">RequestVolumeThreshold</span><span class="p">:</span> <span class="mi">20</span><span class="p">,</span>
-      <span class="nx">ErrorPercentThreshold</span><span class="p">:</span>  <span class="mi">30</span><span class="p">,</span>
-   <span class="p">})</span>
-   <span class="nx">msg</span> <span class="o">:=</span> <span class="s">&#34;success&#34;</span>
-
-  <span class="nx">_</span> <span class="p">=</span> <span class="nx">hystrix</span><span class="p">.</span><span class="nf">Do</span><span class="p">(</span><span class="s">&#34;mycommand&#34;</span><span class="p">,</span> <span class="kd">func</span><span class="p">()</span> <span class="kt">error</span> <span class="p">{</span>
-      <span class="nx">_</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">http</span><span class="p">.</span><span class="nf">Get</span><span class="p">(</span><span class="s">&#34;https://www.baidu.com&#34;</span><span class="p">)</span>
-      <span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
-         <span class="nx">fmt</span><span class="p">.</span><span class="nf">Printf</span><span class="p">(</span><span class="s">&#34;请求失败:%v&#34;</span><span class="p">,</span> <span class="nx">err</span><span class="p">)</span>
-         <span class="k">return</span> <span class="nx">err</span>
-  <span class="p">}</span>
-      <span class="k">return</span> <span class="kc">nil</span>
-  <span class="p">},</span> <span class="kd">func</span><span class="p">(</span><span class="nx">err</span> <span class="kt">error</span><span class="p">)</span> <span class="kt">error</span> <span class="p">{</span>
-      <span class="nx">fmt</span><span class="p">.</span><span class="nf">Printf</span><span class="p">(</span><span class="s">&#34;handle  error:%v\n&#34;</span><span class="p">,</span> <span class="nx">err</span><span class="p">)</span>
-      <span class="nx">msg</span> <span class="p">=</span> <span class="s">&#34;error&#34;</span>
-  <span class="k">return</span> <span class="kc">nil</span>
-  <span class="p">})</span>
-   <span class="nx">r</span><span class="p">.</span><span class="nf">Write</span><span class="p">([]</span><span class="nb">byte</span><span class="p">(</span><span class="nx">msg</span><span class="p">))</span>
-<span class="p">}</span>
-
-<span class="kd">func</span> <span class="nf">main</span><span class="p">()</span> <span class="p">{</span>
-   <span class="nx">http</span><span class="p">.</span><span class="nf">ListenAndServe</span><span class="p">(</span><span class="s">&#34;:8090&#34;</span><span class="p">,</span> <span class="o">&amp;</span><span class="nx">Handle</span><span class="p">{})</span>
-<span class="p">}</span>
-
-</code></pre></div><p>我们开启了一个 <code>http</code> 服务，监听端口号 <code>8090</code>，所有请求的处理逻辑都在  <code>Common </code> 方法中，在这个方法中，我们主要是发起一次 <code>http</code>请求，请求成功响应<code> success</code>,如果失败，响应失败原因。</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="kn">package</span> <span class="nx">main</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="kn">import</span> <span class="p">(</span>
+</span></span><span class="line"><span class="cl">   <span class="s">&#34;fmt&#34;</span>
+</span></span><span class="line"><span class="cl"> <span class="s">&#34;github.com/afex/hystrix-go/hystrix&#34;</span> <span class="s">&#34;net/http&#34;</span> <span class="s">&#34;time&#34;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="kd">type</span> <span class="nx">Handle</span> <span class="kd">struct</span><span class="p">{}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="kd">func</span> <span class="p">(</span><span class="nx">h</span> <span class="o">*</span><span class="nx">Handle</span><span class="p">)</span> <span class="nf">ServeHTTP</span><span class="p">(</span><span class="nx">r</span> <span class="nx">http</span><span class="p">.</span><span class="nx">ResponseWriter</span><span class="p">,</span> <span class="nx">request</span> <span class="o">*</span><span class="nx">http</span><span class="p">.</span><span class="nx">Request</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">   <span class="nx">h</span><span class="p">.</span><span class="nf">Common</span><span class="p">(</span><span class="nx">r</span><span class="p">,</span> <span class="nx">request</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="kd">func</span> <span class="p">(</span><span class="nx">h</span> <span class="o">*</span><span class="nx">Handle</span><span class="p">)</span> <span class="nf">Common</span><span class="p">(</span><span class="nx">r</span> <span class="nx">http</span><span class="p">.</span><span class="nx">ResponseWriter</span><span class="p">,</span> <span class="nx">request</span> <span class="o">*</span><span class="nx">http</span><span class="p">.</span><span class="nx">Request</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">   <span class="nx">hystrix</span><span class="p">.</span><span class="nf">ConfigureCommand</span><span class="p">(</span><span class="s">&#34;mycommand&#34;</span><span class="p">,</span> <span class="nx">hystrix</span><span class="p">.</span><span class="nx">CommandConfig</span><span class="p">{</span>
+</span></span><span class="line"><span class="cl">      <span class="nx">Timeout</span><span class="p">:</span>                <span class="nb">int</span><span class="p">(</span><span class="mi">3</span> <span class="o">*</span> <span class="nx">time</span><span class="p">.</span><span class="nx">Second</span><span class="p">),</span>
+</span></span><span class="line"><span class="cl">      <span class="nx">MaxConcurrentRequests</span><span class="p">:</span>  <span class="mi">10</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">      <span class="nx">SleepWindow</span><span class="p">:</span>            <span class="mi">5000</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">      <span class="nx">RequestVolumeThreshold</span><span class="p">:</span> <span class="mi">20</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">      <span class="nx">ErrorPercentThreshold</span><span class="p">:</span>  <span class="mi">30</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">   <span class="p">})</span>
+</span></span><span class="line"><span class="cl">   <span class="nx">msg</span> <span class="o">:=</span> <span class="s">&#34;success&#34;</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">  <span class="nx">_</span> <span class="p">=</span> <span class="nx">hystrix</span><span class="p">.</span><span class="nf">Do</span><span class="p">(</span><span class="s">&#34;mycommand&#34;</span><span class="p">,</span> <span class="kd">func</span><span class="p">()</span> <span class="kt">error</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">      <span class="nx">_</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">http</span><span class="p">.</span><span class="nf">Get</span><span class="p">(</span><span class="s">&#34;https://www.baidu.com&#34;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">      <span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">         <span class="nx">fmt</span><span class="p">.</span><span class="nf">Printf</span><span class="p">(</span><span class="s">&#34;请求失败:%v&#34;</span><span class="p">,</span> <span class="nx">err</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">         <span class="k">return</span> <span class="nx">err</span>
+</span></span><span class="line"><span class="cl">  <span class="p">}</span>
+</span></span><span class="line"><span class="cl">      <span class="k">return</span> <span class="kc">nil</span>
+</span></span><span class="line"><span class="cl">  <span class="p">},</span> <span class="kd">func</span><span class="p">(</span><span class="nx">err</span> <span class="kt">error</span><span class="p">)</span> <span class="kt">error</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">      <span class="nx">fmt</span><span class="p">.</span><span class="nf">Printf</span><span class="p">(</span><span class="s">&#34;handle  error:%v\n&#34;</span><span class="p">,</span> <span class="nx">err</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">      <span class="nx">msg</span> <span class="p">=</span> <span class="s">&#34;error&#34;</span>
+</span></span><span class="line"><span class="cl">  <span class="k">return</span> <span class="kc">nil</span>
+</span></span><span class="line"><span class="cl">  <span class="p">})</span>
+</span></span><span class="line"><span class="cl">   <span class="nx">r</span><span class="p">.</span><span class="nf">Write</span><span class="p">([]</span><span class="nb">byte</span><span class="p">(</span><span class="nx">msg</span><span class="p">))</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="kd">func</span> <span class="nf">main</span><span class="p">()</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">   <span class="nx">http</span><span class="p">.</span><span class="nf">ListenAndServe</span><span class="p">(</span><span class="s">&#34;:8090&#34;</span><span class="p">,</span> <span class="o">&amp;</span><span class="nx">Handle</span><span class="p">{})</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></div><p>我们开启了一个 <code>http</code> 服务，监听端口号 <code>8090</code>，所有请求的处理逻辑都在  <code>Common </code> 方法中，在这个方法中，我们主要是发起一次 <code>http</code>请求，请求成功响应<code> success</code>,如果失败，响应失败原因。</p>
 <p>我们再写另一个简单程序，并发 <code>11</code> 次的请求 <code>8090</code> 端口。</p>
-<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kn">package</span> <span class="nx">main</span>
-
-<span class="kn">import</span> <span class="p">(</span>
-	<span class="s">&#34;fmt&#34;</span>
-	<span class="s">&#34;io/ioutil&#34;</span>
-	<span class="s">&#34;net/http&#34;</span>
-	<span class="s">&#34;sync&#34;</span>
-	<span class="s">&#34;time&#34;</span>
-<span class="p">)</span>
-
-<span class="kd">var</span> <span class="nx">client</span> <span class="o">*</span><span class="nx">http</span><span class="p">.</span><span class="nx">Client</span>
-
-<span class="kd">func</span> <span class="nf">init</span><span class="p">()</span> <span class="p">{</span>
-	<span class="nx">tr</span> <span class="o">:=</span> <span class="o">&amp;</span><span class="nx">http</span><span class="p">.</span><span class="nx">Transport</span><span class="p">{</span>
-		<span class="nx">MaxIdleConns</span><span class="p">:</span>    <span class="mi">100</span><span class="p">,</span>
-		<span class="nx">IdleConnTimeout</span><span class="p">:</span> <span class="mi">1</span> <span class="o">*</span> <span class="nx">time</span><span class="p">.</span><span class="nx">Second</span><span class="p">,</span>
-	<span class="p">}</span>
-	<span class="nx">client</span> <span class="p">=</span> <span class="o">&amp;</span><span class="nx">http</span><span class="p">.</span><span class="nx">Client</span><span class="p">{</span><span class="nx">Transport</span><span class="p">:</span> <span class="nx">tr</span><span class="p">}</span>
-<span class="p">}</span>
-
-<span class="kd">type</span> <span class="nx">info</span> <span class="kd">struct</span> <span class="p">{</span>
-	<span class="nx">Data</span> <span class="kd">interface</span><span class="p">{}</span> <span class="s">`json:&#34;data&#34;`</span>
-<span class="p">}</span>
-
-<span class="kd">func</span> <span class="nf">main</span><span class="p">()</span> <span class="p">{</span>
-	<span class="kd">var</span> <span class="nx">wg</span> <span class="nx">sync</span><span class="p">.</span><span class="nx">WaitGroup</span>
-
-	<span class="k">for</span> <span class="nx">i</span> <span class="o">:=</span> <span class="mi">0</span><span class="p">;</span> <span class="nx">i</span> <span class="p">&lt;</span> <span class="mi">11</span><span class="p">;</span> <span class="nx">i</span><span class="o">++</span> <span class="p">{</span>
-		<span class="nx">wg</span><span class="p">.</span><span class="nf">Add</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
-		<span class="k">go</span> <span class="kd">func</span><span class="p">(</span><span class="nx">int2</span> <span class="kt">int</span><span class="p">)</span> <span class="p">{</span>
-			<span class="k">defer</span> <span class="nx">wg</span><span class="p">.</span><span class="nf">Done</span><span class="p">()</span>
-			<span class="nx">req</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">http</span><span class="p">.</span><span class="nf">NewRequest</span><span class="p">(</span><span class="s">&#34;GET&#34;</span><span class="p">,</span> <span class="s">&#34;http://localhost:8090&#34;</span><span class="p">,</span> <span class="kc">nil</span><span class="p">)</span>
-			<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
-				<span class="nx">fmt</span><span class="p">.</span><span class="nf">Printf</span><span class="p">(</span><span class="s">&#34;初始化http客户端处错误:%v&#34;</span><span class="p">,</span> <span class="nx">err</span><span class="p">)</span>
-				<span class="k">return</span>
-			<span class="p">}</span>
-			<span class="nx">resp</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">client</span><span class="p">.</span><span class="nf">Do</span><span class="p">(</span><span class="nx">req</span><span class="p">)</span>
-			<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
-				<span class="nx">fmt</span><span class="p">.</span><span class="nf">Printf</span><span class="p">(</span><span class="s">&#34;初始化http客户端处错误:%v&#34;</span><span class="p">,</span> <span class="nx">err</span><span class="p">)</span>
-				<span class="k">return</span>
-			<span class="p">}</span>
-			<span class="k">defer</span> <span class="nx">resp</span><span class="p">.</span><span class="nx">Body</span><span class="p">.</span><span class="nf">Close</span><span class="p">()</span>
-			<span class="nx">nByte</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">ioutil</span><span class="p">.</span><span class="nf">ReadAll</span><span class="p">(</span><span class="nx">resp</span><span class="p">.</span><span class="nx">Body</span><span class="p">)</span>
-			<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
-				<span class="nx">fmt</span><span class="p">.</span><span class="nf">Printf</span><span class="p">(</span><span class="s">&#34;读取http数据失败:%v&#34;</span><span class="p">,</span> <span class="nx">err</span><span class="p">)</span>
-				<span class="k">return</span>
-			<span class="p">}</span>
-			<span class="nx">fmt</span><span class="p">.</span><span class="nf">Printf</span><span class="p">(</span><span class="s">&#34;接收到到值:%v\n&#34;</span><span class="p">,</span> <span class="nb">string</span><span class="p">(</span><span class="nx">nByte</span><span class="p">))</span>
-		<span class="p">}(</span><span class="nx">i</span><span class="p">)</span>
-	<span class="p">}</span>
-	<span class="nx">wg</span><span class="p">.</span><span class="nf">Wait</span><span class="p">()</span>
-
-	<span class="nx">fmt</span><span class="p">.</span><span class="nf">Printf</span><span class="p">(</span><span class="s">&#34;请求完毕\n&#34;</span><span class="p">)</span>
-<span class="p">}</span>
-
-</code></pre></div><p>由于我们配置 <code>MaxConcurrentRequests</code> 为10，那么意味着还有个 g 请求会失败:
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="kn">package</span> <span class="nx">main</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="kn">import</span> <span class="p">(</span>
+</span></span><span class="line"><span class="cl">	<span class="s">&#34;fmt&#34;</span>
+</span></span><span class="line"><span class="cl">	<span class="s">&#34;io/ioutil&#34;</span>
+</span></span><span class="line"><span class="cl">	<span class="s">&#34;net/http&#34;</span>
+</span></span><span class="line"><span class="cl">	<span class="s">&#34;sync&#34;</span>
+</span></span><span class="line"><span class="cl">	<span class="s">&#34;time&#34;</span>
+</span></span><span class="line"><span class="cl"><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="kd">var</span> <span class="nx">client</span> <span class="o">*</span><span class="nx">http</span><span class="p">.</span><span class="nx">Client</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="kd">func</span> <span class="nf">init</span><span class="p">()</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">tr</span> <span class="o">:=</span> <span class="o">&amp;</span><span class="nx">http</span><span class="p">.</span><span class="nx">Transport</span><span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">MaxIdleConns</span><span class="p">:</span>    <span class="mi">100</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">IdleConnTimeout</span><span class="p">:</span> <span class="mi">1</span> <span class="o">*</span> <span class="nx">time</span><span class="p">.</span><span class="nx">Second</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">client</span> <span class="p">=</span> <span class="o">&amp;</span><span class="nx">http</span><span class="p">.</span><span class="nx">Client</span><span class="p">{</span><span class="nx">Transport</span><span class="p">:</span> <span class="nx">tr</span><span class="p">}</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="kd">type</span> <span class="nx">info</span> <span class="kd">struct</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">Data</span> <span class="kd">interface</span><span class="p">{}</span> <span class="s">`json:&#34;data&#34;`</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="kd">func</span> <span class="nf">main</span><span class="p">()</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">	<span class="kd">var</span> <span class="nx">wg</span> <span class="nx">sync</span><span class="p">.</span><span class="nx">WaitGroup</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">	<span class="k">for</span> <span class="nx">i</span> <span class="o">:=</span> <span class="mi">0</span><span class="p">;</span> <span class="nx">i</span> <span class="p">&lt;</span> <span class="mi">11</span><span class="p">;</span> <span class="nx">i</span><span class="o">++</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">wg</span><span class="p">.</span><span class="nf">Add</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">		<span class="k">go</span> <span class="kd">func</span><span class="p">(</span><span class="nx">int2</span> <span class="kt">int</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">			<span class="k">defer</span> <span class="nx">wg</span><span class="p">.</span><span class="nf">Done</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">			<span class="nx">req</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">http</span><span class="p">.</span><span class="nf">NewRequest</span><span class="p">(</span><span class="s">&#34;GET&#34;</span><span class="p">,</span> <span class="s">&#34;http://localhost:8090&#34;</span><span class="p">,</span> <span class="kc">nil</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">			<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">				<span class="nx">fmt</span><span class="p">.</span><span class="nf">Printf</span><span class="p">(</span><span class="s">&#34;初始化http客户端处错误:%v&#34;</span><span class="p">,</span> <span class="nx">err</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">				<span class="k">return</span>
+</span></span><span class="line"><span class="cl">			<span class="p">}</span>
+</span></span><span class="line"><span class="cl">			<span class="nx">resp</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">client</span><span class="p">.</span><span class="nf">Do</span><span class="p">(</span><span class="nx">req</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">			<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">				<span class="nx">fmt</span><span class="p">.</span><span class="nf">Printf</span><span class="p">(</span><span class="s">&#34;初始化http客户端处错误:%v&#34;</span><span class="p">,</span> <span class="nx">err</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">				<span class="k">return</span>
+</span></span><span class="line"><span class="cl">			<span class="p">}</span>
+</span></span><span class="line"><span class="cl">			<span class="k">defer</span> <span class="nx">resp</span><span class="p">.</span><span class="nx">Body</span><span class="p">.</span><span class="nf">Close</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">			<span class="nx">nByte</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">ioutil</span><span class="p">.</span><span class="nf">ReadAll</span><span class="p">(</span><span class="nx">resp</span><span class="p">.</span><span class="nx">Body</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">			<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">				<span class="nx">fmt</span><span class="p">.</span><span class="nf">Printf</span><span class="p">(</span><span class="s">&#34;读取http数据失败:%v&#34;</span><span class="p">,</span> <span class="nx">err</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">				<span class="k">return</span>
+</span></span><span class="line"><span class="cl">			<span class="p">}</span>
+</span></span><span class="line"><span class="cl">			<span class="nx">fmt</span><span class="p">.</span><span class="nf">Printf</span><span class="p">(</span><span class="s">&#34;接收到到值:%v\n&#34;</span><span class="p">,</span> <span class="nb">string</span><span class="p">(</span><span class="nx">nByte</span><span class="p">))</span>
+</span></span><span class="line"><span class="cl">		<span class="p">}(</span><span class="nx">i</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">wg</span><span class="p">.</span><span class="nf">Wait</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">	<span class="nx">fmt</span><span class="p">.</span><span class="nf">Printf</span><span class="p">(</span><span class="s">&#34;请求完毕\n&#34;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></div><p>由于我们配置 <code>MaxConcurrentRequests</code> 为10，那么意味着还有个 g 请求会失败:
 <img src="https://cdn.learnku.com/uploads/images/202012/27/26855/lUriDTdjlP.png!large" alt="">
 和我们想的一样。</p>
 <p>接着我们把网络断开，并发请求改成10次。再次运行程序并发请求 <code>8090</code> 端口，此时由于网络已关闭，导致请求百度失败：
@@ -3922,33 +4159,33 @@ _ = hystrix.Do(&amp;#34;wuqq&amp;#34;, func() error { // talk to other services 
 可以看到，10个都已经是正常成功的状态了。</p>
 <p>那么问题来了，为什么最上面的图只有一个是成功的？5秒已经过了，并且当前网络正常，应该是10个请求都成功，但是我们看到的只有一个是成功状态。通过源码我们可以找到答案:
 具体逻辑在判断当前请求是否可以调用依赖</p>
-<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="k">if</span> <span class="p">!</span><span class="nx">cmd</span><span class="p">.</span><span class="nx">circuit</span><span class="p">.</span><span class="nf">AllowRequest</span><span class="p">()</span> <span class="p">{</span>
-			<span class="o">......</span>
-			<span class="k">return</span>
-		<span class="p">}</span>
-</code></pre></div><div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go">
-<span class="kd">func</span> <span class="p">(</span><span class="nx">circuit</span> <span class="o">*</span><span class="nx">CircuitBreaker</span><span class="p">)</span> <span class="nf">AllowRequest</span><span class="p">()</span> <span class="kt">bool</span> <span class="p">{</span>
-	<span class="k">return</span> <span class="p">!</span><span class="nx">circuit</span><span class="p">.</span><span class="nf">IsOpen</span><span class="p">()</span> <span class="o">||</span> <span class="nx">circuit</span><span class="p">.</span><span class="nf">allowSingleTest</span><span class="p">()</span>
-<span class="p">}</span>
-
-<span class="kd">func</span> <span class="p">(</span><span class="nx">circuit</span> <span class="o">*</span><span class="nx">CircuitBreaker</span><span class="p">)</span> <span class="nf">allowSingleTest</span><span class="p">()</span> <span class="kt">bool</span> <span class="p">{</span>
-	<span class="nx">circuit</span><span class="p">.</span><span class="nx">mutex</span><span class="p">.</span><span class="nf">RLock</span><span class="p">()</span>
-	<span class="k">defer</span> <span class="nx">circuit</span><span class="p">.</span><span class="nx">mutex</span><span class="p">.</span><span class="nf">RUnlock</span><span class="p">()</span>
-
-	<span class="nx">now</span> <span class="o">:=</span> <span class="nx">time</span><span class="p">.</span><span class="nf">Now</span><span class="p">().</span><span class="nf">UnixNano</span><span class="p">()</span>
-	<span class="nx">openedOrLastTestedTime</span> <span class="o">:=</span> <span class="nx">atomic</span><span class="p">.</span><span class="nf">LoadInt64</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">circuit</span><span class="p">.</span><span class="nx">openedOrLastTestedTime</span><span class="p">)</span>
-	<span class="k">if</span> <span class="nx">circuit</span><span class="p">.</span><span class="nx">open</span> <span class="o">&amp;&amp;</span> <span class="nx">now</span> <span class="p">&gt;</span> <span class="nx">openedOrLastTestedTime</span><span class="o">+</span><span class="nf">getSettings</span><span class="p">(</span><span class="nx">circuit</span><span class="p">.</span><span class="nx">Name</span><span class="p">).</span><span class="nx">SleepWindow</span><span class="p">.</span><span class="nf">Nanoseconds</span><span class="p">()</span> <span class="p">{</span>
-	<span class="o">/</span>
-		<span class="nx">swapped</span> <span class="o">:=</span> <span class="nx">atomic</span><span class="p">.</span><span class="nf">CompareAndSwapInt64</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">circuit</span><span class="p">.</span><span class="nx">openedOrLastTestedTime</span><span class="p">,</span> <span class="nx">openedOrLastTestedTime</span><span class="p">,</span> <span class="nx">now</span><span class="p">)</span> <span class="c1">//这一句才是关键
-</span><span class="c1"></span>		<span class="k">if</span> <span class="nx">swapped</span> <span class="p">{</span>
-			<span class="nx">log</span><span class="p">.</span><span class="nf">Printf</span><span class="p">(</span><span class="s">&#34;hystrix-go: allowing single test to possibly close circuit %v&#34;</span><span class="p">,</span> <span class="nx">circuit</span><span class="p">.</span><span class="nx">Name</span><span class="p">)</span>
-		<span class="p">}</span>
-		<span class="k">return</span> <span class="nx">swapped</span>
-	<span class="p">}</span>
-
-	<span class="k">return</span> <span class="kc">false</span>
-<span class="p">}</span>
-</code></pre></div><p>这段代码首先判断了熔断器是否开启，并且当前时间大于 上一次开启熔断器的时间+ <code>SleepWindow</code> 的时间，如果条件都符合的话，更新此熔断器最新的 <code>openedOrLastTestedTime </code> ,是通过  <code>CompareAndSwapInt64 </code> 原子操作完成的，意外着必然只会有一个成功。
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="k">if</span> <span class="p">!</span><span class="nx">cmd</span><span class="p">.</span><span class="nx">circuit</span><span class="p">.</span><span class="nf">AllowRequest</span><span class="p">()</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">			<span class="o">......</span>
+</span></span><span class="line"><span class="cl">			<span class="k">return</span>
+</span></span><span class="line"><span class="cl">		<span class="p">}</span>
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="kd">func</span> <span class="p">(</span><span class="nx">circuit</span> <span class="o">*</span><span class="nx">CircuitBreaker</span><span class="p">)</span> <span class="nf">AllowRequest</span><span class="p">()</span> <span class="kt">bool</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">	<span class="k">return</span> <span class="p">!</span><span class="nx">circuit</span><span class="p">.</span><span class="nf">IsOpen</span><span class="p">()</span> <span class="o">||</span> <span class="nx">circuit</span><span class="p">.</span><span class="nf">allowSingleTest</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="kd">func</span> <span class="p">(</span><span class="nx">circuit</span> <span class="o">*</span><span class="nx">CircuitBreaker</span><span class="p">)</span> <span class="nf">allowSingleTest</span><span class="p">()</span> <span class="kt">bool</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">circuit</span><span class="p">.</span><span class="nx">mutex</span><span class="p">.</span><span class="nf">RLock</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">	<span class="k">defer</span> <span class="nx">circuit</span><span class="p">.</span><span class="nx">mutex</span><span class="p">.</span><span class="nf">RUnlock</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">	<span class="nx">now</span> <span class="o">:=</span> <span class="nx">time</span><span class="p">.</span><span class="nf">Now</span><span class="p">().</span><span class="nf">UnixNano</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">openedOrLastTestedTime</span> <span class="o">:=</span> <span class="nx">atomic</span><span class="p">.</span><span class="nf">LoadInt64</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">circuit</span><span class="p">.</span><span class="nx">openedOrLastTestedTime</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">	<span class="k">if</span> <span class="nx">circuit</span><span class="p">.</span><span class="nx">open</span> <span class="o">&amp;&amp;</span> <span class="nx">now</span> <span class="p">&gt;</span> <span class="nx">openedOrLastTestedTime</span><span class="o">+</span><span class="nf">getSettings</span><span class="p">(</span><span class="nx">circuit</span><span class="p">.</span><span class="nx">Name</span><span class="p">).</span><span class="nx">SleepWindow</span><span class="p">.</span><span class="nf">Nanoseconds</span><span class="p">()</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">	<span class="o">/</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">swapped</span> <span class="o">:=</span> <span class="nx">atomic</span><span class="p">.</span><span class="nf">CompareAndSwapInt64</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">circuit</span><span class="p">.</span><span class="nx">openedOrLastTestedTime</span><span class="p">,</span> <span class="nx">openedOrLastTestedTime</span><span class="p">,</span> <span class="nx">now</span><span class="p">)</span> <span class="c1">//这一句才是关键
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>		<span class="k">if</span> <span class="nx">swapped</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">			<span class="nx">log</span><span class="p">.</span><span class="nf">Printf</span><span class="p">(</span><span class="s">&#34;hystrix-go: allowing single test to possibly close circuit %v&#34;</span><span class="p">,</span> <span class="nx">circuit</span><span class="p">.</span><span class="nx">Name</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">		<span class="p">}</span>
+</span></span><span class="line"><span class="cl">		<span class="k">return</span> <span class="nx">swapped</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">	<span class="k">return</span> <span class="kc">false</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></div><p>这段代码首先判断了熔断器是否开启，并且当前时间大于 上一次开启熔断器的时间+ <code>SleepWindow</code> 的时间，如果条件都符合的话，更新此熔断器最新的 <code>openedOrLastTestedTime </code> ,是通过  <code>CompareAndSwapInt64 </code> 原子操作完成的，意外着必然只会有一个成功。
 此时熔断器还是半开的状态，接着如果能拿到令牌，执行<code>run</code> 函数（也就是Do传入的第二个简单封装后的函数），发起 <code>http</code> 请求，如果成功，上报成功状态，关闭熔断器。如果失败，那么熔断器依旧开启。
 <img src="https://cdn.learnku.com/uploads/images/202012/27/26855/sLDxoIvR4J.png!large" alt=""></p>
 <p><img src="https://cdn.learnku.com/uploads/images/202012/27/26855/ChLKeOHULy.png!large" alt="hystrix-go源码解析"></p>
