@@ -5,22 +5,31 @@
     <loc>https://www.syst.top/friends/friends/</loc>
     <lastmod>2021-08-11T00:00:00+00:00</lastmod>
   </url><url>
+    <loc>https://www.syst.top/lives/</loc>
+    <lastmod>2022-04-16T20:24:52+08:00</lastmod>
+  </url><url>
+    <loc>https://www.syst.top/tags/</loc>
+    <lastmod>2022-04-16T20:24:52+08:00</lastmod>
+  </url><url>
+    <loc>https://www.syst.top/tags/%E4%B8%8D%E5%AE%9A%E6%9C%9F%E6%9B%B4%E6%96%B0%E7%9A%84%E6%97%A5%E5%B8%B8/</loc>
+    <lastmod>2022-04-16T20:24:52+08:00</lastmod>
+  </url><url>
+    <loc>https://www.syst.top/lives/2022-04-16/</loc>
+    <lastmod>2022-04-16T20:24:52+08:00</lastmod>
+  </url><url>
+    <loc>https://www.syst.top/</loc>
+    <lastmod>2022-04-16T20:24:52+08:00</lastmod>
+  </url><url>
     <loc>https://www.syst.top/tags/go/</loc>
     <lastmod>2022-04-14T10:23:51+08:00</lastmod>
   </url><url>
-    <loc>https://www.syst.top/posts/go/io/</loc>
+    <loc>https://www.syst.top/posts/go/netpoll/</loc>
     <lastmod>2022-04-14T10:23:51+08:00</lastmod>
   </url><url>
     <loc>https://www.syst.top/tags/net/</loc>
     <lastmod>2022-04-14T10:23:51+08:00</lastmod>
   </url><url>
     <loc>https://www.syst.top/posts/</loc>
-    <lastmod>2022-04-14T10:23:51+08:00</lastmod>
-  </url><url>
-    <loc>https://www.syst.top/tags/</loc>
-    <lastmod>2022-04-14T10:23:51+08:00</lastmod>
-  </url><url>
-    <loc>https://www.syst.top/</loc>
     <lastmod>2022-04-14T10:23:51+08:00</lastmod>
   </url><url>
     <loc>https://www.syst.top/readings/</loc>
@@ -43,9 +52,6 @@
   </url><url>
     <loc>https://www.syst.top/posts/go/generics/</loc>
     <lastmod>2022-01-02T18:32:00+08:00</lastmod>
-  </url><url>
-    <loc>https://www.syst.top/lives/</loc>
-    <lastmod>2021-12-23T23:18:52+08:00</lastmod>
   </url><url>
     <loc>https://www.syst.top/lives/bulaoqishi/</loc>
     <lastmod>2021-12-23T23:18:52+08:00</lastmod>
@@ -94,12 +100,6 @@
   </url><url>
     <loc>https://www.syst.top/posts/go/dtm/</loc>
     <lastmod>2021-10-10T21:25:52+08:00</lastmod>
-  </url><url>
-    <loc>https://www.syst.top/tags/%E7%A4%BE%E4%BA%A4%E5%AA%92%E4%BD%93/</loc>
-    <lastmod>2021-08-29T15:25:52+08:00</lastmod>
-  </url><url>
-    <loc>https://www.syst.top/lives/medium/</loc>
-    <lastmod>2021-08-29T15:25:52+08:00</lastmod>
   </url><url>
     <loc>https://www.syst.top/tags/grpc/</loc>
     <lastmod>2021-08-22T08:01:52+08:00</lastmod>
@@ -182,12 +182,6 @@
     <loc>https://www.syst.top/posts/go/hystrix-go/</loc>
     <lastmod>2021-04-17T22:24:32+08:00</lastmod>
   </url><url>
-    <loc>https://www.syst.top/tags/%E4%B8%8D%E5%AE%9A%E6%9C%9F%E6%9B%B4%E6%96%B0%E7%9A%84%E6%97%A5%E5%B8%B8/</loc>
-    <lastmod>2021-04-16T20:24:52+08:00</lastmod>
-  </url><url>
-    <loc>https://www.syst.top/lives/2022-04-16/</loc>
-    <lastmod>2021-04-16T20:24:52+08:00</lastmod>
-  </url><url>
     <loc>https://www.syst.top/tags/etcd/</loc>
     <lastmod>2021-04-10T09:54:52+08:00</lastmod>
   </url><url>
@@ -211,7 +205,5 @@
   </url><url>
     <loc>https://www.syst.top/about/</loc>
     <lastmod>2021-04-03T00:00:00+00:00</lastmod>
-  </url><url>
-    <loc>https://www.syst.top/lives/untitled/</loc>
   </url>
 </urlset>
