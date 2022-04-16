@@ -10,11 +10,11 @@ tags :
 
 
 
-#### 开篇
+### 开篇
 
 之前简单看过一点go原生netpoll，没注意太多细节。最近从头到尾看了一遍，特写篇文章记录下。文章很长，请耐心看完，一定有所收获。
 
-#### 用户空间和内核空间
+### 用户空间和内核空间
 
 在linux中，经常能看到两个词语:User space(用户空间)和Kernel space (内核空间)。
 
@@ -28,13 +28,13 @@ Kernel space可以调用系统的一切资源。User space 不能直接调用系
 
 比如像下面这样，
 
-![截屏2022-04-14 下午11.51.47](https://cdn.syst.top/截屏2022-04-14 下午11.51.47.png)
+![截屏2022-04-14 下午11.51.47](https://cdn.syst.top/20220414115147.png)
 
 应用程序要读取磁盘上的一个文件，它可以向内核发起一个 “系统调用” 告诉内核：”我要读取磁盘上的某某文件”。其实就是通过一个特殊的指令让进程从用户态进入到内核态，在内核空间中，CPU 可以执行任何的指令，当然也包括从磁盘上读取数据。具体过程是先把数据读取到内核空间中，然后再把数据拷贝到用户空间并从内核态切换到用户态。此时应用程序已经从系统调用中返回并且拿到了想要的数据，继续往下执行用户空间执行逻辑。
 
 这样的话，一旦涉及到对I/O的处理，就必然会涉及到在用户态和内核态之间来回切换。
 
-#### io模型
+### io模型
 
 网上有太多关于I/O模型的文章，看着看着有可能就跑偏了，所以我还是从 <<UNIX 网络编程>> 中总结的5中I/O模型说起吧。
 
@@ -50,7 +50,7 @@ Unix可用的5种I/O模型。
 
 ##### 阻塞I/O
 
-![截屏2022-04-09 上午10.29.31](https://cdn.syst.top/截屏2022-04-09 上午10.29.31.png)
+![截屏2022-04-09 上午10.29.31](https://cdn.syst.top/20220409102931.png)
 
 阻塞式I/O下，进程调用recvfrom，直到数据到达且被复制到应用程序的缓冲区中或者发生错误才返回，在整个过程进程都是被阻塞的。
 
@@ -58,7 +58,7 @@ Unix可用的5种I/O模型。
 
 ##### 非阻塞I/O
 
-![截屏2022-04-09 上午10.39.42](https://cdn.syst.top/截屏2022-04-09 上午10.39.42.png)
+![截屏2022-04-09 上午10.39.42](https://cdn.syst.top/20220409103942.png)
 
 从图中可以看出，前三次调用recvfrom中没有数据可返回，因此内核转而立即返回一个EWOULDBLOCK错误。第四次调用recvfrom时已有一个数据报准备好，它被复制到应用程序缓冲区，于是recvfrom成功返回。
 
@@ -66,7 +66,7 @@ Unix可用的5种I/O模型。
 
 ##### I/O多路复用
 
-![截屏2022-04-09 上午10.39.48](https://cdn.syst.top/截屏2022-04-09 上午10.39.48.png)
+![截屏2022-04-09 上午10.39.48](https://cdn.syst.top/20220409103948.png)
 
 有了I/O多路复用(I/O multiplexing)，我们就可以调用 select 或者 poll，阻塞在这两个系统调用中的某一个之上，而不是阻塞在真正的I/O系统调用上。
 
@@ -83,15 +83,15 @@ POSIX 把这两种术语定义如下:
 
 基于上面的定义，
 
-![截屏2022-04-09 上午11.06.43](https://cdn.syst.top/截屏2022-04-09 上午11.06.43.png)
+![截屏2022-04-09 上午11.06.43](https://cdn.syst.top/20220409110643.png)
 
 异步I/O的关键在于第二步的recrfrom是否会阻塞住用户进程，如果不阻塞，那它就是异步I/O。从上面汇总图中可以看出，只有异步I/O满足POSIX中对异步I/O的定义。
 
-#### Go netpoller
+### Go netpoller
 
 Go netpoller 底层就是对I/O多路复用的封装。不同平台对I/O多路复用有不同的实现方式。比如Linux的select、poll和epoll(具体差别不是很明白可以看这篇)。在MacOS则是kqueue,而Windows是基于异步I/O实现的icop......，基于这些背景，Go针对不同的平台调用实现了多版本的netpoller。
 
-![截屏2022-04-09 下午8.39.28](https://cdn.syst.top/截屏2022-04-09 下午8.39.28.png)
+![截屏2022-04-09 下午8.39.28](https://cdn.syst.top/2022040983928.png)
 
 下面我们通过一个demo开始讲解。
 
@@ -101,13 +101,13 @@ Go netpoller 底层就是对I/O多路复用的封装。不同平台对I/O多路�
 
 而且我们使用的是同步的模式去编写异步的逻辑，一个连接对应一个g处理，极其简单和易于理解。go标准库中的http.server也是这么干的。
 
-![carbon (14)](https://cdn.syst.top/carbon (14).png)
+![carbon (14)](https://cdn.syst.top/carbon14.png)
 
 针对上面的tcp服务demo，我们需要关注这段代码底层都发生了什么。
 
 上面代码中主要涉及底层的一些结构。
 
-![截屏2022-04-09 下午8.24.29](https://cdn.syst.top/截屏2022-04-09 下午8.24.29.png)
+![截屏2022-04-09 下午8.24.29](https://cdn.syst.top/2022040982429.png)
 
 先简单解释一波。
 
@@ -142,7 +142,7 @@ Go netpoller 底层就是对I/O多路复用的封装。不同平台对I/O多路�
 
 
 
-##### Listen解析
+### Listen解析
 
 带着这些问题，我们接着看流程。
 
@@ -158,7 +158,7 @@ Go netpoller 底层就是对I/O多路复用的封装。不同平台对I/O多路�
 
 上图是在调用socket函数这一步返回的netFD，可想而之核心逻辑都在这里面。
 
-![截屏2022-04-12 下午9.49.36](https://cdn.syst.top/截屏2022-04-12 下午9.49.36.png)
+![截屏2022-04-12 下午9.49.36](https://cdn.syst.top/2022041294936.png)
 
 我们可以把这个函数核心点看成三步。
 
@@ -176,7 +176,7 @@ Go netpoller 底层就是对I/O多路复用的封装。不同平台对I/O多路�
 
 第三步，也就是最核心的一步，调用netFD自身的listenStream方法。
 
-![截屏2022-04-12 下午10.12.07](https://cdn.syst.top/截屏2022-04-12 下午10.12.07.png)
+![截屏2022-04-12 下午10.12.07](https://cdn.syst.top/20220412101207.png)
 
 listenStream里面也有核心的三步:
 
@@ -199,19 +199,19 @@ listenStream里面也有核心的三步:
 
 接着我们看下runtime_pollServerInit函数，
 
-![截屏2022-04-12 下午10.40.34](https://cdn.syst.top/截屏2022-04-12 下午10.40.34.png)
+![截屏2022-04-12 下午10.40.34](https://cdn.syst.top/20220412104034.png)
 
 这是咋回事，和我们平常看过的函数长的不太一样，执行体呢？
 
 其实这个函数是通过 **go:linkname**连接到具体实现的函数poll_runtime_pollServerInit。找起来也很简单，
 
-![截屏2022-04-12 下午10.42.57](https://cdn.syst.top/截屏2022-04-12 下午10.42.57.png)
+![截屏2022-04-12 下午10.42.57](https://cdn.syst.top/20220412104257.png)
 
 看到poll_runtime_pollServerInit()上面的 **//go:linkname xxx** 了吗？不了解的可以看看Go官方文档`go:linkname。
 
 所以最终runtime_pollServerInit调用的是，
 
-![截屏2022-04-12 下午10.47.19](https://cdn.syst.top/截屏2022-04-12 下午10.47.19.png)
+![截屏2022-04-12 下午10.47.19](https://cdn.syst.top/20220412104719.png)
 
 通过调用poll_runtime_pollServerInit->netpollGenericInit，netpollGenericInit里调用netpollinit函数完成初始化。
 
@@ -225,25 +225,25 @@ listenStream里面也有核心的三步:
 
 所以对应，如果你当前是Linux，那么最终调用的是`src/runtime/netpoll_epoll.go`下的 netpollinit函数，然后会创建一个epoll实例，并把值赋给epfd，作为整个runtime中唯一的event-loop使用。
 
-![截屏2022-04-13 下午9.32.22](https://cdn.syst.top/截屏2022-04-13 下午9.32.22.png)
+![截屏2022-04-13 下午9.32.22](https://cdn.syst.top/2022041393222.png)
 
 其他的，比如MacOS下的kqueue,也存在netpollinit函数。
 
-![截屏2022-04-12 下午11.03.31](https://cdn.syst.top/截屏2022-04-12 下午11.03.31.png)
+![截屏2022-04-12 下午11.03.31](https://cdn.syst.top/20220412110331.png)
 
 以及Windows下的icop。
 
-![截屏2022-04-12 下午11.04.41](https://cdn.syst.top/截屏2022-04-12 下午11.04.41.png)
+![截屏2022-04-12 下午11.04.41](https://cdn.syst.top/20220412110441.png)
 
 我们回到pollDesc.init 操作，
 
-<img src="https://cdn.syst.top/截屏2022-04-12 下午11.06.23.png" alt="截屏2022-04-12 下午11.06.23" style="zoom:80%;" />
+<img src="https://cdn.syst.top/20220412110623.png" alt="截屏2022-04-12 下午11.06.23" style="zoom:80%;" />
 
 完成第一步初始化操作后，第二步就是调用runtime_pollOpen。
 
 老套路通过**//go:linkname**找到对应的实现，实际上是调用的poll_runtime_pollOpen函数，这个函数里面再调用netpollopen函数，netpollopen函数和上面的netpollinit函数一样，不同平台都有它的实现。linux平台下，
 
-![截屏2022-04-13 下午9.45.40 2](https://cdn.syst.top/截屏2022-04-13 下午9.45.40 2.png)
+![截屏2022-04-13 下午9.45.40 2](https://cdn.syst.top/20220413945402.png)
 
 netpollopen函数，首先会通过指针把pollDesc保存到epollevent的一个字节数组data里。
 
@@ -253,9 +253,7 @@ netpollopen函数，首先会通过指针把pollDesc保存到epollevent的一个
 
 到这里整个Listen 动作也就结束了，然后层层返回。最终到业务返回的是一个 Listener，按照本篇的例子，本质上还是一个TCPListener。
 
-
-
-##### Accept解析
+### Accept解析
 
 接着当我们调用listen.Accept的时候，
 
@@ -275,13 +273,13 @@ netpollopen函数，首先会通过指针把pollDesc保存到epollevent的一个
 
 我刚才说的调用fd.pd.waitRead会被阻塞，直到对应I/O事件ready。我们来看它具体逻辑，
 
-![carbon (15)](https://cdn.syst.top/carbon (15).png)
+![carbon (15)](https://cdn.syst.top/carbon15.png)
 
 
 
 最终到runtime_pollWait函数，老套路了，我们找到具体的实现函数。
 
-![carbon (3)](https://cdn.syst.top/carbon (5).png)
+![carbon (3)](https://cdn.syst.top/carbon5.png)
 
 poll_runtime_pollWait 里的for循环就是为了等待对应的I/O ready才会返回，否则的话一直调用netpollblock函数。pollDesc结构我们之前提到，它就是底层事件驱动的封装。其中有两个重要字段: rg和wg，都是指针类型，实际这两个字段存储的就是Go底层的g，更具体点是等待i/O ready的g。
 
@@ -299,17 +297,17 @@ netpollblock里也有一个for循环，如果已经ready了，那么直接返回
 
 进入gopark。
 
-![carbon (6)](https://cdn.syst.top/carbon (6).png)
+![carbon (6)](https://cdn.syst.top/carbon6.png)
 
 这一块代码不是很难懂，基本的字段打了备注，核心还是要看park_m这个函数。
 
-![carbon (8)](https://cdn.syst.top/carbon (9).png)
+![carbon (8)](https://cdn.syst.top/carbon9.png)
 
 park_m函数中，首先会通过CAS并发安全的修改g的状态。然后调用dropg解绑g和m的关系，也就是m把当前运行的g置空，g把当前绑定的m置空。
 
 后面的代码是根据当前场景来解释的。我们知道此时m的waitunlockf 其实就是netpollblockcommit。
 
-![carbon (7)](https://cdn.syst.top/carbon (7).png)
+![carbon (7)](https://cdn.syst.top/carbon7.png)
 
 netpollblockcommit会把当前已经是_Gwaiting状态下的g赋值给gpp。如果赋值成功，netpollWaiters会加1。这个全局变量表示当前等待I/O事件ready的g数量，调度器再进行调度的时候可以根据此变量判断是否存在等待I/O事件的g。
 
@@ -323,15 +321,13 @@ netpollblockcommit会把当前已经是_Gwaiting状态下的g赋值给gpp。如�
 
 当I/O事件ready，会一层层返回，获取到新的socket fd，创建conn类型的netFD，初始化netFD(其实就是把这个conn类型的fd也加入epoll事件队列，用于监听)，最终最上游会获取到一个Conn类型的网络连接，就可以基于这个连接做Read、Write等操作了。
 
-![carbon (10)](https://cdn.syst.top/carbon (10).png)
+![carbon (10)](https://cdn.syst.top/carbon10.png)
 
-
-
-##### Read/Write 解析
+### Read/Write 解析
 
 后续的Conn.Read 和 Conn.Write 原理和Accept 类似。
 
-![carbon (11)](https://cdn.syst.top/carbon (11).png)
+![carbon (11)](https://cdn.syst.top/carbon11.png)
 
 给出了Write操作，可以看出核心部分和accept操作时一样的。对于Read操作，就不再重复了。
 
@@ -339,13 +335,11 @@ netpollblockcommit会把当前已经是_Gwaiting状态下的g赋值给gpp。如�
 
 还有最后一个问题，我们咋么知道哪些FD发生读写事件了？
 
-
-
-#### I/O已就绪
+### I/O已就绪
 
 答案就是netpoll()函数。
 
-![carbon (12)](https://cdn.syst.top/carbon (12).png)
+![carbon (12)](https://cdn.syst.top/carbon12.png)
 
 此函数会调用epollwait函数，本质上就是Linux中epoll_wait(int epfd, struct epoll_event * events, int maxevents, int timeout)。
 
@@ -364,11 +358,13 @@ netpollblockcommit会把当前已经是_Gwaiting状态下的g赋值给gpp。如�
 
 这和go的调度有关，当然这不是本章的内容。当这四种方法调用netpoll函数得到一个可运行的g链表时，都会调用同一个函数injectglist。这个函数本质上就是把链表中所有g的状态从_Gwaiting->_Grunnable。然后按照策略，把这些g推送到本地处理器p或者全家运行队列中等待被调度器执行。
 
-![carbon (13)](https://cdn.syst.top/carbon (13).png)
+![carbon (13)](https://cdn.syst.top/carbon13.png)
 
 到这里，整个流程就已经剖析完毕。不能再写了。
 
-#### 最后
+
+
+### 最后
 
 Go netpoller通过在底层对epoll/kqueue/iocp这些不同平台下对I/O多路复用实现的封装，加上自带的goroutine(上文我一直用g表达)，从而实现了使用同步编程模式达到异步执行的效果。 代码很长，涉及到的模块也很多，整体看完代码还是非常爽的。
 
