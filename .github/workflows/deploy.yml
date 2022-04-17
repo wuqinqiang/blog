@@ -15,7 +15,7 @@ jobs:
         with:
           host: ${{ secrets.USER_HOST }}
           username: ${{ secrets.SSH_USER }}
-          key: ${{ secrets.DEPLOY_KEY }}
+          key: ${{ secrets.KEY }}
 
           script: |
             sudo su
