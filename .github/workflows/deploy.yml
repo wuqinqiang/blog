@@ -1,0 +1,26 @@
+name: Deploy blog
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deply:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: git clone blog
+        uses: appleboy/ssh-action@main
+        with:
+          host: ${{ secrts.USER_HOST }}
+          username: ${{ secrts.SSH_USER }}
+          key: ${{ secrts.DEPLOY_KEY }}
+
+          scripts: |
+            sudo su
+            cd /var/www
+            rm -rf blog 
+            git clone https://github.com/wuqinqiang/blog.git
+            
+
