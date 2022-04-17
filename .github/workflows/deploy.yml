@@ -13,9 +13,9 @@ jobs:
       - name: git clone blog
         uses: appleboy/ssh-action@main
         with:
-          host: ${{ secrts.USER_HOST }}
-          username: ${{ secrts.SSH_USER }}
-          key: ${{ secrts.DEPLOY_KEY }}
+          host: ${{ secrets.USER_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.DEPLOY_KEY }}
 
           scripts: |
             sudo su
