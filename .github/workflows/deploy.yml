@@ -8,7 +8,6 @@ on:
 jobs:
   deply:
     runs-on: ubuntu-latest
-
     steps:
       - name: git clone blog
         uses: appleboy/ssh-action@master
@@ -19,8 +18,10 @@ jobs:
 
           script: |
             sudo su
+            sleep 1m
             cd /var/www
             rm -rf blog 
-            git clone https://github.com/wuqinqiang/blog.git
+            git clone https://gitee.com/wuqinqiang/blog.git
+            chmod -R 777 blog
             
 
