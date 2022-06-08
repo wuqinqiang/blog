@@ -22,6 +22,7 @@ jobs:
             cd /var/www
             rm -rf blog 
             git clone https://gitee.com/wuqinqiang/blog.git
+            sudo su
             chmod -R 777 blog
             
 
