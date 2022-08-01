@@ -1,7 +1,7 @@
 baseURL = "https://www.syst.top"
 languageCode = "zh-hans"
 defaultContentLanguage = "en"
-title = "记得"
+title = "Remember吴亲库里"
 theme = "hermit"
 # enableGitInfo = true
 pygmentsCodefences  = true
