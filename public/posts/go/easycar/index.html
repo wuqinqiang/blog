@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="zh-hans">
+
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<meta http-equiv="X-UA-Compatible" content="ie=edge">
+	<meta name="theme-color" content="#494f5c">
+	<meta name="msapplication-TileColor" content="#494f5c">
+<meta itemprop="name" content="一个用go实现的分布式事务框架">
+<meta itemprop="description" content="开篇 对分布式事务一直感兴趣，之前一直被其他事情(懒)耽搁了，最近终于动手了。
+easycar是什么 easycar 是一个用go实现的支持两阶段提交协议的分布式事务框架。目前还只支持TCC,SAGA 模式，其他模式待开发。
+在介绍easycar 之前，先简单介绍几个角色。
+Transaction Coordinator(TC) 负责全局事务的管理，所有参与分布式事务的分支都会注册到coordinator，回给每个分布式事务分配一个唯一id，
+当然还包括驱动全局 begin / commit /abort(我喜欢称rollback)。
+Transaction Manager (TM) 有些时候也叫 Transaction Client，当然不同的实现也许都会换个名字，但是职责都大差不差。
+一般通过TM对每个参与的RM发起一阶段的请求，如果一阶段的RM全部成功，那么TM会向TC发起commit请求，否则发起rollback。
+Resource Manager(RM) 用户维度的角色，管理本地事务处理的资源。其实你可以这么理解，假设你的订单服务部分接口参与了分布式事务，无论是第一阶段TM调用接口，还是TC第二阶段调用接口，你的订单服务都会去负责本地的事务修改。
+那么 easycar 上述角色有什么不同吗？
+有的。既然TC负责的就是全局事务的管理，那么我把职责都给了它。即由TC像每个参与的RM发起一阶段的请求，然后再根据一阶段的结果，发起二阶段的请求。由TC接管整个分布式事务的生命周期。
+是的，我弱化了上面TM的能力。在我眼里，TM本质上就是一个客户端。客户端只需要做一些数据封装，简便化操作即可。所以即使没有客户端，其他语言的用户也可以直接通过http请求easycar服务接口。
+所以理论上，大部分模式下，不需要客户端也是可以直接使用easycar服务的。
+支持协议和事务模式同时混用 参与分布式事务的服务往往由不同的多个部门维护，或者部分新老项目交错，可能无法保证服务的协议是一致的。
+另外，不同的服务所采用的事务模式具体是由：业务场景以及构造的成本来决定的。所以参与分布式事务之间所使用的事务模式不一定是统一的。
+在这些基础上，easycar支持协议混用(目前支持http和原生的grpc服务)，支持部分事务模式混用(目前支持TCC,Saga)。
+支持并发执行 假如现在有 order，account以及stock三个服务。
+由这三个服务组成一个分布式事务。 当用户下单时，需要经过这三个服务中内部一些接口(account 扣钱，stock减库存，order 创建订单)。
+如果只是同步执行第一阶段，那么第一阶段总执行时间= (account&#43;stock&#43;order)。
+很多场景下，分布式事务之间并不会存在执行依赖先后的关系。所以多个子事务一阶段可以同时并发执行。
+流程就像这样：
+上图我们需要保证创建订单前必须先执行account扣减余额和stock扣减库存服务，才能创建订单order的服务。同时account和stock服务并不需要保证他们的执行顺序。
+那么我们一阶段总执行耗时可以粗略=max(account,stock)&#43;order。
+因此，easycar是支持分层并发执行的。 对参与的RM通过设置的权重做分层，同一层的RM可以并发调用，一层处理完毕再接下一层。在这个基础上，当某个RM发生调用错误时，那么后面一层也不会执行了，整个分布式事务需要回滚。
+异常处理 分布式事务中会出现一些问题，比如
+  空补偿： Cancel请求到来时，Try还没有执行，这时候这样的请求我们不能执行，理应直接返回。
+  悬挂： Try执行时，Cancel已执行完成，不能执行，直接返回。
+  幂等： 所有操作的接口都存在这个问题。
+  这些问题需要用户自己去解决，框架不会自动帮你处理。
+在我看来，这些问题本身就是服务的必要工作，而不是通过外部服务来帮你保证。
+换句话说，前端说它参数做了校验，难道后端就不校验接口了吗？"><meta itemprop="datePublished" content="2022-09-12T18:11:22+08:00" />
+<meta itemprop="dateModified" content="2022-09-12T18:11:22+08:00" />
+<meta itemprop="wordCount" content="77">
+<meta itemprop="keywords" content="go,easycar," /><meta property="og:title" content="一个用go实现的分布式事务框架" />
+<meta property="og:description" content="开篇 对分布式事务一直感兴趣，之前一直被其他事情(懒)耽搁了，最近终于动手了。
+easycar是什么 easycar 是一个用go实现的支持两阶段提交协议的分布式事务框架。目前还只支持TCC,SAGA 模式，其他模式待开发。
+在介绍easycar 之前，先简单介绍几个角色。
+Transaction Coordinator(TC) 负责全局事务的管理，所有参与分布式事务的分支都会注册到coordinator，回给每个分布式事务分配一个唯一id，
+当然还包括驱动全局 begin / commit /abort(我喜欢称rollback)。
+Transaction Manager (TM) 有些时候也叫 Transaction Client，当然不同的实现也许都会换个名字，但是职责都大差不差。
+一般通过TM对每个参与的RM发起一阶段的请求，如果一阶段的RM全部成功，那么TM会向TC发起commit请求，否则发起rollback。
+Resource Manager(RM) 用户维度的角色，管理本地事务处理的资源。其实你可以这么理解，假设你的订单服务部分接口参与了分布式事务，无论是第一阶段TM调用接口，还是TC第二阶段调用接口，你的订单服务都会去负责本地的事务修改。
+那么 easycar 上述角色有什么不同吗？
+有的。既然TC负责的就是全局事务的管理，那么我把职责都给了它。即由TC像每个参与的RM发起一阶段的请求，然后再根据一阶段的结果，发起二阶段的请求。由TC接管整个分布式事务的生命周期。
+是的，我弱化了上面TM的能力。在我眼里，TM本质上就是一个客户端。客户端只需要做一些数据封装，简便化操作即可。所以即使没有客户端，其他语言的用户也可以直接通过http请求easycar服务接口。
+所以理论上，大部分模式下，不需要客户端也是可以直接使用easycar服务的。
+支持协议和事务模式同时混用 参与分布式事务的服务往往由不同的多个部门维护，或者部分新老项目交错，可能无法保证服务的协议是一致的。
+另外，不同的服务所采用的事务模式具体是由：业务场景以及构造的成本来决定的。所以参与分布式事务之间所使用的事务模式不一定是统一的。
+在这些基础上，easycar支持协议混用(目前支持http和原生的grpc服务)，支持部分事务模式混用(目前支持TCC,Saga)。
+支持并发执行 假如现在有 order，account以及stock三个服务。
+由这三个服务组成一个分布式事务。 当用户下单时，需要经过这三个服务中内部一些接口(account 扣钱，stock减库存，order 创建订单)。
+如果只是同步执行第一阶段，那么第一阶段总执行时间= (account&#43;stock&#43;order)。
+很多场景下，分布式事务之间并不会存在执行依赖先后的关系。所以多个子事务一阶段可以同时并发执行。
+流程就像这样：
+上图我们需要保证创建订单前必须先执行account扣减余额和stock扣减库存服务，才能创建订单order的服务。同时account和stock服务并不需要保证他们的执行顺序。
+那么我们一阶段总执行耗时可以粗略=max(account,stock)&#43;order。
+因此，easycar是支持分层并发执行的。 对参与的RM通过设置的权重做分层，同一层的RM可以并发调用，一层处理完毕再接下一层。在这个基础上，当某个RM发生调用错误时，那么后面一层也不会执行了，整个分布式事务需要回滚。
+异常处理 分布式事务中会出现一些问题，比如
+  空补偿： Cancel请求到来时，Try还没有执行，这时候这样的请求我们不能执行，理应直接返回。
+  悬挂： Try执行时，Cancel已执行完成，不能执行，直接返回。
+  幂等： 所有操作的接口都存在这个问题。
+  这些问题需要用户自己去解决，框架不会自动帮你处理。
+在我看来，这些问题本身就是服务的必要工作，而不是通过外部服务来帮你保证。
+换句话说，前端说它参数做了校验，难道后端就不校验接口了吗？" />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="https://www.syst.top/posts/go/easycar/" /><meta property="article:section" content="posts" />
+<meta property="article:published_time" content="2022-09-12T18:11:22+08:00" />
+<meta property="article:modified_time" content="2022-09-12T18:11:22+08:00" />
+
+<meta name="twitter:card" content="summary"/>
+<meta name="twitter:title" content="一个用go实现的分布式事务框架"/>
+<meta name="twitter:description" content="开篇 对分布式事务一直感兴趣，之前一直被其他事情(懒)耽搁了，最近终于动手了。
+easycar是什么 easycar 是一个用go实现的支持两阶段提交协议的分布式事务框架。目前还只支持TCC,SAGA 模式，其他模式待开发。
+在介绍easycar 之前，先简单介绍几个角色。
+Transaction Coordinator(TC) 负责全局事务的管理，所有参与分布式事务的分支都会注册到coordinator，回给每个分布式事务分配一个唯一id，
+当然还包括驱动全局 begin / commit /abort(我喜欢称rollback)。
+Transaction Manager (TM) 有些时候也叫 Transaction Client，当然不同的实现也许都会换个名字，但是职责都大差不差。
+一般通过TM对每个参与的RM发起一阶段的请求，如果一阶段的RM全部成功，那么TM会向TC发起commit请求，否则发起rollback。
+Resource Manager(RM) 用户维度的角色，管理本地事务处理的资源。其实你可以这么理解，假设你的订单服务部分接口参与了分布式事务，无论是第一阶段TM调用接口，还是TC第二阶段调用接口，你的订单服务都会去负责本地的事务修改。
+那么 easycar 上述角色有什么不同吗？
+有的。既然TC负责的就是全局事务的管理，那么我把职责都给了它。即由TC像每个参与的RM发起一阶段的请求，然后再根据一阶段的结果，发起二阶段的请求。由TC接管整个分布式事务的生命周期。
+是的，我弱化了上面TM的能力。在我眼里，TM本质上就是一个客户端。客户端只需要做一些数据封装，简便化操作即可。所以即使没有客户端，其他语言的用户也可以直接通过http请求easycar服务接口。
+所以理论上，大部分模式下，不需要客户端也是可以直接使用easycar服务的。
+支持协议和事务模式同时混用 参与分布式事务的服务往往由不同的多个部门维护，或者部分新老项目交错，可能无法保证服务的协议是一致的。
+另外，不同的服务所采用的事务模式具体是由：业务场景以及构造的成本来决定的。所以参与分布式事务之间所使用的事务模式不一定是统一的。
+在这些基础上，easycar支持协议混用(目前支持http和原生的grpc服务)，支持部分事务模式混用(目前支持TCC,Saga)。
+支持并发执行 假如现在有 order，account以及stock三个服务。
+由这三个服务组成一个分布式事务。 当用户下单时，需要经过这三个服务中内部一些接口(account 扣钱，stock减库存，order 创建订单)。
+如果只是同步执行第一阶段，那么第一阶段总执行时间= (account&#43;stock&#43;order)。
+很多场景下，分布式事务之间并不会存在执行依赖先后的关系。所以多个子事务一阶段可以同时并发执行。
+流程就像这样：
+上图我们需要保证创建订单前必须先执行account扣减余额和stock扣减库存服务，才能创建订单order的服务。同时account和stock服务并不需要保证他们的执行顺序。
+那么我们一阶段总执行耗时可以粗略=max(account,stock)&#43;order。
+因此，easycar是支持分层并发执行的。 对参与的RM通过设置的权重做分层，同一层的RM可以并发调用，一层处理完毕再接下一层。在这个基础上，当某个RM发生调用错误时，那么后面一层也不会执行了，整个分布式事务需要回滚。
+异常处理 分布式事务中会出现一些问题，比如
+  空补偿： Cancel请求到来时，Try还没有执行，这时候这样的请求我们不能执行，理应直接返回。
+  悬挂： Try执行时，Cancel已执行完成，不能执行，直接返回。
+  幂等： 所有操作的接口都存在这个问题。
+  这些问题需要用户自己去解决，框架不会自动帮你处理。
+在我看来，这些问题本身就是服务的必要工作，而不是通过外部服务来帮你保证。
+换句话说，前端说它参数做了校验，难道后端就不校验接口了吗？"/>
+
+	<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+	<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+	<link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+	<link rel="manifest" href="/site.webmanifest">
+	<link rel="mask-icon" href="/safari-pinned-tab.svg" color="">
+	<link rel="shortcut icon" href="/favicon.ico">
+
+	<title>一个用go实现的分布式事务框架</title>
+	<link rel="stylesheet" href="https://www.syst.top/css/style.min.cb0663fd19952012fdb4a1345792a808ae19eb828578bde6eeae217ff1fb1e8b.css">
+	
+</head>
+
+<body id="page">
+	
+	<header id="site-header" class="animated slideInUp faster">
+		<div class="hdr-wrapper section-inner">
+			<div class="hdr-left">
+				<div class="site-branding">
+					<a href="https://www.syst.top">是不是很酷</a>
+				</div>
+				<nav class="site-nav hide-in-mobile">
+					<a href="https://www.syst.top/posts/">文章</a>
+					<a href="https://www.syst.top/leetcode/">刷题</a>
+					<a href="https://www.syst.top/lives/">生活</a>
+					<a href="https://www.syst.top/readings/">读书笔记</a>
+					<a href="https://www.syst.top/friends/">朋友</a>
+					<a href="https://go.aabbccm.com">grpc-shop</a>
+				</nav>
+			</div>
+			<div class="hdr-right hdr-icons">
+				<button id="toc-btn" class="hdr-btn desktop-only-ib" title="Table of Contents"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-list"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3" y2="6"></line><line x1="3" y1="12" x2="3" y2="12"></line><line x1="3" y1="18" x2="3" y2="18"></line></svg></button><span class="hdr-social hide-in-mobile"><a href="https://github.com/wuqinqiang" target="_blank" rel="noopener me" title="Github"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-github"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"></path></svg></a></span><button id="menu-btn" class="hdr-btn" title="Menu"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-menu"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg></button>
+			</div>
+		</div>
+	</header>
+	<div id="mobile-menu" class="animated fast">
+		<ul>
+			<li><a href="https://www.syst.top/posts/">文章</a></li>
+			<li><a href="https://www.syst.top/tags/">标签</a></li>
+			<li><a href="https://www.syst.top/about/">关于</a></li>
+		</ul>
+	</div>
+
+
+	<main class="site-main section-inner animated fadeIn faster">
+		<article class="thin">
+			<header class="post-header">
+				<div class="post-meta"><span>Sep 12, 2022</span></div>
+				<h1>一个用go实现的分布式事务框架</h1>
+			</header>
+			<div class="content">
+				<h3 id="开篇">开篇<a href="#开篇" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h3>
+<p>对分布式事务一直感兴趣，之前一直被其他事情(懒)耽搁了，最近终于动手了。</p>
+<h3 id="easycar是什么">easycar是什么<a href="#easycar是什么" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h3>
+<p>easycar 是一个用go实现的支持两阶段提交协议的分布式事务框架。目前还只支持TCC,SAGA 模式，其他模式待开发。</p>
+<p>在介绍easycar 之前，先简单介绍几个角色。</p>
+<h4 id="transaction-coordinatortc">Transaction Coordinator(TC)<a href="#transaction-coordinatortc" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h4>
+<p>负责全局事务的管理，所有参与分布式事务的分支都会注册到coordinator，回给每个分布式事务分配一个唯一id，</p>
+<p>当然还包括驱动全局 begin / commit /abort(我喜欢称rollback)。</p>
+<h4 id="transaction-manager-tm">Transaction Manager (TM)<a href="#transaction-manager-tm" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h4>
+<p>有些时候也叫 Transaction Client，当然不同的实现也许都会换个名字，但是职责都大差不差。</p>
+<p>一般通过TM对每个参与的RM发起一阶段的请求，如果一阶段的RM全部成功，那么TM会向TC发起commit请求，否则发起rollback。</p>
+<h4 id="resource-managerrm">Resource Manager(RM)<a href="#resource-managerrm" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h4>
+<p>用户维度的角色，管理本地事务处理的资源。其实你可以这么理解，假设你的订单服务部分接口参与了分布式事务，无论是第一阶段TM调用接口，还是TC第二阶段调用接口，你的订单服务都会去负责本地的事务修改。</p>
+<p>那么 easycar 上述角色有什么不同吗？</p>
+<p>有的。既然TC负责的就是全局事务的管理，那么我把职责都给了它。即由TC像每个参与的RM发起一阶段的请求，然后再根据一阶段的结果，发起二阶段的请求。由TC接管整个分布式事务的生命周期。</p>
+<p>是的，我弱化了上面TM的能力。在我眼里，TM本质上就是一个客户端。客户端只需要做一些数据封装，简便化操作即可。所以即使没有客户端，其他语言的用户也可以直接通过http请求easycar服务接口。</p>
+<p>所以理论上，大部分模式下，不需要客户端也是可以直接使用easycar服务的。</p>
+<h4 id="支持协议和事务模式同时混用">支持协议和事务模式同时混用<a href="#支持协议和事务模式同时混用" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h4>
+<p>参与分布式事务的服务往往由不同的多个部门维护，或者部分新老项目交错，可能无法保证服务的协议是一致的。</p>
+<p>另外，不同的服务所采用的事务模式具体是由：业务场景以及构造的成本来决定的。所以参与分布式事务之间所使用的事务模式不一定是统一的。</p>
+<p>在这些基础上，easycar支持协议混用(目前支持http和原生的grpc服务)，支持部分事务模式混用(目前支持TCC,Saga)。</p>
+<h4 id="支持并发执行">支持并发执行<a href="#支持并发执行" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h4>
+<p>假如现在有 order，account以及stock三个服务。</p>
+<p>由这三个服务组成一个分布式事务。
+当用户下单时，需要经过这三个服务中内部一些接口(account 扣钱，stock减库存，order 创建订单)。</p>
+<p>如果只是同步执行第一阶段，那么第一阶段总执行时间= (account+stock+order)。</p>
+<p>很多场景下，分布式事务之间并不会存在执行依赖先后的关系。所以多个子事务一阶段可以同时并发执行。</p>
+<p>流程就像这样：</p>
+<p><img src="https://cdn.syst.top/servers.png" alt="global"></p>
+<p>上图我们需要保证创建订单前必须先执行account扣减余额和stock扣减库存服务，才能创建订单order的服务。同时account和stock服务并不需要保证他们的执行顺序。</p>
+<p>那么我们一阶段总执行耗时可以粗略=max(account,stock)+order。</p>
+<p>因此，easycar是支持分层并发执行的。 对参与的RM通过设置的权重做分层，同一层的RM可以并发调用，一层处理完毕再接下一层。在这个基础上，当某个RM发生调用错误时，那么后面一层也不会执行了，整个分布式事务需要回滚。</p>
+<h4 id="异常处理">异常处理<a href="#异常处理" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h4>
+<p>分布式事务中会出现一些问题，比如</p>
+<ul>
+<li>
+<p><strong>空补偿：</strong> Cancel请求到来时，Try还没有执行，这时候这样的请求我们不能执行，理应直接返回。</p>
+</li>
+<li>
+<p><strong>悬挂：</strong> Try执行时，Cancel已执行完成，不能执行，直接返回。</p>
+</li>
+<li>
+<p><strong>幂等：</strong> 所有操作的接口都存在这个问题。</p>
+</li>
+</ul>
+<p>这些问题需要用户自己去解决，框架不会自动帮你处理。</p>
+<p>在我看来，这些问题本身就是服务的必要工作，而不是通过外部服务来帮你保证。</p>
+<p>换句话说，前端说它参数做了校验，难道后端就不校验接口了吗？</p>
+<h4 id="重试">重试<a href="#重试" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h4>
+<p>这一块暂时还没决定最终方案。</p>
+<p>我眼中的重试有两种模式：同步和异步。</p>
+<p>同步的意思是说，当请求RM服务发生错误的时候(网络、服务本身挂了、或者服务里的中间件挂了)，通过固定次数固定时间重试，这个时间通常很短，比如一秒。问题是服务挂的情况下，短时间大概率好不了，重试几乎可能是无用功。整个过程，客户端是阻塞等待的，白白耗费时间。</p>
+<p>异步重试采用指数退避算法之类的逻辑，比如第一次重试1分钟后，第二次2分钟&hellip;..，限制一个上限值，比如最多延迟一个小时还是不行的话，那只能发告警，线下处理了。</p>
+<p>这样的弊端是，</p>
+<ul>
+<li>首先用户不能实时获取本次分布式事务结果了(正在重试中)，只能等到真正执行完毕的时候通过回调的方式异步通知用户分布式事务最终结果。</li>
+<li>退避时间越长，就意味着数据不一致的时间越长。但是如果人工直接干预又存在极大的风险。比如在你人工干预的同时，正好逻辑已经开始执行了，可能会造成新的数据不一致。</li>
+</ul>
+<h4 id="状态流转图">状态流转图<a href="#状态流转图" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h4>
+<p>global 状态流转图</p>
+<p><img src="https://cdn.syst.top/global.png" alt="global"></p>
+<h3 id="最后">最后<a href="#最后" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h3>
+<p>easycar 开发不是很久，它还有好多工作需要去完成。感兴趣的可以一起加入。</p>
+<p>项目地址：https://github.com/wuqinqiang/easycar</p>
+
+			</div>
+			<div class="content"><br><img src="https://cdn.syst.top/wechat2.png"></div>
+			<hr class="post-end">
+			<footer class="post-info">
+				<p>
+					<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-tag meta-icon"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"></path><line x1="7" y1="7" x2="7" y2="7"></line></svg><span class="tag"><a href="https://www.syst.top/tags/go">go</a></span><span class="tag"><a href="https://www.syst.top/tags/easycar">easycar</a></span>
+				</p>
+				<p><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-file-text"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>77 Words</p>
+				<p><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-calendar"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>2022-09-12 18:11 &#43;0800</p>
+			</footer>
+		</article>
+		<aside id="toc" class="show-toc">
+			<div class="toc-title">Table of Contents</div>
+			<nav id="TableOfContents">
+  <ul>
+    <li>
+      <ul>
+        <li><a href="#开篇">开篇</a></li>
+        <li><a href="#easycar是什么">easycar是什么</a></li>
+        <li><a href="#最后">最后</a></li>
+      </ul>
+    </li>
+  </ul>
+</nav>
+		</aside>
+		<div class="post-nav thin">
+			<a class="prev-post" href="https://www.syst.top/posts/go/gnet/">
+				<span class="post-nav-label">Older&nbsp;<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-arrow-right"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg></span><br><span>Gnet原理解析</span>
+			</a>
+		</div>
+		<div id="comments" class="thin">
+			<script src="https://utteranc.es/client.js"
+        repo="wuqinqiang/blog"
+        issue-term="pathname"
+        theme="github-light"
+        crossorigin="anonymous"
+        async>
+</script>
+		</div>
+	</main>
+
+	<footer id="site-footer" class="section-inner thin animated fadeIn faster">
+		<p>&copy; 2018 - 2022 <a href="https://www.syst.top">Remember</a> &#183; <a href="http://beian.miit.gov.cn/">浙ICP备18028603号-2</a></p>
+		<p>
+			Made with <a href="https://gohugo.io/" target="_blank" rel="noopener">Hugo</a> &#183; Theme <a href="https://github.com/Track3/hermit" target="_blank" rel="noopener">Hermit</a> &#183; <a href="https://www.syst.top/post/index.xml" target="_blank" title="rss"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-rss"><path d="M4 11a9 9 0 0 1 9 9"></path><path d="M4 4a16 16 0 0 1 16 16"></path><circle cx="5" cy="19" r="1"></circle></svg></a>
+		</p>
+	</footer>
+
+
+	<script src="https://www.syst.top/js/main.min.c8a831e54547e9c081939713d77308bf58ae5fed99a75acbcaaa14c5ce45bf89.js"></script>
+<script type="application/javascript">
+var doNotTrack = false;
+if (!doNotTrack) {
+	window.ga=window.ga||function(){(ga.q=ga.q||[]).push(arguments)};ga.l=+new Date;
+	ga('create', 'UA-166045776-1', 'auto');
+	
+	ga('send', 'pageview');
+}
+</script>
+<script async src='https://www.google-analytics.com/analytics.js'></script>
+
+
+</body>
+
+</html>

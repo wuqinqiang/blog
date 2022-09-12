@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>easycar on 是不是很酷</title>
+    <link>https://www.syst.top/tags/easycar/</link>
+    <description>Recent content in easycar on 是不是很酷</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>zh-hans</language>
+    <copyright>This work is licensed under a Creative Commons Attribution-NonCommercial 4.0 International License.</copyright>
+    <lastBuildDate>Mon, 12 Sep 2022 18:11:22 +0800</lastBuildDate><atom:link href="https://www.syst.top/tags/easycar/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>一个用go实现的分布式事务框架</title>
+      <link>https://www.syst.top/posts/go/easycar/</link>
+      <pubDate>Mon, 12 Sep 2022 18:11:22 +0800</pubDate>
+      
+      <guid>https://www.syst.top/posts/go/easycar/</guid>
+      <description>开篇 对分布式事务一直感兴趣，之前一直被其他事情(懒)耽搁了，最近终于动手了。
+easycar是什么 easycar 是一个用go实现的支持两阶段提交协议的分布式事务框架。目前还只支持TCC,SAGA 模式，其他模式待开发。
+在介绍easycar 之前，先简单介绍几个角色。
+Transaction Coordinator(TC) 负责全局事务的管理，所有参与分布式事务的分支都会注册到coordinator，回给每个分布式事务分配一个唯一id，
+当然还包括驱动全局 begin / commit /abort(我喜欢称rollback)。
+Transaction Manager (TM) 有些时候也叫 Transaction Client，当然不同的实现也许都会换个名字，但是职责都大差不差。
+一般通过TM对每个参与的RM发起一阶段的请求，如果一阶段的RM全部成功，那么TM会向TC发起commit请求，否则发起rollback。
+Resource Manager(RM) 用户维度的角色，管理本地事务处理的资源。其实你可以这么理解，假设你的订单服务部分接口参与了分布式事务，无论是第一阶段TM调用接口，还是TC第二阶段调用接口，你的订单服务都会去负责本地的事务修改。
+那么 easycar 上述角色有什么不同吗？
+有的。既然TC负责的就是全局事务的管理，那么我把职责都给了它。即由TC像每个参与的RM发起一阶段的请求，然后再根据一阶段的结果，发起二阶段的请求。由TC接管整个分布式事务的生命周期。
+是的，我弱化了上面TM的能力。在我眼里，TM本质上就是一个客户端。客户端只需要做一些数据封装，简便化操作即可。所以即使没有客户端，其他语言的用户也可以直接通过http请求easycar服务接口。
+所以理论上，大部分模式下，不需要客户端也是可以直接使用easycar服务的。
+支持协议和事务模式同时混用 参与分布式事务的服务往往由不同的多个部门维护，或者部分新老项目交错，可能无法保证服务的协议是一致的。
+另外，不同的服务所采用的事务模式具体是由：业务场景以及构造的成本来决定的。所以参与分布式事务之间所使用的事务模式不一定是统一的。
+在这些基础上，easycar支持协议混用(目前支持http和原生的grpc服务)，支持部分事务模式混用(目前支持TCC,Saga)。
+支持并发执行 假如现在有 order，account以及stock三个服务。
+由这三个服务组成一个分布式事务。 当用户下单时，需要经过这三个服务中内部一些接口(account 扣钱，stock减库存，order 创建订单)。
+如果只是同步执行第一阶段，那么第一阶段总执行时间= (account+stock+order)。
+很多场景下，分布式事务之间并不会存在执行依赖先后的关系。所以多个子事务一阶段可以同时并发执行。
+流程就像这样：
+上图我们需要保证创建订单前必须先执行account扣减余额和stock扣减库存服务，才能创建订单order的服务。同时account和stock服务并不需要保证他们的执行顺序。
+那么我们一阶段总执行耗时可以粗略=max(account,stock)+order。
+因此，easycar是支持分层并发执行的。 对参与的RM通过设置的权重做分层，同一层的RM可以并发调用，一层处理完毕再接下一层。在这个基础上，当某个RM发生调用错误时，那么后面一层也不会执行了，整个分布式事务需要回滚。
+异常处理 分布式事务中会出现一些问题，比如
+  空补偿： Cancel请求到来时，Try还没有执行，这时候这样的请求我们不能执行，理应直接返回。
+  悬挂： Try执行时，Cancel已执行完成，不能执行，直接返回。
+  幂等： 所有操作的接口都存在这个问题。
+  这些问题需要用户自己去解决，框架不会自动帮你处理。
+在我看来，这些问题本身就是服务的必要工作，而不是通过外部服务来帮你保证。
+换句话说，前端说它参数做了校验，难道后端就不校验接口了吗？</description>
+    </item>
+    
+  </channel>
+</rss>
