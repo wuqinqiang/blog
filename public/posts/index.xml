@@ -6,8 +6,88 @@
 		<generator>Hugo -- gohugo.io</generator>
 		<language>zh-hans</language>
 		<copyright>This work is licensed under a Creative Commons Attribution-NonCommercial 4.0 International License.</copyright>
-		<lastBuildDate>Mon, 12 Sep 2022 18:11:22 +0800</lastBuildDate>
+		<lastBuildDate>Sun, 06 Nov 2022 10:11:22 +0800</lastBuildDate>
 		<atom:link href="https://www.syst.top/posts/index.xml" rel="self" type="application/rss+xml" />
+		
+		<item>
+			<title>easycar更新日记</title>
+			<link>https://www.syst.top/posts/go/easycar2/</link>
+			<pubDate>Sun, 06 Nov 2022 10:11:22 +0800</pubDate>
+			
+			<guid>https://www.syst.top/posts/go/easycar2/</guid>
+			<description>开篇 又拖更了一个多月，在思考人生的意义。
+上一次介绍了新开发的一个分布式的事务框架easycar，这篇就当是对easycar的更新日记了。
+服务注册与发现
+由于easycar底层基于gRPC, 通过自定义Resolver接口还是很容易实现的。
+负载均衡
+客户端负载均衡，目前支持
+  round-robin
+  random
+  power of 2 random choice
+  consistent hash
+  ip-hash
+  least-load
+  架构图
+上次提到，参与的一组分布式事务可能部分操作存在先后顺序的问题。
+我举了个例子，我们需要保证必须先执行account扣减余额和stock扣减库存服务成功后，才能创建订单order的服务。同时account和stock服务并不需要保证他们的执行顺序。下图，
+以这个例子，那么实际在easycar中整个流程，
+成功
+失败
+在easycar中，client负责和easycar(TC)端交互。主要负责注册分支，触发执行分布式事务以及查看状态等。
+它并不会和RM产生联系。也就是说它不会负责去请求RM的第一阶段，这是和其他平台不同的一点。
+TC全程接管和更新RM状态。
+分支状态
+项目地址:
+Easycar: https://github.com/wuqinqiang/easycar
+Client-go: https://github.com/easycar/client-go
+Examples： https://github.com/easycar/examples</description>
+			<content type="html"><![CDATA[<h4 id="开篇">开篇</h4>
+<p>又拖更了一个多月，在思考人生的意义。</p>
+<p>上一次介绍了新开发的一个分布式的事务框架easycar，这篇就当是对easycar的更新日记了。</p>
+<p><strong>服务注册与发现</strong></p>
+<p>由于easycar底层基于gRPC, 通过自定义Resolver接口还是很容易实现的。</p>
+<p><strong>负载均衡</strong></p>
+<p>客户端负载均衡，目前支持</p>
+<ul>
+<li>
+<p><code>round-robin</code></p>
+</li>
+<li>
+<p><code>random</code></p>
+</li>
+<li>
+<p><code>power of 2 random choice</code></p>
+</li>
+<li>
+<p><code>consistent hash</code></p>
+</li>
+<li>
+<p><code>ip-hash</code></p>
+</li>
+<li>
+<p><code>least-load</code></p>
+</li>
+</ul>
+<p>架构图</p>
+<p><img src="https://cdn.syst.top/easycar.png" alt="easycar"></p>
+<p>上次提到，参与的一组分布式事务可能部分操作存在先后顺序的问题。</p>
+<p>我举了个例子，我们需要保证必须先执行account扣减余额和stock扣减库存服务成功后，才能创建订单order的服务。同时account和stock服务并不需要保证他们的执行顺序。下图，</p>
+<p><img src="https://cdn.syst.top/servers.png" alt="global">以这个例子，那么实际在easycar中整个流程，</p>
+<p><strong>成功</strong></p>
+<p><img src="https://cdn.syst.top/success.png" alt="success"></p>
+<p><strong>失败</strong></p>
+<p><img src="https://cdn.syst.top/failed.png" alt="failed"></p>
+<p>在easycar中，client负责和easycar(TC)端交互。主要负责注册分支，触发执行分布式事务以及查看状态等。</p>
+<p>它并不会和RM产生联系。也就是说它不会负责去请求RM的第一阶段，这是和其他平台不同的一点。</p>
+<p>TC全程接管和更新RM状态。</p>
+<p>分支状态</p>
+<p><img src="https://cdn.syst.top/b2-state.png" alt="global"></p>
+<p>项目地址:</p>
+<p>Easycar: <a href="https://github.com/wuqinqiang/easycar">https://github.com/wuqinqiang/easycar</a></p>
+<p>Client-go: <a href="https://github.com/easycar/client-go">https://github.com/easycar/client-go</a></p>
+<p>Examples： <a href="https://github.com/easycar/examples">https://github.com/easycar/examples</a></p>
+]]></content>
+		</item>
 		
 		<item>
 			<title>一个用go实现的分布式事务框架</title>

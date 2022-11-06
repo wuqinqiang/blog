@@ -7,7 +7,7 @@
     <generator>Hugo -- gohugo.io</generator>
     <language>zh-hans</language>
     <copyright>This work is licensed under a Creative Commons Attribution-NonCommercial 4.0 International License.</copyright>
-    <lastBuildDate>Mon, 12 Sep 2022 18:11:22 +0800</lastBuildDate><atom:link href="https://www.syst.top/index.xml" rel="self" type="application/rss+xml" />
+    <lastBuildDate>Sun, 06 Nov 2022 10:11:22 +0800</lastBuildDate><atom:link href="https://www.syst.top/index.xml" rel="self" type="application/rss+xml" />
     <item>
       <title>Myfriends</title>
       <link>https://www.syst.top/friends/friends/</link>
@@ -15,6 +15,40 @@
       
       <guid>https://www.syst.top/friends/friends/</guid>
       <description></description>
+    </item>
+    
+    <item>
+      <title>easycar更新日记</title>
+      <link>https://www.syst.top/posts/go/easycar2/</link>
+      <pubDate>Sun, 06 Nov 2022 10:11:22 +0800</pubDate>
+      
+      <guid>https://www.syst.top/posts/go/easycar2/</guid>
+      <description>开篇 又拖更了一个多月，在思考人生的意义。
+上一次介绍了新开发的一个分布式的事务框架easycar，这篇就当是对easycar的更新日记了。
+服务注册与发现
+由于easycar底层基于gRPC, 通过自定义Resolver接口还是很容易实现的。
+负载均衡
+客户端负载均衡，目前支持
+  round-robin
+  random
+  power of 2 random choice
+  consistent hash
+  ip-hash
+  least-load
+  架构图
+上次提到，参与的一组分布式事务可能部分操作存在先后顺序的问题。
+我举了个例子，我们需要保证必须先执行account扣减余额和stock扣减库存服务成功后，才能创建订单order的服务。同时account和stock服务并不需要保证他们的执行顺序。下图，
+以这个例子，那么实际在easycar中整个流程，
+成功
+失败
+在easycar中，client负责和easycar(TC)端交互。主要负责注册分支，触发执行分布式事务以及查看状态等。
+它并不会和RM产生联系。也就是说它不会负责去请求RM的第一阶段，这是和其他平台不同的一点。
+TC全程接管和更新RM状态。
+分支状态
+项目地址:
+Easycar: https://github.com/wuqinqiang/easycar
+Client-go: https://github.com/easycar/client-go
+Examples： https://github.com/easycar/examples</description>
     </item>
     
     <item>
@@ -291,42 +325,6 @@ fsm:=NewFsm(&amp;#34;业务名称&amp;#34;,&amp;#34;当前状态&amp;#34;) curre
 简单解释一下：
  业务:比如有商品状态业务、订单状态业务&amp;hellip;.. 状态：订单待付款、待发货&amp;hellip;. 事件：对应状态仅可达事件集合。比如待付款状态的可达事件仅有:支付事件和取消事件(取决于自己的业务) 执行事件主体：执行自定义的事件函数,如果有需要，还可以自定义执行事件前后hook，事件订阅者(比如支付事件发生后，异步通知用户等)  使用姿势 go get -u github.com/wuqinqiang/easyfsm 首先自定义业务、状态、事件。
 package main import ( &amp;#34;fmt&amp;#34; &amp;#34;github.com/wuqinqiang/easyfsm&amp;#34; ) var ( // 业务 	businessName easyfsm.BusinessName = &amp;#34;order&amp;#34; // 对应状态 	initState easyfsm.State = 1 // 初始化 	paidState easyfsm.State = 2 // 已付款 	canceled easyfsm.State = 3 // 已取消  //对应事件 	paymentOrderEvent easyfsm.EventName = &amp;#34;paymentOrderEvent&amp;#34; cancelOrderEvent easyfsm.</description>
-    </item>
-    
-    <item>
-      <title>你还不体验泛型吗</title>
-      <link>https://www.syst.top/posts/go/generics/</link>
-      <pubDate>Sun, 02 Jan 2022 18:32:00 +0800</pubDate>
-      
-      <guid>https://www.syst.top/posts/go/generics/</guid>
-      <description>介绍 之前有看过官方发布的一些泛型文章，但是自己没动手玩过。还有没有没玩过的，那么最后一班车了。
-不管学什么入门先从官网拿例子。
-这段代码很简单，定义两个函数，计算对应传入的map值的和。两个函数最大的不同在于函数参数类型有所不同，一个map的值类型为int64,一个为float64，对应返回参数也有所不同。
-在没有泛型的情况下，每种类型都不得不重新定义一个函数。
-有人可能会说，上面的代码你可以这样写在一个函数里，
-你确认这真的好吗？
-泛型函数 但是，有了泛型之后，那就简单多了。
-上面这段代码中，
-定义了一个新函数SumIntsOrFloats，该函数声明两个类型参数 [K comparable, V int64 | float64]。其中K指定了类型必须为可比较(即可以用作比较符 == 和 !=)。因为 go中规定map的key必须是可比较类型。
-比如，我们不能这样声明一个map。
-所以这里的K就不能使用any关键字。
-另一个V参数指定了一个约束，该约束由int64和float64组成，使用 | 指定了联合类型。
-所以这里m参数为map[K]V类型，K,V即为参数类型指定的类型。
-那么，如果你传入的map值的类型为其他类型。比如下面这种就不行了。
-类型约束 上面看到的是我们在方法上对参数做一些约束。当然我们也可以直接声明类型约束。
-上面的代码声明了一个Number用做类型约束的接口类型。在接口里声明int64和float64联合类型。
-在SumNumbers中如果约束类型为int64或者 float64，那么只需要使用Number类型约束即可，就不用每个不同函数写 int64 | float64，达到代码复用的效果。
-但是如果我这样，
-我们把map中的值类型调整为自定义的otherInt64类型，otherInt64的基础类型也是int64。但是，这段代码编译会报错。
-原因是 int64 约束会将其限制为只能是该类型，也就是只能是 int64，不能是基于此类型定义的其他类型。
-如果想使用otherInt64咋么办，很简单，只需要一个～符号，
-使用带～xxtype会将其限制为基础类型为xxtype的所有类型。
-应用 上面只是简单介绍了一下使用姿势，那么哪些场景下可以使用泛型呢？
-比如日常开发中，像slice、map、channel的一些处理函数，可能逻辑相同但是类型不同导致copy多个不同函数，这时候可以用泛型解决。比如，
-还有一些行为方面的。比如 go 中的排序，通过泛型，不需要每一个结构都实现(Len，Less，Swap)三个方法，而是抽象出依赖于三个方法的行为。那么想要实现排序只需要依赖定义的这个抽象就行了。
-其他方面的应用可以自行体验。
-总结 这篇文章主要带你们体验下泛型的基本使用，以及对应的类型约束，最后还简单实验了两个泛型的场景demo，感兴趣的可以自行体验。更多内容，欢迎留言区域交流。
-附录  https://go.dev/doc/tutorial/generics https://teivah.medium.com/when-to-use-generics-in-go-36d49c1aeda https://github.com/mattn/go-generics-example  </description>
     </item>
     
   </channel>
