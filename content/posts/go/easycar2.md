@@ -33,7 +33,7 @@ tags:
 
 架构图
 
-![easycar](https://cdn.syst.top/easycar.png)
+![easycar](https://cdn.syst.top/easycar2.jpg)
 
 上次提到，参与的一组分布式事务可能部分操作存在先后顺序的问题。
 
@@ -43,11 +43,11 @@ tags:
 
  **成功**
 
-![success](https://cdn.syst.top/success.png)
+![success](https://cdn.syst.top/success2.png)
 
  **失败**
 
-![failed](https://cdn.syst.top/failed.png)
+![failed](https://cdn.syst.top/failed2.png)
 
 在easycar中，client负责和easycar(TC)端交互。主要负责注册分支，触发执行分布式事务以及查看状态等。
 
@@ -57,7 +57,7 @@ TC全程接管和更新RM状态。
 
 分支状态
 
-![global](https://cdn.syst.top/b2-state.png)
+![global](https://cdn.syst.top/state3.png)
 
 
 

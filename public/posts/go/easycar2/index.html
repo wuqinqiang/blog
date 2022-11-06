@@ -175,19 +175,19 @@ Examples： https://github.com/easycar/examples"/>
 </li>
 </ul>
 <p>架构图</p>
-<p><img src="https://cdn.syst.top/easycar.png" alt="easycar"></p>
+<p><img src="https://cdn.syst.top/easycar2.jpg" alt="easycar"></p>
 <p>上次提到，参与的一组分布式事务可能部分操作存在先后顺序的问题。</p>
 <p>我举了个例子，我们需要保证必须先执行account扣减余额和stock扣减库存服务成功后，才能创建订单order的服务。同时account和stock服务并不需要保证他们的执行顺序。下图，</p>
 <p><img src="https://cdn.syst.top/servers.png" alt="global">以这个例子，那么实际在easycar中整个流程，</p>
 <p><strong>成功</strong></p>
-<p><img src="https://cdn.syst.top/success.png" alt="success"></p>
+<p><img src="https://cdn.syst.top/success2.png" alt="success"></p>
 <p><strong>失败</strong></p>
-<p><img src="https://cdn.syst.top/failed.png" alt="failed"></p>
+<p><img src="https://cdn.syst.top/failed2.png" alt="failed"></p>
 <p>在easycar中，client负责和easycar(TC)端交互。主要负责注册分支，触发执行分布式事务以及查看状态等。</p>
 <p>它并不会和RM产生联系。也就是说它不会负责去请求RM的第一阶段，这是和其他平台不同的一点。</p>
 <p>TC全程接管和更新RM状态。</p>
 <p>分支状态</p>
-<p><img src="https://cdn.syst.top/b2-state.png" alt="global"></p>
+<p><img src="https://cdn.syst.top/state3.png" alt="global"></p>
 <p>项目地址:</p>
 <p>Easycar: <a href="https://github.com/wuqinqiang/easycar">https://github.com/wuqinqiang/easycar</a></p>
 <p>Client-go: <a href="https://github.com/easycar/client-go">https://github.com/easycar/client-go</a></p>
