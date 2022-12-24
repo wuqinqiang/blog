@@ -7,7 +7,7 @@
     <generator>Hugo -- gohugo.io</generator>
     <language>zh-hans</language>
     <copyright>This work is licensed under a Creative Commons Attribution-NonCommercial 4.0 International License.</copyright>
-    <lastBuildDate>Sun, 06 Nov 2022 10:11:22 +0800</lastBuildDate><atom:link href="https://www.syst.top/index.xml" rel="self" type="application/rss+xml" />
+    <lastBuildDate>Sat, 24 Dec 2022 18:30:52 +0800</lastBuildDate><atom:link href="https://www.syst.top/index.xml" rel="self" type="application/rss+xml" />
     <item>
       <title>Myfriends</title>
       <link>https://www.syst.top/friends/friends/</link>
@@ -15,6 +15,27 @@
       
       <guid>https://www.syst.top/friends/friends/</guid>
       <description></description>
+    </item>
+    
+    <item>
+      <title>资源推荐</title>
+      <link>https://www.syst.top/lives/source/</link>
+      <pubDate>Sat, 24 Dec 2022 18:30:52 +0800</pubDate>
+      
+      <guid>https://www.syst.top/lives/source/</guid>
+      <description>今天推荐一下平常使用到的资源。
+CS自学 如果你像我一样不是科班出身的，没有系统学习过CS课程，那么这个网址很适合你。里面大多数是国外顶级大学CS相关的公开课。有些可能你已经看过书籍了，只是拿来垫桌脚了，比如深入理解计算机系统😂。这些CS课程其实和书中的章节是对应的。所以一个技巧是先对着书预习，然后再看视频。当然，书中的题目也可以适当的做下，要是能输出就更好了。这是一个漫长的过程，希望你能耐得住寂寞～
+架构 我之前看过的两本书籍感觉还不错：&amp;laquo;软件架构设计&amp;raquo; 和 &amp;laquo;凤凰架构&amp;raquo; 。这两本都是国人写的，我们看起来可能更加贴切。
+也有一些关于架构的网站。
+ system-design system-design-primer bytebytego system-design-interview  当然，这些系统设计大概都是从高层次的角度来分析设计的，并不会涉及过多的细节。很多细节也需要在对应场景才能对应分析吧，细节是魔鬼。
+区块链 最近几年挺火的一个话题，虽然你可能并没有从事相关工作，但是并不妨碍你去了解它，这样好歹别人跟你吹牛的时候，你不会被他忽悠。然后你就知道大多数web3项目本质上还是一个中心化的项目。大家拿着&amp;quot;去中心化&amp;quot;,”可匿名性“的地址，在中心化的平台上进行交易，你还能说这是匿名的吗？
+关于区块链的视频，我推荐一个对程序员来说入门首选的视频。
+北大肖臻的&amp;laquo;区块链技术与应用&amp;raquo;。
+工具类 随便介绍两个吧。
+Data Structure Visualizations 这个项目可以把常见的数据结构和算法以动画的的形式展示出来。
+maigret 这个项目有点牛逼，输入一个id，就能把互联网上你的相关账户全部扒出来。
+grammarly 这个大部分人应该都知道，平时比如写issues或者代码注释的时候，像我英语不好的人，想要确认有没有英语语法错误或者单词拼写错误，甚至是标点符号，靠它纠正了。
+wakatime 这个工具可以统计你最近一段时间内编码时间，还有一些时间分配。goland 和 vscode 都有插件。</description>
     </item>
     
     <item>
@@ -306,25 +327,6 @@ Go netpoller Go netpoller 底层就是对I/O多路复用的封装。不同平台
 细想，如果你不关注它不能做什么，在你们拍板决定使用框架时，做了一半发现， 核心的一块需求它支持不了，这时候只能欲哭无泪了。
 第三部分：技术架构之道 主要讲解的是道。 里面分为:
  高并发问题 高可用与稳定性 事务一致性 多副本一致性 CAP理论  因为这一部分主要是关于道方面的，所以很多地方是抽象化的。读者在读这一部分时候，针对一些问题的解决方案，需要自行去思考部分细节。</description>
-    </item>
-    
-    <item>
-      <title>一个用go实现的有限状态机 </title>
-      <link>https://www.syst.top/posts/go/easyfsm/</link>
-      <pubDate>Sun, 06 Mar 2022 17:37:22 +0800</pubDate>
-      
-      <guid>https://www.syst.top/posts/go/easyfsm/</guid>
-      <description>easyfsm 之前看过新亮老哥的go-fsm-order，感觉还不错。最近在迁移项目的时候，发现有多处业务存在一些状态的流转，所以就基于go-fsm-order做了重改，让它可以在不同的业务场景下使用。
-为什么不使用looplab/fsm，star挺多的啊。
-不是特别喜欢，每次实例化fsm都需要重新传递对应events(虽然我们可以统一封装)，我更期望在项目启动时把此项目涉及到不同业务状态机流转注册到fsm，对应:不同业务-&amp;gt;[状态]-&amp;gt;[事件]-&amp;gt;处理事件主体(包含handler、params、hooks、observers等)。
-当你开始进行状态流转时，只需要
-fsm:=NewFsm(&amp;#34;业务名称&amp;#34;,&amp;#34;当前状态&amp;#34;) currentState,err:=fsm.Call(&amp;#34;事件名称&amp;#34;,&amp;#34;对应事件所需参数可选项&amp;#34;) 为什么需要区分业务？
-因为绝大多数业务的状态值都是从数据库中获取的，比如订单表的订单状态，商品表中的商品状态，有可能值是相同的。
-同一个业务同一属性对应状态值表达单一，不同业务下属性状态可能会出现值相同，但所表达的含义是不同的。
-整体设计:
-简单解释一下：
- 业务:比如有商品状态业务、订单状态业务&amp;hellip;.. 状态：订单待付款、待发货&amp;hellip;. 事件：对应状态仅可达事件集合。比如待付款状态的可达事件仅有:支付事件和取消事件(取决于自己的业务) 执行事件主体：执行自定义的事件函数,如果有需要，还可以自定义执行事件前后hook，事件订阅者(比如支付事件发生后，异步通知用户等)  使用姿势 go get -u github.com/wuqinqiang/easyfsm 首先自定义业务、状态、事件。
-package main import ( &amp;#34;fmt&amp;#34; &amp;#34;github.com/wuqinqiang/easyfsm&amp;#34; ) var ( // 业务 	businessName easyfsm.BusinessName = &amp;#34;order&amp;#34; // 对应状态 	initState easyfsm.State = 1 // 初始化 	paidState easyfsm.State = 2 // 已付款 	canceled easyfsm.State = 3 // 已取消  //对应事件 	paymentOrderEvent easyfsm.EventName = &amp;#34;paymentOrderEvent&amp;#34; cancelOrderEvent easyfsm.</description>
     </item>
     
   </channel>

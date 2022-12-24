@@ -7,7 +7,16 @@
     <generator>Hugo -- gohugo.io</generator>
     <language>zh-hans</language>
     <copyright>This work is licensed under a Creative Commons Attribution-NonCommercial 4.0 International License.</copyright>
-    <lastBuildDate>Sun, 06 Nov 2022 10:11:22 +0800</lastBuildDate><atom:link href="https://www.syst.top/tags/index.xml" rel="self" type="application/rss+xml" />
+    <lastBuildDate>Sat, 24 Dec 2022 18:30:52 +0800</lastBuildDate><atom:link href="https://www.syst.top/tags/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>资源</title>
+      <link>https://www.syst.top/tags/%E8%B5%84%E6%BA%90/</link>
+      <pubDate>Sat, 24 Dec 2022 18:30:52 +0800</pubDate>
+      
+      <guid>https://www.syst.top/tags/%E8%B5%84%E6%BA%90/</guid>
+      <description></description>
+    </item>
+    
     <item>
       <title>distributed transaction</title>
       <link>https://www.syst.top/tags/distributed-transaction/</link>
@@ -86,15 +95,6 @@
       <pubDate>Sun, 02 Jan 2022 18:32:00 +0800</pubDate>
       
       <guid>https://www.syst.top/tags/generics/</guid>
-      <description></description>
-    </item>
-    
-    <item>
-      <title>年终</title>
-      <link>https://www.syst.top/tags/%E5%B9%B4%E7%BB%88/</link>
-      <pubDate>Thu, 23 Dec 2021 23:18:52 +0800</pubDate>
-      
-      <guid>https://www.syst.top/tags/%E5%B9%B4%E7%BB%88/</guid>
       <description></description>
     </item>
     
