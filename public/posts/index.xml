@@ -6,8 +6,543 @@
 		<generator>Hugo -- gohugo.io</generator>
 		<language>zh-hans</language>
 		<copyright>This work is licensed under a Creative Commons Attribution-NonCommercial 4.0 International License.</copyright>
-		<lastBuildDate>Sun, 06 Nov 2022 10:11:22 +0800</lastBuildDate>
+		<lastBuildDate>Fri, 06 Jan 2023 19:23:51 +0800</lastBuildDate>
 		<atom:link href="https://www.syst.top/posts/index.xml" rel="self" type="application/rss+xml" />
+		
+		<item>
+			<title>evio原理解析～有彩蛋</title>
+			<link>https://www.syst.top/posts/go/evio/</link>
+			<pubDate>Fri, 06 Jan 2023 19:23:51 +0800</pubDate>
+			
+			<guid>https://www.syst.top/posts/go/evio/</guid>
+			<description>之前分析过go自带的netpoll，以及自建的网络框架gnet。
+当然这类框架还有:evio、gev、nbio、cloudwego/netpoll(字节的)。
+为什么会出现这么多自建框架?
+我觉得逃不过三点，
+  自带的netpoll满足不了一些特殊场景。
+  其他实现设计存在局限性，存在优化空间。
+  程序员都喜欢自己造轮子。
+  另外，这类框架都是基于syscall epoll实现的事件驱动框架。主要区别我觉得在于，
+ 对连接conn的管理 对读写数据管理  带着这些问题，我打算把这些框架都看一遍。学习里面优秀的设计以及对比他们的不同点，可以的话，做个整体的性能测试。
+这几个框架中，evio是最早的开源实现，开源于2017年。
+有意思的是，看到几篇文章说evio存在当loopWrite在内核缓冲区满，无法一次写入时，会出现写入数据丢失的bug。
+仔细阅读了代码，evio并不存在这个bug。也不存在是作者后来修复了这个bug，而是evio本身不存在这个bug。
+下面会说明。
+原理解析 根据代码画了个简易架构图说明evio架构。
+简单解释一下，evio启动的时候可以指定loops个数，即多少个epoll实例。同时可以启动多个监听地址，比如图中监听了两个端口。
+程序会把每个Listener fd加入到每个epoll并注册这些fd的读事件。每个epoll会开启一个goroutine等待事件到来。
+当客户端发起对应端口连接，程序会根据策略选择一个epoll，并把conn fd 也加入到此epoll并注册读写事件。
+当一个conn fd读事件ready，那么对应的epoll会被唤醒，然后执行相应的操作。
+以上就是整理的流程，接下来我们来深入一些细节。
+在此之前，根据上面所描述的，需要先提几个问题，
+ 当一个新的客户端连接到来时，会发生什么？ 读写数据是如何流动的？ 同一个epoll里多个fd读写事件ready，程序是如何处理的？  看完下面，再回来回答这三个问题。
+代码细节 运行一个简单demo，
+package main import ( &amp;#34;fmt&amp;#34; &amp;#34;github.com/tidwall/evio&amp;#34; &amp;#34;log&amp;#34; ) func main() { var events evio.Events events.NumLoops = 3 events.Serving = func(srv evio.Server) (action evio.Action) { log.</description>
+			<content type="html"><![CDATA[<p>之前分析过go自带的netpoll，以及自建的网络框架gnet。</p>
+<p>当然这类框架还有:evio、gev、nbio、cloudwego/netpoll(字节的)。</p>
+<p>为什么会出现这么多自建框架?</p>
+<p>我觉得逃不过三点，</p>
+<ul>
+<li>
+<p>自带的netpoll满足不了一些特殊场景。</p>
+</li>
+<li>
+<p>其他实现设计存在局限性，存在优化空间。</p>
+</li>
+<li>
+<p>程序员都喜欢自己造轮子。</p>
+</li>
+</ul>
+<p>另外，这类框架都是基于syscall epoll实现的事件驱动框架。主要区别我觉得在于，</p>
+<ul>
+<li>对连接conn的管理</li>
+<li>对读写数据管理</li>
+</ul>
+<p>带着这些问题，我打算把这些框架都看一遍。学习里面优秀的设计以及对比他们的不同点，可以的话，做个整体的性能测试。</p>
+<p>这几个框架中，evio是最早的开源实现，开源于2017年。</p>
+<p>有意思的是，看到几篇文章说evio存在当loopWrite在内核缓冲区满，无法一次写入时，会出现写入数据丢失的bug。</p>
+<p><img src="https://cdn.syst.top/evio3.png" alt=""></p>
+<p>仔细阅读了代码，evio并不存在这个bug。也不存在是作者后来修复了这个bug，而是evio本身不存在这个bug。</p>
+<p>下面会说明。</p>
+<h4 id="原理解析">原理解析</h4>
+<p>根据代码画了个简易架构图说明evio架构。</p>
+<p><img src="https://cdn.syst.top/evio1.png" alt=""></p>
+<p>简单解释一下，evio启动的时候可以指定loops个数，即多少个epoll实例。同时可以启动多个监听地址，比如图中监听了两个端口。</p>
+<p>程序会把每个Listener fd加入到每个epoll并注册这些fd的读事件。每个epoll会开启一个goroutine等待事件到来。</p>
+<p>当客户端发起对应端口连接，程序会根据策略选择一个epoll，并把conn fd 也加入到此epoll并注册读写事件。</p>
+<p>当一个conn fd读事件ready，那么对应的epoll会被唤醒，然后执行相应的操作。</p>
+<p>以上就是整理的流程，接下来我们来深入一些细节。</p>
+<p>在此之前，根据上面所描述的，需要先提几个问题，</p>
+<ul>
+<li>当一个新的客户端连接到来时，会发生什么？</li>
+<li>读写数据是如何流动的？</li>
+<li>同一个epoll里多个fd读写事件ready，程序是如何处理的？</li>
+</ul>
+<p>看完下面，再回来回答这三个问题。</p>
+<h5 id="代码细节">代码细节</h5>
+<p>运行一个简单demo，</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="kn">package</span> <span class="nx">main</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="kn">import</span> <span class="p">(</span>
+</span></span><span class="line"><span class="cl">	<span class="s">&#34;fmt&#34;</span>
+</span></span><span class="line"><span class="cl">	<span class="s">&#34;github.com/tidwall/evio&#34;</span>
+</span></span><span class="line"><span class="cl">	<span class="s">&#34;log&#34;</span>
+</span></span><span class="line"><span class="cl"><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="kd">func</span> <span class="nf">main</span><span class="p">()</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">	<span class="kd">var</span> <span class="nx">events</span> <span class="nx">evio</span><span class="p">.</span><span class="nx">Events</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">events</span><span class="p">.</span><span class="nx">NumLoops</span> <span class="p">=</span> <span class="mi">3</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">events</span><span class="p">.</span><span class="nx">Serving</span> <span class="p">=</span> <span class="kd">func</span><span class="p">(</span><span class="nx">srv</span> <span class="nx">evio</span><span class="p">.</span><span class="nx">Server</span><span class="p">)</span> <span class="p">(</span><span class="nx">action</span> <span class="nx">evio</span><span class="p">.</span><span class="nx">Action</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">log</span><span class="p">.</span><span class="nf">Printf</span><span class="p">(</span><span class="s">&#34;echo server started&#34;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">		<span class="k">return</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">events</span><span class="p">.</span><span class="nx">Data</span> <span class="p">=</span> <span class="kd">func</span><span class="p">(</span><span class="nx">c</span> <span class="nx">evio</span><span class="p">.</span><span class="nx">Conn</span><span class="p">,</span> <span class="nx">in</span> <span class="p">[]</span><span class="kt">byte</span><span class="p">)</span> <span class="p">(</span><span class="nx">out</span> <span class="p">[]</span><span class="kt">byte</span><span class="p">,</span> <span class="nx">action</span> <span class="nx">evio</span><span class="p">.</span><span class="nx">Action</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">fmt</span><span class="p">.</span><span class="nf">Println</span><span class="p">(</span><span class="s">&#34;receiver data:&#34;</span><span class="p">,</span> <span class="nb">string</span><span class="p">(</span><span class="nx">in</span><span class="p">))</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">out</span> <span class="p">=</span> <span class="nx">in</span>
+</span></span><span class="line"><span class="cl">		<span class="k">return</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">log</span><span class="p">.</span><span class="nf">Fatal</span><span class="p">(</span><span class="nx">evio</span><span class="p">.</span><span class="nf">Serve</span><span class="p">(</span><span class="nx">events</span><span class="p">,</span> <span class="s">&#34;tcp://:8089&#34;</span><span class="p">,</span> <span class="s">&#34;tcp://:8088&#34;</span><span class="p">))</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></div><p>我们指定NumLoops的数量是3，然后传入了两个地址。</p>
+<p>上面还有两个闭包函数，当服务启动的时候会回调events.Serving函数，然后返回一个Action。</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="kd">const</span> <span class="p">(</span>
+</span></span><span class="line"><span class="cl">	<span class="c1">// None indicates that no action should occur following an event.
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="nx">None</span> <span class="nx">Action</span> <span class="p">=</span> <span class="kc">iota</span>
+</span></span><span class="line"><span class="cl">	<span class="c1">// Detach detaches a connection. Not available for UDP connections.
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="nx">Detach</span>
+</span></span><span class="line"><span class="cl">	<span class="c1">// Close closes the connection.
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="nx">Close</span>
+</span></span><span class="line"><span class="cl">	<span class="c1">// Shutdown shutdowns the server.
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="nx">Shutdown</span>
+</span></span><span class="line"><span class="cl"><span class="p">)</span>
+</span></span></code></pre></div><p>比如当你返回一个Shutdown的action，那么程序就直接退出了。</p>
+<p>当有客户端数据到来时，回调events.Data函数，返回out和action，out表示要发送的数据。</p>
+<p>最终调用 evio.Serve函数，传入两个地址，启动服务。</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="kd">func</span> <span class="nf">Serve</span><span class="p">(</span><span class="nx">events</span> <span class="nx">Events</span><span class="p">,</span> <span class="nx">addr</span> <span class="o">...</span><span class="kt">string</span><span class="p">)</span> <span class="kt">error</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">	<span class="kd">var</span> <span class="nx">lns</span> <span class="p">[]</span><span class="o">*</span><span class="nx">listener</span>
+</span></span><span class="line"><span class="cl">	<span class="k">defer</span> <span class="kd">func</span><span class="p">()</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="k">for</span> <span class="nx">_</span><span class="p">,</span> <span class="nx">ln</span> <span class="o">:=</span> <span class="k">range</span> <span class="nx">lns</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">			<span class="nx">ln</span><span class="p">.</span><span class="nb">close</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">		<span class="p">}</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}()</span>
+</span></span><span class="line"><span class="cl">	<span class="k">for</span> <span class="nx">_</span><span class="p">,</span> <span class="nx">addr</span> <span class="o">:=</span> <span class="k">range</span> <span class="nx">addr</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="kd">var</span> <span class="nx">ln</span> <span class="nx">listener</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">ln</span><span class="p">.</span><span class="nx">network</span><span class="p">,</span> <span class="nx">ln</span><span class="p">.</span><span class="nx">addr</span><span class="p">,</span> <span class="nx">ln</span><span class="p">.</span><span class="nx">opts</span><span class="p">,</span> <span class="nx">_</span><span class="p">=</span> <span class="nf">parseAddr</span><span class="p">(</span><span class="nx">addr</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">		
+</span></span><span class="line"><span class="cl">		<span class="k">if</span> <span class="nx">ln</span><span class="p">.</span><span class="nx">network</span> <span class="o">==</span> <span class="s">&#34;unix&#34;</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">			<span class="nx">os</span><span class="p">.</span><span class="nf">RemoveAll</span><span class="p">(</span><span class="nx">ln</span><span class="p">.</span><span class="nx">addr</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">		<span class="p">}</span>
+</span></span><span class="line"><span class="cl">		<span class="kd">var</span> <span class="nx">err</span> <span class="kt">error</span>
+</span></span><span class="line"><span class="cl">		<span class="k">if</span> <span class="nx">ln</span><span class="p">.</span><span class="nx">network</span> <span class="o">==</span> <span class="s">&#34;udp&#34;</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">			<span class="k">if</span> <span class="nx">ln</span><span class="p">.</span><span class="nx">opts</span><span class="p">.</span><span class="nx">reusePort</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">				<span class="nx">ln</span><span class="p">.</span><span class="nx">pconn</span><span class="p">,</span> <span class="nx">err</span> <span class="p">=</span> <span class="nf">reuseportListenPacket</span><span class="p">(</span><span class="nx">ln</span><span class="p">.</span><span class="nx">network</span><span class="p">,</span> <span class="nx">ln</span><span class="p">.</span><span class="nx">addr</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">			<span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">				<span class="nx">ln</span><span class="p">.</span><span class="nx">pconn</span><span class="p">,</span> <span class="nx">err</span> <span class="p">=</span> <span class="nx">net</span><span class="p">.</span><span class="nf">ListenPacket</span><span class="p">(</span><span class="nx">ln</span><span class="p">.</span><span class="nx">network</span><span class="p">,</span> <span class="nx">ln</span><span class="p">.</span><span class="nx">addr</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">			<span class="p">}</span>
+</span></span><span class="line"><span class="cl">		<span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">			<span class="k">if</span> <span class="nx">ln</span><span class="p">.</span><span class="nx">opts</span><span class="p">.</span><span class="nx">reusePort</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">				<span class="nx">ln</span><span class="p">.</span><span class="nx">ln</span><span class="p">,</span> <span class="nx">err</span> <span class="p">=</span> <span class="nf">reuseportListen</span><span class="p">(</span><span class="nx">ln</span><span class="p">.</span><span class="nx">network</span><span class="p">,</span> <span class="nx">ln</span><span class="p">.</span><span class="nx">addr</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">			<span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">				<span class="nx">ln</span><span class="p">.</span><span class="nx">ln</span><span class="p">,</span> <span class="nx">err</span> <span class="p">=</span> <span class="nx">net</span><span class="p">.</span><span class="nf">Listen</span><span class="p">(</span><span class="nx">ln</span><span class="p">.</span><span class="nx">network</span><span class="p">,</span> <span class="nx">ln</span><span class="p">.</span><span class="nx">addr</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">			<span class="p">}</span>
+</span></span><span class="line"><span class="cl">		<span class="p">}</span>
+</span></span><span class="line"><span class="cl">		<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">			<span class="k">return</span> <span class="nx">err</span>
+</span></span><span class="line"><span class="cl">		<span class="p">}</span>
+</span></span><span class="line"><span class="cl">		<span class="k">if</span> <span class="nx">ln</span><span class="p">.</span><span class="nx">pconn</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">			<span class="nx">ln</span><span class="p">.</span><span class="nx">lnaddr</span> <span class="p">=</span> <span class="nx">ln</span><span class="p">.</span><span class="nx">pconn</span><span class="p">.</span><span class="nf">LocalAddr</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">		<span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">			<span class="nx">ln</span><span class="p">.</span><span class="nx">lnaddr</span> <span class="p">=</span> <span class="nx">ln</span><span class="p">.</span><span class="nx">ln</span><span class="p">.</span><span class="nf">Addr</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">		<span class="p">}</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">lns</span> <span class="p">=</span> <span class="nb">append</span><span class="p">(</span><span class="nx">lns</span><span class="p">,</span> <span class="o">&amp;</span><span class="nx">ln</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}</span>
+</span></span><span class="line"><span class="cl">	<span class="k">return</span> <span class="nf">serve</span><span class="p">(</span><span class="nx">events</span><span class="p">,</span> <span class="nx">lns</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></div><p>我删除了一些无关代码。</p>
+<p>Serve 函数里面遍历传入的地址识别协议，执行对应listen操作。udp返回一个PacketConn，而tcp返回一个Listener。最终用自定义的listener统一表示。最终调用serve。</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="kd">func</span> <span class="nf">serve</span><span class="p">(</span><span class="nx">events</span> <span class="nx">Events</span><span class="p">,</span> <span class="nx">listeners</span> <span class="p">[]</span><span class="o">*</span><span class="nx">listener</span><span class="p">)</span> <span class="kt">error</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">	<span class="c1">// figure out the correct number of loops/goroutines to use.
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="nx">numLoops</span> <span class="o">:=</span> <span class="nx">events</span><span class="p">.</span><span class="nx">NumLoops</span>
+</span></span><span class="line"><span class="cl">	<span class="k">if</span> <span class="nx">numLoops</span> <span class="o">&lt;=</span> <span class="mi">0</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="k">if</span> <span class="nx">numLoops</span> <span class="o">==</span> <span class="mi">0</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">			<span class="nx">numLoops</span> <span class="p">=</span> <span class="mi">1</span>
+</span></span><span class="line"><span class="cl">		<span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">			<span class="nx">numLoops</span> <span class="p">=</span> <span class="nx">runtime</span><span class="p">.</span><span class="nf">NumCPU</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">		<span class="p">}</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">	<span class="nx">s</span> <span class="o">:=</span> <span class="o">&amp;</span><span class="nx">server</span><span class="p">{}</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">s</span><span class="p">.</span><span class="nx">events</span> <span class="p">=</span> <span class="nx">events</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">s</span><span class="p">.</span><span class="nx">lns</span> <span class="p">=</span> <span class="nx">listeners</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">s</span><span class="p">.</span><span class="nx">cond</span> <span class="p">=</span> <span class="nx">sync</span><span class="p">.</span><span class="nf">NewCond</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">sync</span><span class="p">.</span><span class="nx">Mutex</span><span class="p">{})</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">s</span><span class="p">.</span><span class="nx">balance</span> <span class="p">=</span> <span class="nx">events</span><span class="p">.</span><span class="nx">LoadBalance</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">s</span><span class="p">.</span><span class="nx">tch</span> <span class="p">=</span> <span class="nb">make</span><span class="p">(</span><span class="kd">chan</span> <span class="nx">time</span><span class="p">.</span><span class="nx">Duration</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">	<span class="c1">//println(&#34;-- server starting&#34;)
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="k">if</span> <span class="nx">s</span><span class="p">.</span><span class="nx">events</span><span class="p">.</span><span class="nx">Serving</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="kd">var</span> <span class="nx">svr</span> <span class="nx">Server</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">svr</span><span class="p">.</span><span class="nx">NumLoops</span> <span class="p">=</span> <span class="nx">numLoops</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">svr</span><span class="p">.</span><span class="nx">Addrs</span> <span class="p">=</span> <span class="nb">make</span><span class="p">([]</span><span class="nx">net</span><span class="p">.</span><span class="nx">Addr</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="nx">listeners</span><span class="p">))</span>
+</span></span><span class="line"><span class="cl">		<span class="k">for</span> <span class="nx">i</span><span class="p">,</span> <span class="nx">ln</span> <span class="o">:=</span> <span class="k">range</span> <span class="nx">listeners</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">			<span class="nx">svr</span><span class="p">.</span><span class="nx">Addrs</span><span class="p">[</span><span class="nx">i</span><span class="p">]</span> <span class="p">=</span> <span class="nx">ln</span><span class="p">.</span><span class="nx">lnaddr</span>
+</span></span><span class="line"><span class="cl">		<span class="p">}</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">action</span> <span class="o">:=</span> <span class="nx">s</span><span class="p">.</span><span class="nx">events</span><span class="p">.</span><span class="nf">Serving</span><span class="p">(</span><span class="nx">svr</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">		<span class="k">switch</span> <span class="nx">action</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="k">case</span> <span class="nx">None</span><span class="p">:</span>
+</span></span><span class="line"><span class="cl">		<span class="k">case</span> <span class="nx">Shutdown</span><span class="p">:</span>
+</span></span><span class="line"><span class="cl">			<span class="k">return</span> <span class="kc">nil</span>
+</span></span><span class="line"><span class="cl">		<span class="p">}</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">	<span class="k">defer</span> <span class="kd">func</span><span class="p">()</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="c1">// wait on a signal for shutdown
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>		<span class="nx">s</span><span class="p">.</span><span class="nf">waitForShutdown</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">		<span class="c1">// notify all loops to close by closing all listeners
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>		<span class="k">for</span> <span class="nx">_</span><span class="p">,</span> <span class="nx">l</span> <span class="o">:=</span> <span class="k">range</span> <span class="nx">s</span><span class="p">.</span><span class="nx">loops</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">			<span class="nx">l</span><span class="p">.</span><span class="nx">poll</span><span class="p">.</span><span class="nf">Trigger</span><span class="p">(</span><span class="nx">errClosing</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">		<span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">		<span class="c1">// wait on all loops to complete reading events
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>		<span class="nx">s</span><span class="p">.</span><span class="nx">wg</span><span class="p">.</span><span class="nf">Wait</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">		<span class="c1">// close loops and all outstanding connections
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>		<span class="k">for</span> <span class="nx">_</span><span class="p">,</span> <span class="nx">l</span> <span class="o">:=</span> <span class="k">range</span> <span class="nx">s</span><span class="p">.</span><span class="nx">loops</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">			<span class="k">for</span> <span class="nx">_</span><span class="p">,</span> <span class="nx">c</span> <span class="o">:=</span> <span class="k">range</span> <span class="nx">l</span><span class="p">.</span><span class="nx">fdconns</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">				<span class="nf">loopCloseConn</span><span class="p">(</span><span class="nx">s</span><span class="p">,</span> <span class="nx">l</span><span class="p">,</span> <span class="nx">c</span><span class="p">,</span> <span class="kc">nil</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">			<span class="p">}</span>
+</span></span><span class="line"><span class="cl">			<span class="nx">l</span><span class="p">.</span><span class="nx">poll</span><span class="p">.</span><span class="nf">Close</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">		<span class="p">}</span>
+</span></span><span class="line"><span class="cl">		<span class="c1">//println(&#34;-- server stopped&#34;)
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="p">}()</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">	<span class="c1">// create loops locally and bind the listeners.
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="k">for</span> <span class="nx">i</span> <span class="o">:=</span> <span class="mi">0</span><span class="p">;</span> <span class="nx">i</span> <span class="p">&lt;</span> <span class="nx">numLoops</span><span class="p">;</span> <span class="nx">i</span><span class="o">++</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">l</span> <span class="o">:=</span> <span class="o">&amp;</span><span class="nx">loop</span><span class="p">{</span>
+</span></span><span class="line"><span class="cl">			<span class="nx">idx</span><span class="p">:</span>     <span class="nx">i</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">			<span class="nx">poll</span><span class="p">:</span>    <span class="nx">internal</span><span class="p">.</span><span class="nf">OpenPoll</span><span class="p">(),</span>
+</span></span><span class="line"><span class="cl">			<span class="nx">packet</span><span class="p">:</span>  <span class="nb">make</span><span class="p">([]</span><span class="kt">byte</span><span class="p">,</span> <span class="mh">0xFFFF</span><span class="p">),</span>
+</span></span><span class="line"><span class="cl">			<span class="nx">fdconns</span><span class="p">:</span> <span class="nb">make</span><span class="p">(</span><span class="kd">map</span><span class="p">[</span><span class="kt">int</span><span class="p">]</span><span class="o">*</span><span class="nx">conn</span><span class="p">),</span>
+</span></span><span class="line"><span class="cl">		<span class="p">}</span>
+</span></span><span class="line"><span class="cl">		<span class="k">for</span> <span class="nx">_</span><span class="p">,</span> <span class="nx">ln</span> <span class="o">:=</span> <span class="k">range</span> <span class="nx">listeners</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">			<span class="nx">l</span><span class="p">.</span><span class="nx">poll</span><span class="p">.</span><span class="nf">AddRead</span><span class="p">(</span><span class="nx">ln</span><span class="p">.</span><span class="nx">fd</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">		<span class="p">}</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">s</span><span class="p">.</span><span class="nx">loops</span> <span class="p">=</span> <span class="nb">append</span><span class="p">(</span><span class="nx">s</span><span class="p">.</span><span class="nx">loops</span><span class="p">,</span> <span class="nx">l</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}</span>
+</span></span><span class="line"><span class="cl">	<span class="c1">// start loops in background
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="nx">s</span><span class="p">.</span><span class="nx">wg</span><span class="p">.</span><span class="nf">Add</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="nx">s</span><span class="p">.</span><span class="nx">loops</span><span class="p">))</span>
+</span></span><span class="line"><span class="cl">	<span class="k">for</span> <span class="nx">_</span><span class="p">,</span> <span class="nx">l</span> <span class="o">:=</span> <span class="k">range</span> <span class="nx">s</span><span class="p">.</span><span class="nx">loops</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="k">go</span> <span class="nf">loopRun</span><span class="p">(</span><span class="nx">s</span><span class="p">,</span> <span class="nx">l</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}</span>
+</span></span><span class="line"><span class="cl">	<span class="k">return</span> <span class="kc">nil</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></div><p>这个函数逻辑:</p>
+<p>1.先初始化一个自定义server结构，确定负载均衡算法。</p>
+<p>2.回调自定义的serving闭包函数。</p>
+<p>3.根据numloops值，创建对应数量的epoll封装在自定义结构loop中。并把每一个listener对应的fd加入到每一个epoll同时注册fd的读事件，</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="k">for</span> <span class="nx">_</span><span class="p">,</span> <span class="nx">ln</span> <span class="o">:=</span> <span class="k">range</span> <span class="nx">listeners</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">			<span class="nx">l</span><span class="p">.</span><span class="nx">poll</span><span class="p">.</span><span class="nf">AddRead</span><span class="p">(</span><span class="nx">ln</span><span class="p">.</span><span class="nx">fd</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">		<span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="kd">func</span> <span class="p">(</span><span class="nx">p</span> <span class="o">*</span><span class="nx">Poll</span><span class="p">)</span> <span class="nf">AddRead</span><span class="p">(</span><span class="nx">fd</span> <span class="kt">int</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">	<span class="k">if</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">syscall</span><span class="p">.</span><span class="nf">EpollCtl</span><span class="p">(</span><span class="nx">p</span><span class="p">.</span><span class="nx">fd</span><span class="p">,</span> <span class="nx">syscall</span><span class="p">.</span><span class="nx">EPOLL_CTL_ADD</span><span class="p">,</span> <span class="nx">fd</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">		<span class="o">&amp;</span><span class="nx">syscall</span><span class="p">.</span><span class="nx">EpollEvent</span><span class="p">{</span><span class="nx">Fd</span><span class="p">:</span> <span class="nb">int32</span><span class="p">(</span><span class="nx">fd</span><span class="p">),</span>
+</span></span><span class="line"><span class="cl">			<span class="nx">Events</span><span class="p">:</span> <span class="nx">syscall</span><span class="p">.</span><span class="nx">EPOLLIN</span><span class="p">,</span> <span class="c1">//读事件
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>		<span class="p">},</span>
+</span></span><span class="line"><span class="cl">	<span class="p">);</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="nb">panic</span><span class="p">(</span><span class="nx">err</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></div><p>4.遍历loops,每个loop都用一个g执行loopRun函数。</p>
+<p>至于loopRun函数，</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="kd">func</span> <span class="nf">loopRun</span><span class="p">(</span><span class="nx">s</span> <span class="o">*</span><span class="nx">server</span><span class="p">,</span> <span class="nx">l</span> <span class="o">*</span><span class="nx">loop</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">	<span class="k">defer</span> <span class="kd">func</span><span class="p">()</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="c1">//fmt.Println(&#34;-- loop stopped --&#34;, l.idx)
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>		<span class="nx">s</span><span class="p">.</span><span class="nf">signalShutdown</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">s</span><span class="p">.</span><span class="nx">wg</span><span class="p">.</span><span class="nf">Done</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}()</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">	<span class="k">if</span> <span class="nx">l</span><span class="p">.</span><span class="nx">idx</span> <span class="o">==</span> <span class="mi">0</span> <span class="o">&amp;&amp;</span> <span class="nx">s</span><span class="p">.</span><span class="nx">events</span><span class="p">.</span><span class="nx">Tick</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="k">go</span> <span class="nf">loopTicker</span><span class="p">(</span><span class="nx">s</span><span class="p">,</span> <span class="nx">l</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">	<span class="c1">//fmt.Println(&#34;-- loop started --&#34;, l.idx)
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="nx">l</span><span class="p">.</span><span class="nx">poll</span><span class="p">.</span><span class="nf">Wait</span><span class="p">(</span><span class="kd">func</span><span class="p">(</span><span class="nx">fd</span> <span class="kt">int</span><span class="p">,</span> <span class="nx">note</span> <span class="kd">interface</span><span class="p">{})</span> <span class="kt">error</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="k">if</span> <span class="nx">fd</span> <span class="o">==</span> <span class="mi">0</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">			<span class="k">return</span> <span class="nf">loopNote</span><span class="p">(</span><span class="nx">s</span><span class="p">,</span> <span class="nx">l</span><span class="p">,</span> <span class="nx">note</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">		<span class="p">}</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">c</span> <span class="o">:=</span> <span class="nx">l</span><span class="p">.</span><span class="nx">fdconns</span><span class="p">[</span><span class="nx">fd</span><span class="p">]</span>
+</span></span><span class="line"><span class="cl">		<span class="k">switch</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="k">case</span> <span class="nx">c</span> <span class="o">==</span> <span class="kc">nil</span><span class="p">:</span>
+</span></span><span class="line"><span class="cl">			<span class="k">return</span> <span class="nf">loopAccept</span><span class="p">(</span><span class="nx">s</span><span class="p">,</span> <span class="nx">l</span><span class="p">,</span> <span class="nx">fd</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">		<span class="k">case</span> <span class="p">!</span><span class="nx">c</span><span class="p">.</span><span class="nx">opened</span><span class="p">:</span>
+</span></span><span class="line"><span class="cl">			<span class="k">return</span> <span class="nf">loopOpened</span><span class="p">(</span><span class="nx">s</span><span class="p">,</span> <span class="nx">l</span><span class="p">,</span> <span class="nx">c</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">		<span class="k">case</span> <span class="nb">len</span><span class="p">(</span><span class="nx">c</span><span class="p">.</span><span class="nx">out</span><span class="p">)</span> <span class="p">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+</span></span><span class="line"><span class="cl">			<span class="k">return</span> <span class="nf">loopWrite</span><span class="p">(</span><span class="nx">s</span><span class="p">,</span> <span class="nx">l</span><span class="p">,</span> <span class="nx">c</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">		<span class="k">case</span> <span class="nx">c</span><span class="p">.</span><span class="nx">action</span> <span class="o">!=</span> <span class="nx">None</span><span class="p">:</span>
+</span></span><span class="line"><span class="cl">			<span class="k">return</span> <span class="nf">loopAction</span><span class="p">(</span><span class="nx">s</span><span class="p">,</span> <span class="nx">l</span><span class="p">,</span> <span class="nx">c</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">		<span class="k">default</span><span class="p">:</span>
+</span></span><span class="line"><span class="cl">			<span class="k">return</span> <span class="nf">loopRead</span><span class="p">(</span><span class="nx">s</span><span class="p">,</span> <span class="nx">l</span><span class="p">,</span> <span class="nx">c</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">		<span class="p">}</span>
+</span></span><span class="line"><span class="cl">	<span class="p">})</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></div><p>每个loop都会调用epoll.Wait函数阻塞等待事件到来，参数时一个闭包函数，每一个到达的事件都会回调此闭包执行相应操作。</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="kd">func</span> <span class="p">(</span><span class="nx">p</span> <span class="o">*</span><span class="nx">Poll</span><span class="p">)</span> <span class="nf">Wait</span><span class="p">(</span><span class="nx">iter</span> <span class="kd">func</span><span class="p">(</span><span class="nx">fd</span> <span class="kt">int</span><span class="p">,</span> <span class="nx">note</span> <span class="kd">interface</span><span class="p">{})</span> <span class="kt">error</span><span class="p">)</span> <span class="kt">error</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">events</span> <span class="o">:=</span> <span class="nb">make</span><span class="p">([]</span><span class="nx">syscall</span><span class="p">.</span><span class="nx">EpollEvent</span><span class="p">,</span> <span class="mi">64</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">	<span class="k">for</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="c1">// 等待事件
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>		<span class="nx">n</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">syscall</span><span class="p">.</span><span class="nf">EpollWait</span><span class="p">(</span><span class="nx">p</span><span class="p">.</span><span class="nx">fd</span><span class="p">,</span> <span class="nx">events</span><span class="p">,</span> <span class="mi">100</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">		<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="o">&amp;&amp;</span> <span class="nx">err</span> <span class="o">!=</span> <span class="nx">syscall</span><span class="p">.</span><span class="nx">EINTR</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">			<span class="k">return</span> <span class="nx">err</span>
+</span></span><span class="line"><span class="cl">		<span class="p">}</span>
+</span></span><span class="line"><span class="cl">		<span class="k">if</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">p</span><span class="p">.</span><span class="nx">notes</span><span class="p">.</span><span class="nf">ForEach</span><span class="p">(</span><span class="kd">func</span><span class="p">(</span><span class="nx">note</span> <span class="kd">interface</span><span class="p">{})</span> <span class="kt">error</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">			<span class="k">return</span> <span class="nf">iter</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="nx">note</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">		<span class="p">});</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">			<span class="k">return</span> <span class="nx">err</span>
+</span></span><span class="line"><span class="cl">		<span class="p">}</span>
+</span></span><span class="line"><span class="cl">		<span class="k">for</span> <span class="nx">i</span> <span class="o">:=</span> <span class="mi">0</span><span class="p">;</span> <span class="nx">i</span> <span class="p">&lt;</span> <span class="nx">n</span><span class="p">;</span> <span class="nx">i</span><span class="o">++</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">      <span class="c1">// 正常的客户端fd
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>			<span class="k">if</span> <span class="nx">fd</span> <span class="o">:=</span> <span class="nb">int</span><span class="p">(</span><span class="nx">events</span><span class="p">[</span><span class="nx">i</span><span class="p">].</span><span class="nx">Fd</span><span class="p">);</span> <span class="nx">fd</span> <span class="o">!=</span> <span class="nx">p</span><span class="p">.</span><span class="nx">wfd</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">				<span class="k">if</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nf">iter</span><span class="p">(</span><span class="nx">fd</span><span class="p">,</span> <span class="kc">nil</span><span class="p">);</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">					<span class="k">return</span> <span class="nx">err</span>
+</span></span><span class="line"><span class="cl">				<span class="p">}</span>
+</span></span><span class="line"><span class="cl">			<span class="p">}</span> <span class="k">else</span> <span class="k">if</span> <span class="nx">fd</span> <span class="o">==</span> <span class="nx">p</span><span class="p">.</span><span class="nx">wfd</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">				<span class="kd">var</span> <span class="nx">data</span> <span class="p">[</span><span class="mi">8</span><span class="p">]</span><span class="kt">byte</span>
+</span></span><span class="line"><span class="cl">				<span class="nx">syscall</span><span class="p">.</span><span class="nf">Read</span><span class="p">(</span><span class="nx">p</span><span class="p">.</span><span class="nx">wfd</span><span class="p">,</span> <span class="nx">data</span><span class="p">[:])</span>
+</span></span><span class="line"><span class="cl">			<span class="p">}</span>
+</span></span><span class="line"><span class="cl">		<span class="p">}</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></div><p>回到上一步，</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="nx">l</span><span class="p">.</span><span class="nx">poll</span><span class="p">.</span><span class="nf">Wait</span><span class="p">(</span><span class="kd">func</span><span class="p">(</span><span class="nx">fd</span> <span class="kt">int</span><span class="p">,</span> <span class="nx">note</span> <span class="kd">interface</span><span class="p">{})</span> <span class="kt">error</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="k">if</span> <span class="nx">fd</span> <span class="o">==</span> <span class="mi">0</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">			<span class="k">return</span> <span class="nf">loopNote</span><span class="p">(</span><span class="nx">s</span><span class="p">,</span> <span class="nx">l</span><span class="p">,</span> <span class="nx">note</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">		<span class="p">}</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">c</span> <span class="o">:=</span> <span class="nx">l</span><span class="p">.</span><span class="nx">fdconns</span><span class="p">[</span><span class="nx">fd</span><span class="p">]</span>
+</span></span><span class="line"><span class="cl">		<span class="k">switch</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="k">case</span> <span class="nx">c</span> <span class="o">==</span> <span class="kc">nil</span><span class="p">:</span>
+</span></span><span class="line"><span class="cl">			<span class="k">return</span> <span class="nf">loopAccept</span><span class="p">(</span><span class="nx">s</span><span class="p">,</span> <span class="nx">l</span><span class="p">,</span> <span class="nx">fd</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">		<span class="k">case</span> <span class="p">!</span><span class="nx">c</span><span class="p">.</span><span class="nx">opened</span><span class="p">:</span>
+</span></span><span class="line"><span class="cl">			<span class="k">return</span> <span class="nf">loopOpened</span><span class="p">(</span><span class="nx">s</span><span class="p">,</span> <span class="nx">l</span><span class="p">,</span> <span class="nx">c</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">		<span class="k">case</span> <span class="nb">len</span><span class="p">(</span><span class="nx">c</span><span class="p">.</span><span class="nx">out</span><span class="p">)</span> <span class="p">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+</span></span><span class="line"><span class="cl">			<span class="k">return</span> <span class="nf">loopWrite</span><span class="p">(</span><span class="nx">s</span><span class="p">,</span> <span class="nx">l</span><span class="p">,</span> <span class="nx">c</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">		<span class="k">case</span> <span class="nx">c</span><span class="p">.</span><span class="nx">action</span> <span class="o">!=</span> <span class="nx">None</span><span class="p">:</span>
+</span></span><span class="line"><span class="cl">			<span class="k">return</span> <span class="nf">loopAction</span><span class="p">(</span><span class="nx">s</span><span class="p">,</span> <span class="nx">l</span><span class="p">,</span> <span class="nx">c</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">		<span class="k">default</span><span class="p">:</span>
+</span></span><span class="line"><span class="cl">			<span class="k">return</span> <span class="nf">loopRead</span><span class="p">(</span><span class="nx">s</span><span class="p">,</span> <span class="nx">l</span><span class="p">,</span> <span class="nx">c</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">		<span class="p">}</span>
+</span></span><span class="line"><span class="cl">	<span class="p">})</span>
+</span></span></code></pre></div><p>注意这里是每个loop都会调用自己的epoll.Wait。当对应的Listener来了一个新客户端连接，所有的epoll都会被“惊醒”，这就是惊群效应。</p>
+<blockquote>
+<p>惊群效应（thundering herd）是指多进程（多线程）在同时阻塞等待同一个事件的时候（休眠状态），如果等待的这个事件发生，那么它就会唤醒等待的所有进程（或者线程）</p>
+</blockquote>
+<p>然后所有的loop都会执行loopAccept函数，</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="kd">func</span> <span class="nf">loopAccept</span><span class="p">(</span><span class="nx">s</span> <span class="o">*</span><span class="nx">server</span><span class="p">,</span> <span class="nx">l</span> <span class="o">*</span><span class="nx">loop</span><span class="p">,</span> <span class="nx">fd</span> <span class="kt">int</span><span class="p">)</span> <span class="kt">error</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">   <span class="k">for</span> <span class="nx">i</span><span class="p">,</span> <span class="nx">ln</span> <span class="o">:=</span> <span class="k">range</span> <span class="nx">s</span><span class="p">.</span><span class="nx">lns</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">      <span class="c1">// 确实是哪个listener fd 事件
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>      <span class="k">if</span> <span class="nx">ln</span><span class="p">.</span><span class="nx">fd</span> <span class="o">==</span> <span class="nx">fd</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">         <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="nx">s</span><span class="p">.</span><span class="nx">loops</span><span class="p">)</span> <span class="p">&gt;</span> <span class="mi">1</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">            <span class="k">switch</span> <span class="nx">s</span><span class="p">.</span><span class="nx">balance</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">            <span class="k">case</span> <span class="nx">LeastConnections</span><span class="p">:</span>
+</span></span><span class="line"><span class="cl">               <span class="nx">n</span> <span class="o">:=</span> <span class="nx">atomic</span><span class="p">.</span><span class="nf">LoadInt32</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">l</span><span class="p">.</span><span class="nx">count</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">               <span class="k">for</span> <span class="nx">_</span><span class="p">,</span> <span class="nx">lp</span> <span class="o">:=</span> <span class="k">range</span> <span class="nx">s</span><span class="p">.</span><span class="nx">loops</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">                  <span class="c1">// 对比其他的loop，有比自己连接数少的，自己就不连接了
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>                  <span class="k">if</span> <span class="nx">lp</span><span class="p">.</span><span class="nx">idx</span> <span class="o">!=</span> <span class="nx">l</span><span class="p">.</span><span class="nx">idx</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">                     <span class="k">if</span> <span class="nx">atomic</span><span class="p">.</span><span class="nf">LoadInt32</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">lp</span><span class="p">.</span><span class="nx">count</span><span class="p">)</span> <span class="p">&lt;</span> <span class="nx">n</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">                        <span class="k">return</span> <span class="kc">nil</span> <span class="c1">// do not accept
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>                     <span class="p">}</span>
+</span></span><span class="line"><span class="cl">                  <span class="p">}</span>
+</span></span><span class="line"><span class="cl">               <span class="p">}</span>
+</span></span><span class="line"><span class="cl">            <span class="k">case</span> <span class="nx">RoundRobin</span><span class="p">:</span>
+</span></span><span class="line"><span class="cl">               <span class="nx">idx</span> <span class="o">:=</span> <span class="nb">int</span><span class="p">(</span><span class="nx">atomic</span><span class="p">.</span><span class="nf">LoadUintptr</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">s</span><span class="p">.</span><span class="nx">accepted</span><span class="p">))</span> <span class="o">%</span> <span class="nb">len</span><span class="p">(</span><span class="nx">s</span><span class="p">.</span><span class="nx">loops</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">               <span class="c1">//还没轮到我，也不能连接
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>               <span class="k">if</span> <span class="nx">idx</span> <span class="o">!=</span> <span class="nx">l</span><span class="p">.</span><span class="nx">idx</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">                  <span class="k">return</span> <span class="kc">nil</span> <span class="c1">// do not accept
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>               <span class="p">}</span>
+</span></span><span class="line"><span class="cl">               <span class="nx">atomic</span><span class="p">.</span><span class="nf">AddUintptr</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">s</span><span class="p">.</span><span class="nx">accepted</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">            <span class="p">}</span>
+</span></span><span class="line"><span class="cl">         <span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">         <span class="c1">// udp
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>         <span class="k">if</span> <span class="nx">ln</span><span class="p">.</span><span class="nx">pconn</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">            <span class="k">return</span> <span class="nf">loopUDPRead</span><span class="p">(</span><span class="nx">s</span><span class="p">,</span> <span class="nx">l</span><span class="p">,</span> <span class="nx">i</span><span class="p">,</span> <span class="nx">fd</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">         <span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">         <span class="nx">nfd</span><span class="p">,</span> <span class="nx">sa</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">syscall</span><span class="p">.</span><span class="nf">Accept</span><span class="p">(</span><span class="nx">fd</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">         <span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">            <span class="k">if</span> <span class="nx">err</span> <span class="o">==</span> <span class="nx">syscall</span><span class="p">.</span><span class="nx">EAGAIN</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">               <span class="k">return</span> <span class="kc">nil</span>
+</span></span><span class="line"><span class="cl">            <span class="p">}</span>
+</span></span><span class="line"><span class="cl">            <span class="k">return</span> <span class="nx">err</span>
+</span></span><span class="line"><span class="cl">         <span class="p">}</span>
+</span></span><span class="line"><span class="cl">         <span class="c1">//设置 conn fd 为非阻塞
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>         <span class="k">if</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">syscall</span><span class="p">.</span><span class="nf">SetNonblock</span><span class="p">(</span><span class="nx">nfd</span><span class="p">,</span> <span class="kc">true</span><span class="p">);</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">            <span class="k">return</span> <span class="nx">err</span>
+</span></span><span class="line"><span class="cl">         <span class="p">}</span>
+</span></span><span class="line"><span class="cl">         <span class="nx">c</span> <span class="o">:=</span> <span class="o">&amp;</span><span class="nx">conn</span><span class="p">{</span><span class="nx">fd</span><span class="p">:</span> <span class="nx">nfd</span><span class="p">,</span> <span class="nx">sa</span><span class="p">:</span> <span class="nx">sa</span><span class="p">,</span> <span class="nx">lnidx</span><span class="p">:</span> <span class="nx">i</span><span class="p">,</span> <span class="nx">loop</span><span class="p">:</span> <span class="nx">l</span><span class="p">}</span>
+</span></span><span class="line"><span class="cl">         <span class="nx">c</span><span class="p">.</span><span class="nx">out</span> <span class="p">=</span> <span class="kc">nil</span>
+</span></span><span class="line"><span class="cl">         <span class="nx">l</span><span class="p">.</span><span class="nx">fdconns</span><span class="p">[</span><span class="nx">c</span><span class="p">.</span><span class="nx">fd</span><span class="p">]</span> <span class="p">=</span> <span class="nx">c</span>
+</span></span><span class="line"><span class="cl">         <span class="c1">//把conn fd 注册到此epoll，且监听读写事件
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>         <span class="nx">l</span><span class="p">.</span><span class="nx">poll</span><span class="p">.</span><span class="nf">AddReadWrite</span><span class="p">(</span><span class="nx">c</span><span class="p">.</span><span class="nx">fd</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">         <span class="nx">atomic</span><span class="p">.</span><span class="nf">AddInt32</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">l</span><span class="p">.</span><span class="nx">count</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">         <span class="k">break</span>
+</span></span><span class="line"><span class="cl">      <span class="p">}</span>
+</span></span><span class="line"><span class="cl">   <span class="p">}</span>
+</span></span><span class="line"><span class="cl">   <span class="k">return</span> <span class="kc">nil</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></div><p>loopAccept做了几件事：</p>
+<p>1.确定就绪的fd是哪个listener</p>
+<p>2.如果loops大于1，通过策略选择其中一个loop,包装conn fd且设置conn fd为非阻塞(思考下如果让conn fd保持阻塞状态，会影响到什么？)</p>
+<p>3.最后把这个conn fd加入到当前epoll并且注册读写事件</p>
+<p>因此当一个新的客户端连接到来时，会发生什么？</p>
+<p>会产生惊群效应。</p>
+<p>那如果是已存在的conn fd的可读事件，会发生惊群效应吗？</p>
+<p>不会，因为一个conn fd只会加入到其中一个epoll中。</p>
+<p>因为evio创建epoll的时候默认是水平触发LT(level-triggered)，当加入的conn fd包含写事件时，如果此时内核写缓冲区空间未满，那么epoll会再次被唤醒。此时通过f.fdconns[fd]会找到对应的conn，由于连接初始化并未设置opened的直，因此会进入loopOpened函数。</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="kd">func</span> <span class="nf">loopOpened</span><span class="p">(</span><span class="nx">s</span> <span class="o">*</span><span class="nx">server</span><span class="p">,</span> <span class="nx">l</span> <span class="o">*</span><span class="nx">loop</span><span class="p">,</span> <span class="nx">c</span> <span class="o">*</span><span class="nx">conn</span><span class="p">)</span> <span class="kt">error</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">c</span><span class="p">.</span><span class="nx">opened</span> <span class="p">=</span> <span class="kc">true</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">c</span><span class="p">.</span><span class="nx">addrIndex</span> <span class="p">=</span> <span class="nx">c</span><span class="p">.</span><span class="nx">lnidx</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">c</span><span class="p">.</span><span class="nx">localAddr</span> <span class="p">=</span> <span class="nx">s</span><span class="p">.</span><span class="nx">lns</span><span class="p">[</span><span class="nx">c</span><span class="p">.</span><span class="nx">lnidx</span><span class="p">].</span><span class="nx">lnaddr</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">c</span><span class="p">.</span><span class="nx">remoteAddr</span> <span class="p">=</span> <span class="nx">internal</span><span class="p">.</span><span class="nf">SockaddrToAddr</span><span class="p">(</span><span class="nx">c</span><span class="p">.</span><span class="nx">sa</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">	<span class="k">if</span> <span class="nx">s</span><span class="p">.</span><span class="nx">events</span><span class="p">.</span><span class="nx">Opened</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">out</span><span class="p">,</span> <span class="nx">opts</span><span class="p">,</span> <span class="nx">action</span> <span class="o">:=</span> <span class="nx">s</span><span class="p">.</span><span class="nx">events</span><span class="p">.</span><span class="nf">Opened</span><span class="p">(</span><span class="nx">c</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">		<span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="nx">out</span><span class="p">)</span> <span class="p">&gt;</span> <span class="mi">0</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">			<span class="nx">c</span><span class="p">.</span><span class="nx">out</span> <span class="p">=</span> <span class="nb">append</span><span class="p">([]</span><span class="kt">byte</span><span class="p">{},</span> <span class="nx">out</span><span class="o">...</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">		<span class="p">}</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">c</span><span class="p">.</span><span class="nx">action</span> <span class="p">=</span> <span class="nx">action</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">c</span><span class="p">.</span><span class="nx">reuse</span> <span class="p">=</span> <span class="nx">opts</span><span class="p">.</span><span class="nx">ReuseInputBuffer</span>
+</span></span><span class="line"><span class="cl">		<span class="k">if</span> <span class="nx">opts</span><span class="p">.</span><span class="nx">TCPKeepAlive</span> <span class="p">&gt;</span> <span class="mi">0</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">			<span class="k">if</span> <span class="nx">_</span><span class="p">,</span> <span class="nx">ok</span> <span class="o">:=</span> <span class="nx">s</span><span class="p">.</span><span class="nx">lns</span><span class="p">[</span><span class="nx">c</span><span class="p">.</span><span class="nx">lnidx</span><span class="p">].</span><span class="nx">ln</span><span class="p">.(</span><span class="o">*</span><span class="nx">net</span><span class="p">.</span><span class="nx">TCPListener</span><span class="p">);</span> <span class="nx">ok</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">				<span class="nx">internal</span><span class="p">.</span><span class="nf">SetKeepAlive</span><span class="p">(</span><span class="nx">c</span><span class="p">.</span><span class="nx">fd</span><span class="p">,</span> <span class="nb">int</span><span class="p">(</span><span class="nx">opts</span><span class="p">.</span><span class="nx">TCPKeepAlive</span><span class="o">/</span><span class="nx">time</span><span class="p">.</span><span class="nx">Second</span><span class="p">))</span>
+</span></span><span class="line"><span class="cl">			<span class="p">}</span>
+</span></span><span class="line"><span class="cl">		<span class="p">}</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}</span>
+</span></span><span class="line"><span class="cl">	<span class="c1">// 没有可写的数据，并且也未设置连接的action，重新修改此conn只有read事件
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="nx">c</span><span class="p">.</span><span class="nx">out</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span> <span class="o">&amp;&amp;</span> <span class="nx">c</span><span class="p">.</span><span class="nx">action</span> <span class="o">==</span> <span class="nx">None</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">l</span><span class="p">.</span><span class="nx">poll</span><span class="p">.</span><span class="nf">ModRead</span><span class="p">(</span><span class="nx">c</span><span class="p">.</span><span class="nx">fd</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}</span>
+</span></span><span class="line"><span class="cl">	<span class="k">return</span> <span class="kc">nil</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></div><p>无非是一些简单赋值操作，如果设置了Opened闭包函数，那么回调它。</p>
+<p>最后如果out没有可发送的事件，那么就重新把此conn fd修改成读事件。</p>
+<p>想象一下，如果在没有可写数据的情况下，加入epoll的conn fd注册含有写事件，那么只要内核写缓存区未满，此epoll会不断被唤醒，我称它是空转。</p>
+<p>如果上面你设置了Opened闭包函数且最终action设置了值，那么就还是保持此conn fd的读写事件。</p>
+<p>这时候再次唤醒的epoll会执行loopAction，</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="kd">func</span> <span class="nf">loopAction</span><span class="p">(</span><span class="nx">s</span> <span class="o">*</span><span class="nx">server</span><span class="p">,</span> <span class="nx">l</span> <span class="o">*</span><span class="nx">loop</span><span class="p">,</span> <span class="nx">c</span> <span class="o">*</span><span class="nx">conn</span><span class="p">)</span> <span class="kt">error</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">   <span class="k">switch</span> <span class="nx">c</span><span class="p">.</span><span class="nx">action</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">   <span class="k">default</span><span class="p">:</span>
+</span></span><span class="line"><span class="cl">      <span class="nx">c</span><span class="p">.</span><span class="nx">action</span> <span class="p">=</span> <span class="nx">None</span>
+</span></span><span class="line"><span class="cl">   <span class="k">case</span> <span class="nx">Close</span><span class="p">:</span>
+</span></span><span class="line"><span class="cl">      <span class="k">return</span> <span class="nf">loopCloseConn</span><span class="p">(</span><span class="nx">s</span><span class="p">,</span> <span class="nx">l</span><span class="p">,</span> <span class="nx">c</span><span class="p">,</span> <span class="kc">nil</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">   <span class="k">case</span> <span class="nx">Shutdown</span><span class="p">:</span>
+</span></span><span class="line"><span class="cl">      <span class="k">return</span> <span class="nx">errClosing</span>
+</span></span><span class="line"><span class="cl">   <span class="k">case</span> <span class="nx">Detach</span><span class="p">:</span>
+</span></span><span class="line"><span class="cl">      <span class="k">return</span> <span class="nf">loopDetachConn</span><span class="p">(</span><span class="nx">s</span><span class="p">,</span> <span class="nx">l</span><span class="p">,</span> <span class="nx">c</span><span class="p">,</span> <span class="kc">nil</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">   <span class="p">}</span>
+</span></span><span class="line"><span class="cl">   <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="nx">c</span><span class="p">.</span><span class="nx">out</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span> <span class="o">&amp;&amp;</span> <span class="nx">c</span><span class="p">.</span><span class="nx">action</span> <span class="o">==</span> <span class="nx">None</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">      <span class="nx">l</span><span class="p">.</span><span class="nx">poll</span><span class="p">.</span><span class="nf">ModRead</span><span class="p">(</span><span class="nx">c</span><span class="p">.</span><span class="nx">fd</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">   <span class="p">}</span>
+</span></span><span class="line"><span class="cl">   <span class="k">return</span> <span class="kc">nil</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></div><p>上面代码很简单。</p>
+<p>当client发送数据，epoll被唤醒，执行loopRead。</p>
+<pre tabindex="0"><code>func loopRead(s *server, l *loop, c *conn) error {
+   var in []byte
+   // 读数据
+   n, err := syscall.Read(c.fd, l.packet)
+   if n == 0 || err != nil {
+      if err == syscall.EAGAIN {
+         return nil
+      }
+      return loopCloseConn(s, l, c, err)
+   }
+   in = l.packet[:n]
+   if !c.reuse {
+      in = append([]byte{}, in...)
+   }
+   // 回调data闭包函数
+   if s.events.Data != nil {
+      out, action := s.events.Data(c, in)
+      c.action = action
+      // 表示要发送的数据
+      if len(out) &gt; 0 {
+         c.out = append(c.out[:0], out...)
+      }
+   }
+   // 说明有数据要发送，重新注册读写事件
+   if len(c.out) != 0 || c.action != None {
+      l.poll.ModReadWrite(c.fd)
+   }
+   return nil
+}
+</code></pre><p>先读取数据，如果有数据要发送，又会修改conn fd为读写事件。当epoll再次被唤醒，且c.out不为空时，执行loopWrite。</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="kd">func</span> <span class="nf">loopWrite</span><span class="p">(</span><span class="nx">s</span> <span class="o">*</span><span class="nx">server</span><span class="p">,</span> <span class="nx">l</span> <span class="o">*</span><span class="nx">loop</span><span class="p">,</span> <span class="nx">c</span> <span class="o">*</span><span class="nx">conn</span><span class="p">)</span> <span class="kt">error</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">	<span class="k">if</span> <span class="nx">s</span><span class="p">.</span><span class="nx">events</span><span class="p">.</span><span class="nx">PreWrite</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">s</span><span class="p">.</span><span class="nx">events</span><span class="p">.</span><span class="nf">PreWrite</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">n</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">syscall</span><span class="p">.</span><span class="nf">Write</span><span class="p">(</span><span class="nx">c</span><span class="p">.</span><span class="nx">fd</span><span class="p">,</span> <span class="nx">c</span><span class="p">.</span><span class="nx">out</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">	<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="k">if</span> <span class="nx">err</span> <span class="o">==</span> <span class="nx">syscall</span><span class="p">.</span><span class="nx">EAGAIN</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">			<span class="k">return</span> <span class="kc">nil</span>
+</span></span><span class="line"><span class="cl">		<span class="p">}</span>
+</span></span><span class="line"><span class="cl">		<span class="k">return</span> <span class="nf">loopCloseConn</span><span class="p">(</span><span class="nx">s</span><span class="p">,</span> <span class="nx">l</span><span class="p">,</span> <span class="nx">c</span><span class="p">,</span> <span class="nx">err</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}</span>
+</span></span><span class="line"><span class="cl">	<span class="c1">// 说明一次就写完数据了
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="k">if</span> <span class="nx">n</span> <span class="o">==</span> <span class="nb">len</span><span class="p">(</span><span class="nx">c</span><span class="p">.</span><span class="nx">out</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="c1">// release the connection output page if it goes over page size,
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>		<span class="c1">// otherwise keep reusing existing page.
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>		<span class="c1">// 不让out无限增长空间
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>		<span class="k">if</span> <span class="nb">cap</span><span class="p">(</span><span class="nx">c</span><span class="p">.</span><span class="nx">out</span><span class="p">)</span> <span class="p">&gt;</span> <span class="mi">4096</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">			<span class="nx">c</span><span class="p">.</span><span class="nx">out</span> <span class="p">=</span> <span class="kc">nil</span>
+</span></span><span class="line"><span class="cl">		<span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">			<span class="c1">// 重置nil，复用
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>			<span class="nx">c</span><span class="p">.</span><span class="nx">out</span> <span class="p">=</span> <span class="nx">c</span><span class="p">.</span><span class="nx">out</span><span class="p">[:</span><span class="mi">0</span><span class="p">]</span>
+</span></span><span class="line"><span class="cl">		<span class="p">}</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="c1">//没写完，留着后面没写的部分
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>		<span class="nx">c</span><span class="p">.</span><span class="nx">out</span> <span class="p">=</span> <span class="nx">c</span><span class="p">.</span><span class="nx">out</span><span class="p">[</span><span class="nx">n</span><span class="p">:]</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}</span>
+</span></span><span class="line"><span class="cl">	<span class="c1">// 全写完了，重新调整为读事件
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="nx">c</span><span class="p">.</span><span class="nx">out</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span> <span class="o">&amp;&amp;</span> <span class="nx">c</span><span class="p">.</span><span class="nx">action</span> <span class="o">==</span> <span class="nx">None</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">l</span><span class="p">.</span><span class="nx">poll</span><span class="p">.</span><span class="nf">ModRead</span><span class="p">(</span><span class="nx">c</span><span class="p">.</span><span class="nx">fd</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}</span>
+</span></span><span class="line"><span class="cl">	<span class="k">return</span> <span class="kc">nil</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></div><p>如果一次写完数据，那么说明暂时没有可写的数据了，重新修改conn fd为读事件。</p>
+<p>如果一次没写完，那么保留未写完的数据，下次epoll唤醒的时候继续写。</p>
+<p>上面提到，一些文章提到，evio存在 loopWrite在内核缓冲区满，无法一次写入时，会出现写入数据丢失的bug。</p>
+<p>给的理由是，当内核写缓冲区满了，可数据并未写完。此时另一个conn读事件ready，会执行loopRead。</p>
+<p>loopRead有这么一段代码，</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="k">if</span> <span class="nx">s</span><span class="p">.</span><span class="nx">events</span><span class="p">.</span><span class="nx">Data</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">out</span><span class="p">,</span> <span class="nx">action</span> <span class="o">:=</span> <span class="nx">s</span><span class="p">.</span><span class="nx">events</span><span class="p">.</span><span class="nf">Data</span><span class="p">(</span><span class="nx">c</span><span class="p">,</span> <span class="nx">in</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">c</span><span class="p">.</span><span class="nx">action</span> <span class="p">=</span> <span class="nx">action</span>
+</span></span><span class="line"><span class="cl">		<span class="c1">// 表示要发送的数据
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>		<span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="nx">out</span><span class="p">)</span> <span class="p">&gt;</span> <span class="mi">0</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">      <span class="c1">// 之前这里是:c.out = append([]byte{}, out...)，效果是一样的
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>			<span class="nx">c</span><span class="p">.</span><span class="nx">out</span> <span class="p">=</span> <span class="nb">append</span><span class="p">(</span><span class="nx">c</span><span class="p">.</span><span class="nx">out</span><span class="p">[:</span><span class="mi">0</span><span class="p">],</span> <span class="nx">out</span><span class="o">...</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">		<span class="p">}</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}</span>
+</span></span></code></pre></div><p>那么此时之前未发送完的数据就会被覆盖，导致数据丢失。</p>
+<p>但是我仔细看了代码，并不存在这个bug。</p>
+<p>因为如果第一次没写完，假设此时同一个epoll下的另一个conn读事件ready，由于out还有未写完的数据，只会执行loopWrite分支， 并不会走到默认分支loopRead，也就不存在写数据被覆盖导致丢失的问题了。</p>
+<p>有趣的是，这样的情况会导致空转。因为执行loopWrite逻辑，由于内核写缓冲区已满，导致写不进去数据，会出现syscall.EAGAIN直接返回。又因此时还有可读的数据没读，会不断唤醒epoll。</p>
+<p>调用epoll_wait会陷入内核态，所以会导致不断的在用户态和内核态切换。直到写完数据，才能读其他conn数据。</p>
+<p>到这里，核心的代码已经分析完了。</p>
+<h4 id="evio存在的问题">Evio存在的问题</h4>
+<p><strong>惊群效应</strong>。</p>
+<p><strong>串行化</strong></p>
+<p>从上面的分析可以看出，如果一个epoll有两个fd可读事件ready，那么第二个fd必须等第一个执行完毕，才开始执行。</p>
+<p>换句话说，如果这个闭包函数里有外部依赖调用，第二个就得一直等。</p>
+<p>不能在Data函数里用go func吗？</p>
+<p>还真不能，要是这样的话又会涉及到数据并发问题，数据会发生错乱。</p>
+<p>同一个epoll下的conn是共享数据结构的，如果使用异步，必然又涉及到锁的问题。</p>
+<p><strong>数据copy问题</strong></p>
+<p>evio采用的是同步处理buffer数据，直接通过syscall读写操作存在copy开销，这是cpu直接参与的。看字节的netpoll使用的zero-copy的技术，后面再看源码。</p>
+<p><strong>频繁唤醒epoll</strong></p>
+<p>evio会通过不断修改conn fd的事件来唤醒epoll，达到逻辑上的正确性。频繁唤醒的方式并不是很妥，这种方式是存在开销的。</p>
+<p>这篇文章到这里就结束了，分析完go自建netpoll &ldquo;鼻祖&rdquo; evio，以及它存在局限性，就可以继续学习后续其他框架的设计了。</p>
+]]></content>
+		</item>
 		
 		<item>
 			<title>easycar更新日记</title>
@@ -189,6 +724,137 @@ Resource Manager(RM) 用户维度的角色，管理本地事务处理的资源�
 <h3 id="最后">最后</h3>
 <p>easycar 开发不是很久，它还有好多工作需要去完成。感兴趣的可以一起加入。</p>
 <p>项目地址：https://github.com/wuqinqiang/easycar</p>
+]]></content>
+		</item>
+		
+		<item>
+			<title>Gnet原理解析</title>
+			<link>https://www.syst.top/posts/go/gnet-copy/</link>
+			<pubDate>Tue, 07 Jun 2022 16:23:51 +0800</pubDate>
+			
+			<guid>https://www.syst.top/posts/go/gnet-copy/</guid>
+			<description>距离上次写文章过了一月有余，这段时间着实太躺了。以至于昨晚做了一个噩梦，醒来的时候狠狠的抽了自己两巴掌，不能这么躺了。
+上面当然是个笑话。
+开篇 上一篇我们分析了Go原生网络模型以及部分源码，绝大部分场景下(99%)，使用原生netpoll已经足够了。
+但是在一些海量并发连接下，原生netpoll会为每一个连接都开启一个goroutine处理，也就是1千万的连接就会创建一千万个goroutine。这就给了这些特殊场景下的优化空间，这也是像gnet和cloudwego/netpoll诞生的原因之一吧。
+本质上他们的底层核心都是一样的，都是基于epoll(linux)实现的。
+只是对事件发生后，每个库的处理方式会有所不同。
+本篇文章主要分析gnet的。至于使用姿势就不发了，gnet有对应的demo库，可以自行体验。
+架构 直接引用gnet官网的一张图
+gnet采用的是『主从多 Reactors』。也就是一个主线程负责监听端口连接，当一个客户端连接到来时，就把这个连接根据负载均衡算法分配给其中一个sub线程，由对应的sub线程去处理这个连接的读写事件以及管理它的死亡。
+下面这张图就更清晰了。
+核心结构 我们先解释gnet的一些核心结构。
+engine就是程序最上层的结构了。
+  ln对应的listener就是服务启动后对应监听端口的监听器。
+  lb对应的loadBalancer就是负载均衡器。也就是当客户端连接服务时，负载均衡器会选择一个sub线程，把连接交给此线程处理。
+  mainLoop 就是我们的主线程了，对应的结构eventloop。当然我们的sub线程结构也是eventloop。结构相同，不同的是职责。主线程负责的是监听端口发生的客户端连接事件，然后再由负载均衡器把连接分配给一个sub线程。而sub线程负责的是绑定分配给他的连接(不止一个)，且等待自己管理的所有连接后续读写事件，并进行处理。
+  接着看eventloop。
+ netpoll.Poller:每一个 eventloop都对应一个epoll或者kqueue。 buffer用来作为读消息的缓冲区。 connCoun记录当前eventloop存储的tcp连接数。 udpSockets和connetcions分别管理着这个eventloop下所有的udp socket和tcp连接，注意他们的结构map。这里的int类型存储的就是fd。  对应conn结构，
+这里面有几个字段介绍下，
+ buffer:存储当前conn对端(client)发送的最新数据，比如发送了三次，那个此时buffer存储的是第三次的数据,代码里有。 inboundBuffer:存储对端发送的且未被用户读取的剩余数据，还是个Ring Buffer。 outboundBuffer:存储还未发送给对端的数据。(比如服务端响应客户端的数据，由于conn fd是不阻塞的，调用write返回不可写的时候，就可以先把数据放到这里)  conn相当于每个连接都会有自己独立的缓存空间。这样做是为了减少集中式管理内存带来的锁问题。使用Ring buffer是为了增加空间的复用性。
+整体结构就这些。
+核心逻辑 当程序启动时，
+会根据用户设置的options明确eventloop循环的数量，也就是有多少个sub线程。再进一步说，在linux环境就是会创建多少个epoll对象。
+那么整个程序的epoll对象就是count(sub)+1(main Listener)。
+上图就是我说的，会根据设置的数量创建对应的eventloop,把对应的eventloop 注册到负载均衡器中。
+当新连接到来时，就可以根据一定的算法(gnet提供了轮询、最少连接以及hash)挑选其中一个eventloop把连接分配给它。
+我们先来看主线程，(由于我使用的是mac,所以后面关于IO多路复用，实现部分就是kqueue代码了，当然原理是一样的)
+Polling就是等待网络事件到来，传递了一个闭包参数，更确切的说是一个事件到来时的回调函数，从名字可以看出，就是处理新连接的。
+至于Polling函数，
+逻辑很简单，一个for循环等待事件到来，然后处理事件。
+主线程的事件分两种，
+一种是正常的fd发生网络连接事件，
+一种是通过NOTE_TRIGGER立即激活的事件。
+通过NOTE_TRIGGER触发告诉你队列里有task任务，去执行task任务。
+如果是正常的网络事件到来，就处理闭包函数，主线程处理的就是上面的accept连接函数。
+accept连接逻辑很简单，拿到连接的fd。设置fd非阻塞模式(想想连接是阻塞的会咋么样?),然后根据负载均衡算法选择一个sub 线程，通过register函数把此连接分配给它。
+register做了两件事，首先需要把当前连接注册到当前sub 线程的epoll or kqueue 对象中,新增read的flag。</description>
+			<content type="html"><![CDATA[<p>距离上次写文章过了一月有余，这段时间着实太躺了。以至于昨晚做了一个噩梦，醒来的时候狠狠的抽了自己两巴掌，不能这么躺了。</p>
+<p>上面当然是个笑话。</p>
+<h3 id="开篇">开篇</h3>
+<p>上一篇我们分析了Go原生网络模型以及部分源码，绝大部分场景下(99%)，使用原生netpoll已经足够了。</p>
+<p>但是在一些海量并发连接下，原生netpoll会为每一个连接都开启一个goroutine处理，也就是1千万的连接就会创建一千万个goroutine。这就给了这些特殊场景下的优化空间，这也是像gnet和cloudwego/netpoll诞生的原因之一吧。</p>
+<p>本质上他们的底层核心都是一样的，都是基于epoll(linux)实现的。</p>
+<p>只是对事件发生后，每个库的处理方式会有所不同。</p>
+<p>本篇文章主要分析gnet的。至于使用姿势就不发了，gnet有对应的demo库，可以自行体验。</p>
+<h3 id="架构">架构</h3>
+<p>直接引用gnet官网的一张图</p>
+<p><img src="https://cdn.syst.top/net1.png" alt="截屏2022-06-02 15.03.18"></p>
+<p>gnet采用的是『主从多 Reactors』。也就是一个主线程负责监听端口连接，当一个客户端连接到来时，就把这个连接根据负载均衡算法分配给其中一个sub线程，由对应的sub线程去处理这个连接的读写事件以及管理它的死亡。</p>
+<p>下面这张图就更清晰了。</p>
+<p><img src="https://cdn.syst.top/net2.png" alt="图片来源gnet官网"></p>
+<h3 id="核心结构">核心结构</h3>
+<p>我们先解释gnet的一些核心结构。</p>
+<p><img src="https://cdn.syst.top/net4.png" alt="image-20220602153051260"></p>
+<p>engine就是程序最上层的结构了。</p>
+<ul>
+<li>
+<p>ln对应的listener就是服务启动后对应监听端口的监听器。</p>
+</li>
+<li>
+<p>lb对应的loadBalancer就是负载均衡器。也就是当客户端连接服务时，负载均衡器会选择一个sub线程，把连接交给此线程处理。</p>
+</li>
+<li>
+<p>mainLoop 就是我们的主线程了，对应的结构eventloop。当然我们的sub线程结构也是eventloop。结构相同，不同的是职责。主线程负责的是监听端口发生的客户端连接事件，然后再由负载均衡器把连接分配给一个sub线程。而sub线程负责的是绑定分配给他的连接(不止一个)，且等待自己管理的所有连接后续读写事件，并进行处理。</p>
+</li>
+</ul>
+<p>接着看eventloop。</p>
+<p><img src="https://cdn.syst.top/net5.png" alt="image-20220602154501439"></p>
+<ul>
+<li>netpoll.Poller:每一个 eventloop都对应一个epoll或者kqueue。</li>
+<li>buffer用来作为读消息的缓冲区。</li>
+<li>connCoun记录当前eventloop存储的tcp连接数。</li>
+<li>udpSockets和connetcions分别管理着这个eventloop下所有的udp socket和tcp连接，注意他们的结构map。这里的int类型存储的就是fd。</li>
+</ul>
+<p>对应conn结构，</p>
+<p><img src="https://cdn.syst.top/net5-1.png" alt="image-20220608175339906"></p>
+<p>这里面有几个字段介绍下，</p>
+<ul>
+<li>buffer:存储当前conn对端(client)发送的最新数据，比如发送了三次，那个此时buffer存储的是第三次的数据,代码里有。</li>
+<li>inboundBuffer:存储对端发送的且未被用户读取的剩余数据，还是个Ring Buffer。</li>
+<li>outboundBuffer:存储还未发送给对端的数据。(比如服务端响应客户端的数据，由于conn fd是不阻塞的，调用write返回不可写的时候，就可以先把数据放到这里)</li>
+</ul>
+<p>conn相当于每个连接都会有自己独立的缓存空间。这样做是为了减少集中式管理内存带来的锁问题。使用Ring buffer是为了增加空间的复用性。</p>
+<p>整体结构就这些。</p>
+<h3 id="核心逻辑">核心逻辑</h3>
+<p>当程序启动时，</p>
+<p><img src="https://cdn.syst.top/net3.png" alt="net3"></p>
+<p>会根据用户设置的options明确eventloop循环的数量，也就是有多少个sub线程。再进一步说，在linux环境就是会创建多少个epoll对象。</p>
+<p>那么整个程序的epoll对象就是count(sub)+1(main Listener)。</p>
+<p><img src="https://cdn.syst.top/net6.png" alt="image-20220608164415565"></p>
+<p>上图就是我说的，会根据设置的数量创建对应的eventloop,把对应的eventloop 注册到负载均衡器中。</p>
+<p>当新连接到来时，就可以根据一定的算法(gnet提供了轮询、最少连接以及hash)挑选其中一个eventloop把连接分配给它。</p>
+<p>我们先来看主线程，(由于我使用的是mac,所以后面关于IO多路复用，实现部分就是kqueue代码了，当然原理是一样的)</p>
+<p><img src="https://cdn.syst.top/net7.png" alt="image-20220608165350443"></p>
+<p>Polling就是等待网络事件到来，传递了一个闭包参数，更确切的说是一个事件到来时的回调函数，从名字可以看出，就是处理新连接的。</p>
+<p>至于Polling函数，</p>
+<p><img src="https://cdn.syst.top/net8.png" alt="image-20220608170912204"></p>
+<p>逻辑很简单，一个for循环等待事件到来，然后处理事件。</p>
+<p>主线程的事件分两种，</p>
+<p>一种是正常的fd发生网络连接事件，</p>
+<p>一种是通过NOTE_TRIGGER立即激活的事件。</p>
+<p><img src="https://cdn.syst.top/net9.png" alt="image-20220608171537730"></p>
+<p>通过NOTE_TRIGGER触发告诉你队列里有task任务，去执行task任务。</p>
+<p>如果是正常的网络事件到来，就处理闭包函数，主线程处理的就是上面的accept连接函数。</p>
+<p><img src="https://cdn.syst.top/net10.png" alt="image-20220608172333749"></p>
+<p>accept连接逻辑很简单，拿到连接的fd。设置fd非阻塞模式(想想连接是阻塞的会咋么样?),然后根据负载均衡算法选择一个sub 线程，通过register函数把此连接分配给它。</p>
+<p><img src="https://cdn.syst.top/net11.png" alt="image-20220608173157607"></p>
+<p>register做了两件事，首先需要把当前连接注册到当前sub 线程的epoll or kqueue 对象中,新增read的flag。</p>
+<p>接着就是把当前连接放入到connections的map结构中 fd-&gt;conn。</p>
+<p>这样当对应的sub线程事件到来时，可以通过事件的fd找到是哪个连接，进行相应的处理。</p>
+<p><img src="https://cdn.syst.top/net12.png" alt="image-20220608174647390"></p>
+<p>如果是可读事件，</p>
+<p><img src="https://cdn.syst.top/net13.png" alt="image-20220608182813931"></p>
+<p>到这里分析差不多就结束了。</p>
+<h3 id="总结">总结</h3>
+<p>在gnet里面，你可以看到，基本上所有的操作都无锁的。</p>
+<p>那是因为事件到来时，采取的都是非阻塞的操作，且是串行处理对应的每个fd(conn)。每个conn操作的都是自身持有的缓存空间。同时处理完一轮触发的所有事件才会循环进入下一次等待，在此层面上解决了并发问题。</p>
+<p>当然这样用户在使用的时候也需要注意一些问题，比如用户在自定义EventHandler中，如果要异步处理逻辑，就不能像下面这样开一个g然后在里面获取本次数据，</p>
+<p><img src="https://cdn.syst.top/net14.png" alt="image-20220608184718192"></p>
+<p>而应该先拿到数据，再异步处理。</p>
+<p><img src="https://cdn.syst.top/net15.png" alt="image-20220608184937855"></p>
+<p>issues上有提到，连接是使用map[int]*conn存储的。gnet本身的场景就是海量并发连接，内存会很大。进而big map存指针会对 GC造成很大的负担，毕竟它不像数组一样，是连续内存空间，易于GC扫描。</p>
+<p>还有一点，在处理buffer数据的时候，就像上面看到的，本质上是将buffer数据copy给用户一份，那么就存在大量copy开销,在这一点上，字节的netpoll实现了Nocopy Buffer，改天研究一下。</p>
 ]]></content>
 		</item>
 		

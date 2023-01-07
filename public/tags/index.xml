@@ -7,7 +7,25 @@
     <generator>Hugo -- gohugo.io</generator>
     <language>zh-hans</language>
     <copyright>This work is licensed under a Creative Commons Attribution-NonCommercial 4.0 International License.</copyright>
-    <lastBuildDate>Sat, 24 Dec 2022 18:30:52 +0800</lastBuildDate><atom:link href="https://www.syst.top/tags/index.xml" rel="self" type="application/rss+xml" />
+    <lastBuildDate>Fri, 06 Jan 2023 19:23:51 +0800</lastBuildDate><atom:link href="https://www.syst.top/tags/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>go</title>
+      <link>https://www.syst.top/tags/go/</link>
+      <pubDate>Fri, 06 Jan 2023 19:23:51 +0800</pubDate>
+      
+      <guid>https://www.syst.top/tags/go/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>net</title>
+      <link>https://www.syst.top/tags/net/</link>
+      <pubDate>Fri, 06 Jan 2023 19:23:51 +0800</pubDate>
+      
+      <guid>https://www.syst.top/tags/net/</guid>
+      <description></description>
+    </item>
+    
     <item>
       <title>资源</title>
       <link>https://www.syst.top/tags/%E8%B5%84%E6%BA%90/</link>
@@ -32,24 +50,6 @@
       <pubDate>Sun, 06 Nov 2022 10:11:22 +0800</pubDate>
       
       <guid>https://www.syst.top/tags/easycar/</guid>
-      <description></description>
-    </item>
-    
-    <item>
-      <title>go</title>
-      <link>https://www.syst.top/tags/go/</link>
-      <pubDate>Sun, 06 Nov 2022 10:11:22 +0800</pubDate>
-      
-      <guid>https://www.syst.top/tags/go/</guid>
-      <description></description>
-    </item>
-    
-    <item>
-      <title>net</title>
-      <link>https://www.syst.top/tags/net/</link>
-      <pubDate>Tue, 07 Jun 2022 16:23:51 +0800</pubDate>
-      
-      <guid>https://www.syst.top/tags/net/</guid>
       <description></description>
     </item>
     

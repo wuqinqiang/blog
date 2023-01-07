@@ -84,7 +84,7 @@ Polling就是等待网络事件到来，传递了一个闭包参数，更确切�
 accept连接逻辑很简单，拿到连接的fd。设置fd非阻塞模式(想想连接是阻塞的会咋么样?),然后根据负载均衡算法选择一个sub 线程，通过register函数把此连接分配给它。
 register做了两件事，首先需要把当前连接注册到当前sub 线程的epoll or kqueue 对象中,新增read的flag。" />
 <meta property="og:type" content="article" />
-<meta property="og:url" content="https://www.syst.top/posts/go/gnet/" /><meta property="article:section" content="posts" />
+<meta property="og:url" content="https://www.syst.top/posts/go/gnet-copy/" /><meta property="article:section" content="posts" />
 <meta property="article:published_time" content="2022-06-07T16:23:51+08:00" />
 <meta property="article:modified_time" content="2022-06-07T16:23:51+08:00" />
 
@@ -292,11 +292,11 @@ register做了两件事，首先需要把当前连接注册到当前sub 线程�
 </nav>
 		</aside>
 		<div class="post-nav thin">
-			<a class="next-post" href="https://www.syst.top/posts/go/gnet-copy/">
-				<span class="post-nav-label"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-arrow-left"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>&nbsp;Newer</span><br><span>Gnet原理解析</span>
+			<a class="next-post" href="https://www.syst.top/posts/go/easycar/">
+				<span class="post-nav-label"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-arrow-left"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>&nbsp;Newer</span><br><span>一个用go实现的分布式事务框架</span>
 			</a>
-			<a class="prev-post" href="https://www.syst.top/posts/go/netpoll/">
-				<span class="post-nav-label">Older&nbsp;<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-arrow-right"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg></span><br><span>Go netpoll大解析</span>
+			<a class="prev-post" href="https://www.syst.top/posts/go/gnet/">
+				<span class="post-nav-label">Older&nbsp;<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-arrow-right"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg></span><br><span>Gnet原理解析</span>
 			</a>
 		</div>
 		<div id="comments" class="thin">
