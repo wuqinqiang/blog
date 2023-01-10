@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>conc on 是不是很酷</title>
+    <link>https://www.syst.top/tags/conc/</link>
+    <description>Recent content in conc on 是不是很酷</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>zh-hans</language>
+    <copyright>This work is licensed under a Creative Commons Attribution-NonCommercial 4.0 International License.</copyright>
+    <lastBuildDate>Tue, 10 Jan 2023 18:23:51 +0800</lastBuildDate><atom:link href="https://www.syst.top/tags/conc/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>发现conc并发库一个有趣的问题</title>
+      <link>https://www.syst.top/posts/go/conc/</link>
+      <pubDate>Tue, 10 Jan 2023 18:23:51 +0800</pubDate>
+      
+      <guid>https://www.syst.top/posts/go/conc/</guid>
+      <description>上周看到一个新库conc，
+ better structured concurrency for go
+ 这个库的目标是，
+ 更难出现goroutine泄漏 优雅处理panic 使并发的代码更易读  我们一条条细说。
+Make it harder to leak goroutines goroutine泄漏还是很常见的。
+日常我们使用go的时候直接go func开启一个goroutine，写上对应的逻辑，g会进入到某个p的本地队列，最终由p绑定的m执行这个goroutine。
+你能保证一个goroutine在某个时刻一定会结束它的生命周期吗？
+搜了下著名开源项目etcd，goroutine leak还真不少。
+看其中一个简单的泄漏bug。
+done是一个无缓冲的chan，一开始接收动作在最下面，因为中间还有一些没展开的代码可能会导致程序不会执行到&amp;lt;-done，然后goroutine就会发生泄漏，解决方法就是通过defer保证一定会执行&amp;lt;-done。
+那么conc是如何做的？
+package main import ( &amp;#34;fmt&amp;#34; &amp;#34;github.com/sourcegraph/conc&amp;#34; ) func main() { var wg conc.WaitGroup wg.Go(func() { fmt.Println(&amp;#34;g1&amp;#34;) }) wg.Go(func() { fmt.Println(&amp;#34;g2&amp;#34;) }) wg.Wait() } ps:这个结构是不是超级熟悉。
+conc的理念是程序中的每一个goroutine由一个owner创建，归属于owner。一个owner确保它拥有的所有goroutine正常退出，这里的owner也就是conc.WaitGroup。
+但是这真的能像他说的那样Make it harder to leak goroutines吗？
+goroutine的泄漏问题取决于用户对goroutine能正确退出的逻辑保证，和你如何封装没关系吧？
+在我看来conc和标准库的sync.WaitGroup一样，等待所有goroutine执行完毕，可以检测到这个行为。
+要是goroutine里面含有泄漏的bug，该泄漏还得泄漏，Wait该等待还得老实等待。
+Handle panics gracefully 如果直接使用go func,那么可能每一个goroutine都得写上recover，所以一般我们在使用goroutine的时候，都是自己封装一个GoSafe函数。这样就可以在里面统一捕获panic，然后打包调用栈一些信息，进一步处理。
+conc里面因为每个goroutine有owner概念，所以是由owner捕获goroutine的panic。</description>
+    </item>
+    
+  </channel>
+</rss>

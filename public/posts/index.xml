@@ -6,8 +6,220 @@
 		<generator>Hugo -- gohugo.io</generator>
 		<language>zh-hans</language>
 		<copyright>This work is licensed under a Creative Commons Attribution-NonCommercial 4.0 International License.</copyright>
-		<lastBuildDate>Fri, 06 Jan 2023 19:23:51 +0800</lastBuildDate>
+		<lastBuildDate>Tue, 10 Jan 2023 18:23:51 +0800</lastBuildDate>
 		<atom:link href="https://www.syst.top/posts/index.xml" rel="self" type="application/rss+xml" />
+		
+		<item>
+			<title>发现conc并发库一个有趣的问题</title>
+			<link>https://www.syst.top/posts/go/conc/</link>
+			<pubDate>Tue, 10 Jan 2023 18:23:51 +0800</pubDate>
+			
+			<guid>https://www.syst.top/posts/go/conc/</guid>
+			<description>上周看到一个新库conc，
+ better structured concurrency for go
+ 这个库的目标是，
+ 更难出现goroutine泄漏 优雅处理panic 使并发的代码更易读  我们一条条细说。
+Make it harder to leak goroutines goroutine泄漏还是很常见的。
+日常我们使用go的时候直接go func开启一个goroutine，写上对应的逻辑，g会进入到某个p的本地队列，最终由p绑定的m执行这个goroutine。
+你能保证一个goroutine在某个时刻一定会结束它的生命周期吗？
+搜了下著名开源项目etcd，goroutine leak还真不少。
+看其中一个简单的泄漏bug。
+done是一个无缓冲的chan，一开始接收动作在最下面，因为中间还有一些没展开的代码可能会导致程序不会执行到&amp;lt;-done，然后goroutine就会发生泄漏，解决方法就是通过defer保证一定会执行&amp;lt;-done。
+那么conc是如何做的？
+package main import ( &amp;#34;fmt&amp;#34; &amp;#34;github.com/sourcegraph/conc&amp;#34; ) func main() { var wg conc.WaitGroup wg.Go(func() { fmt.Println(&amp;#34;g1&amp;#34;) }) wg.Go(func() { fmt.Println(&amp;#34;g2&amp;#34;) }) wg.Wait() } ps:这个结构是不是超级熟悉。
+conc的理念是程序中的每一个goroutine由一个owner创建，归属于owner。一个owner确保它拥有的所有goroutine正常退出，这里的owner也就是conc.WaitGroup。
+但是这真的能像他说的那样Make it harder to leak goroutines吗？
+goroutine的泄漏问题取决于用户对goroutine能正确退出的逻辑保证，和你如何封装没关系吧？
+在我看来conc和标准库的sync.WaitGroup一样，等待所有goroutine执行完毕，可以检测到这个行为。
+要是goroutine里面含有泄漏的bug，该泄漏还得泄漏，Wait该等待还得老实等待。
+Handle panics gracefully 如果直接使用go func,那么可能每一个goroutine都得写上recover，所以一般我们在使用goroutine的时候，都是自己封装一个GoSafe函数。这样就可以在里面统一捕获panic，然后打包调用栈一些信息，进一步处理。
+conc里面因为每个goroutine有owner概念，所以是由owner捕获goroutine的panic。</description>
+			<content type="html"><![CDATA[<p>上周看到一个新库conc，</p>
+<blockquote>
+<p>better structured concurrency for go</p>
+</blockquote>
+<p>这个库的目标是，</p>
+<ul>
+<li>更难出现goroutine泄漏</li>
+<li>优雅处理panic</li>
+<li>使并发的代码更易读</li>
+</ul>
+<p>我们一条条细说。</p>
+<h4 id="make-it-harder-to-leak-goroutines">Make it harder to leak goroutines</h4>
+<p>goroutine泄漏还是很常见的。</p>
+<p>日常我们使用go的时候直接go func开启一个goroutine，写上对应的逻辑，g会进入到某个p的本地队列，最终由p绑定的m执行这个goroutine。</p>
+<p>你能保证一个goroutine在某个时刻一定会结束它的生命周期吗？</p>
+<p>搜了下著名开源项目etcd，goroutine leak还真不少。</p>
+<p><img src="https://cdn.syst.top/conc1.png" alt="conc"></p>
+<p>看其中一个简单的泄漏bug。</p>
+<p><img src="https://cdn.syst.top/conc2.png" alt="conc"></p>
+<p>done是一个无缓冲的chan，一开始接收动作在最下面，因为中间还有一些没展开的代码可能会导致程序不会执行到&lt;-done，然后goroutine就会发生泄漏，解决方法就是通过defer保证一定会执行&lt;-done。</p>
+<p>那么conc是如何做的？</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="kn">package</span> <span class="nx">main</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="kn">import</span> <span class="p">(</span>
+</span></span><span class="line"><span class="cl">	<span class="s">&#34;fmt&#34;</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">	<span class="s">&#34;github.com/sourcegraph/conc&#34;</span>
+</span></span><span class="line"><span class="cl"><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="kd">func</span> <span class="nf">main</span><span class="p">()</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">	<span class="kd">var</span> <span class="nx">wg</span> <span class="nx">conc</span><span class="p">.</span><span class="nx">WaitGroup</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">wg</span><span class="p">.</span><span class="nf">Go</span><span class="p">(</span><span class="kd">func</span><span class="p">()</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">fmt</span><span class="p">.</span><span class="nf">Println</span><span class="p">(</span><span class="s">&#34;g1&#34;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">	<span class="p">})</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">wg</span><span class="p">.</span><span class="nf">Go</span><span class="p">(</span><span class="kd">func</span><span class="p">()</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">fmt</span><span class="p">.</span><span class="nf">Println</span><span class="p">(</span><span class="s">&#34;g2&#34;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">	<span class="p">})</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">wg</span><span class="p">.</span><span class="nf">Wait</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></div><p>ps:这个结构是不是超级熟悉。</p>
+<p>conc的理念是程序中的每一个goroutine由一个owner创建，归属于owner。一个owner确保它拥有的所有goroutine正常退出，这里的owner也就是conc.WaitGroup。</p>
+<p>但是这真的能像他说的那样Make it harder to leak goroutines吗？</p>
+<p>goroutine的泄漏问题取决于用户对goroutine能正确退出的逻辑保证，和你如何封装没关系吧？</p>
+<p>在我看来conc和标准库的sync.WaitGroup一样，等待所有goroutine执行完毕，可以检测到这个行为。</p>
+<p>要是goroutine里面含有泄漏的bug，该泄漏还得泄漏，Wait该等待还得老实等待。</p>
+<h4 id="handle-panics-gracefully">Handle panics gracefully</h4>
+<p>如果直接使用go func,那么可能每一个goroutine都得写上recover，所以一般我们在使用goroutine的时候，都是自己封装一个GoSafe函数。这样就可以在里面统一捕获panic，然后打包调用栈一些信息，进一步处理。</p>
+<p>conc里面因为每个goroutine有owner概念，所以是由owner捕获goroutine的panic。</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="kd">func</span> <span class="p">(</span><span class="nx">p</span> <span class="o">*</span><span class="nx">Catcher</span><span class="p">)</span> <span class="nf">tryRecover</span><span class="p">()</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">	<span class="k">if</span> <span class="nx">val</span> <span class="o">:=</span> <span class="nb">recover</span><span class="p">();</span> <span class="nx">val</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">rp</span> <span class="o">:=</span> <span class="nf">NewRecoveredPanic</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="nx">val</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">p</span><span class="p">.</span><span class="nx">recovered</span><span class="p">.</span><span class="nf">CompareAndSwap</span><span class="p">(</span><span class="kc">nil</span><span class="p">,</span> <span class="o">&amp;</span><span class="nx">rp</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></div><p>只会记录第一个panic的goroutine堆栈信息。然后在Wait操作的时候，</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="kd">func</span> <span class="p">(</span><span class="nx">h</span> <span class="o">*</span><span class="nx">WaitGroup</span><span class="p">)</span> <span class="nf">Wait</span><span class="p">()</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">h</span><span class="p">.</span><span class="nx">wg</span><span class="p">.</span><span class="nf">Wait</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">	<span class="c1">// Propagate a panic if we caught one from a child goroutine.
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="nx">h</span><span class="p">.</span><span class="nx">pc</span><span class="p">.</span><span class="nf">Repanic</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="kd">func</span> <span class="p">(</span><span class="nx">p</span> <span class="o">*</span><span class="nx">Catcher</span><span class="p">)</span> <span class="nf">Repanic</span><span class="p">()</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">	<span class="k">if</span> <span class="nx">val</span> <span class="o">:=</span> <span class="nx">p</span><span class="p">.</span><span class="nf">Recovered</span><span class="p">();</span> <span class="nx">val</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="nb">panic</span><span class="p">(</span><span class="nx">val</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></div><p>超级粗暴。当conc.WaitGroup里面任何一个goroutine发生panic，调用wg.Wait()的时候就会panic，把goroutine panic的堆栈信息作为panic的值。</p>
+<p>写这篇文章的时候已经看到他们在issue上讨论添加一个类似WaitSafe()函数了。</p>
+<h4 id="make-concurrent-code-easier-to-read">Make concurrent code easier to read</h4>
+<p>这个还是节省了一些工作的，作者给了几个例子。</p>
+<p>上面我们看到的WaitGroup，不再需要用户执行Add和Done操作了。同时内部捕获panic，虽然处理有点粗暴。</p>
+<p><img src="https://cdn.syst.top/conc3.png" alt="conc"></p>
+<p>比如控制并发goroutine数量来并发处理批量数据的例子。</p>
+<p><img src="https://cdn.syst.top/conc4.png" alt="conc"></p>
+<p><img src="https://cdn.syst.top/conc5.png" alt="conc"></p>
+<p>可以看出，确实省了很多的操作，其他例子可以自行查看。</p>
+<p>上面我们说到pool，其实就是一个并发执行任务的worker池，之前文章也介绍过这种模式。</p>
+<p>conc里面有几个类型的pool:ContextPool，ErrorPool，ResultPool，ResultContextPool，ResultErrorPool。</p>
+<p>它们都基于最基础的Pool结构。</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="kd">type</span> <span class="nx">Pool</span> <span class="kd">struct</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">handle</span>   <span class="nx">conc</span><span class="p">.</span><span class="nx">WaitGroup</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">limiter</span>  <span class="nx">limiter</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">tasks</span>    <span class="kd">chan</span> <span class="kd">func</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">initOnce</span> <span class="nx">sync</span><span class="p">.</span><span class="nx">Once</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></div><p>limiter就是一个很简单的用chan控制worker goroutine数量。</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="kd">type</span> <span class="nx">limiter</span> <span class="kd">chan</span> <span class="kd">struct</span><span class="p">{}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="kd">func</span> <span class="p">(</span><span class="nx">l</span> <span class="nx">limiter</span><span class="p">)</span> <span class="nf">limit</span><span class="p">()</span> <span class="kt">int</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">	<span class="k">return</span> <span class="nb">cap</span><span class="p">(</span><span class="nx">l</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="kd">func</span> <span class="p">(</span><span class="nx">l</span> <span class="nx">limiter</span><span class="p">)</span> <span class="nf">release</span><span class="p">()</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">	<span class="k">if</span> <span class="nx">l</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="o">&lt;-</span><span class="nx">l</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></div><p>核心逻辑也很简单，</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="kd">func</span> <span class="p">(</span><span class="nx">p</span> <span class="o">*</span><span class="nx">Pool</span><span class="p">)</span> <span class="nf">Go</span><span class="p">(</span><span class="nx">f</span> <span class="kd">func</span><span class="p">())</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">p</span><span class="p">.</span><span class="nf">init</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">	<span class="k">if</span> <span class="nx">p</span><span class="p">.</span><span class="nx">limiter</span> <span class="o">==</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="c1">// No limit on the number of goroutines.
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>		<span class="k">select</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="k">case</span> <span class="nx">p</span><span class="p">.</span><span class="nx">tasks</span> <span class="o">&lt;-</span> <span class="nx">f</span><span class="p">:</span>
+</span></span><span class="line"><span class="cl">			<span class="c1">// A goroutine was available to handle the task.
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>		<span class="k">default</span><span class="p">:</span>
+</span></span><span class="line"><span class="cl">			<span class="c1">// No goroutine was available to handle the task.
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>			<span class="c1">// Spawn a new one and send it the task.
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>			<span class="nx">p</span><span class="p">.</span><span class="nx">handle</span><span class="p">.</span><span class="nf">Go</span><span class="p">(</span><span class="nx">p</span><span class="p">.</span><span class="nx">worker</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">			<span class="nx">p</span><span class="p">.</span><span class="nx">tasks</span> <span class="o">&lt;-</span> <span class="nx">f</span>
+</span></span><span class="line"><span class="cl">		<span class="p">}</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="k">select</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="k">case</span> <span class="nx">p</span><span class="p">.</span><span class="nx">limiter</span> <span class="o">&lt;-</span> <span class="kd">struct</span><span class="p">{}{}:</span>
+</span></span><span class="line"><span class="cl">			<span class="c1">// If we are below our limit, spawn a new worker rather
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>			<span class="c1">// than waiting for one to become available.
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>			<span class="nx">p</span><span class="p">.</span><span class="nx">handle</span><span class="p">.</span><span class="nf">Go</span><span class="p">(</span><span class="nx">p</span><span class="p">.</span><span class="nx">worker</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">			<span class="c1">// We know there is at least one worker running, so wait
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>			<span class="c1">// for it to become available. This ensures we never spawn
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>			<span class="c1">// more workers than the number of tasks.
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>			<span class="nx">p</span><span class="p">.</span><span class="nx">tasks</span> <span class="o">&lt;-</span> <span class="nx">f</span>
+</span></span><span class="line"><span class="cl">		<span class="k">case</span> <span class="nx">p</span><span class="p">.</span><span class="nx">tasks</span> <span class="o">&lt;-</span> <span class="nx">f</span><span class="p">:</span>
+</span></span><span class="line"><span class="cl">			<span class="c1">// A worker is available and has accepted the task.
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>			<span class="k">return</span>
+</span></span><span class="line"><span class="cl">		<span class="p">}</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></div><p>如果没有设置limiter，那么优先找空闲的worker。否则就创建一个新worker，然后投递任务进去。</p>
+<p>设置了limiter，</p>
+<p>如果达到了limter worker数量上限，那就只能把任务投递给空闲的worker，没有空闲就阻塞等着。</p>
+<p>没有达到上限，空闲worker也存在，那就由select随机选择，否则的话就创建一个新的worker。</p>
+<h4 id="彩蛋">彩蛋</h4>
+<p>看代码的时候发现这里面有个问题，</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="kd">func</span> <span class="p">(</span><span class="nx">p</span> <span class="o">*</span><span class="nx">Pool</span><span class="p">)</span> <span class="nf">deref</span><span class="p">()</span> <span class="nx">Pool</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">	<span class="k">return</span> <span class="nx">Pool</span><span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">limiter</span><span class="p">:</span> <span class="nx">p</span><span class="p">.</span><span class="nx">limiter</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></div><p>这个函数会返回一个新的Pool，上面我说过limiter是一个chan结构，在go中chan是一个引用类型，所以这里对limiter就是一个浅拷贝。</p>
+<p>因此，下面这段代码，</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="kd">func</span> <span class="nf">TestErrorPool</span><span class="p">(</span><span class="nx">t</span> <span class="o">*</span><span class="nx">testing</span><span class="p">.</span><span class="nx">T</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">p</span> <span class="o">:=</span> <span class="nf">New</span><span class="p">().</span><span class="nf">WithMaxGoroutines</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">p</span><span class="p">.</span><span class="nf">Go</span><span class="p">(</span><span class="kd">func</span><span class="p">()</span> <span class="p">{})</span>
+</span></span><span class="line"><span class="cl">  <span class="c1">//p.limiter长度是1
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="nx">require</span><span class="p">.</span><span class="nf">Equal</span><span class="p">(</span><span class="nx">t</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="nx">p</span><span class="p">.</span><span class="nx">limiter</span><span class="p">),</span> <span class="mi">1</span><span class="p">)</span> 
+</span></span><span class="line"><span class="cl">  <span class="c1">//新的ErrorPool:里面的pool是调用p.deref得到的.
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="nx">ep</span> <span class="o">:=</span> <span class="nx">p</span><span class="p">.</span><span class="nf">WithErrors</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">require</span><span class="p">.</span><span class="nf">Equal</span><span class="p">(</span><span class="nx">t</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="nx">ep</span><span class="p">.</span><span class="nx">pool</span><span class="p">.</span><span class="nx">limiter</span><span class="p">),</span> <span class="mi">0</span><span class="p">)</span> 
+</span></span><span class="line"><span class="cl">  <span class="c1">//这里的ep.limiter的长度也是1，尽管ep没有调用一次ep.Go()
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="p">}</span>
+</span></span></code></pre></div><p>正因为这种“特性”,如果我们写了下面的代码，</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="kd">func</span> <span class="nf">main</span><span class="p">()</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">p</span> <span class="o">:=</span> <span class="nx">pool</span><span class="p">.</span><span class="nf">New</span><span class="p">().</span><span class="nf">WithMaxGoroutines</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">p</span><span class="p">.</span><span class="nf">Go</span><span class="p">(</span><span class="kd">func</span><span class="p">()</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">fmt</span><span class="p">.</span><span class="nf">Println</span><span class="p">(</span><span class="s">&#34;g1&#34;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">	<span class="p">})</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">p</span><span class="p">.</span><span class="nf">Go</span><span class="p">(</span><span class="kd">func</span><span class="p">()</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">fmt</span><span class="p">.</span><span class="nf">Println</span><span class="p">(</span><span class="s">&#34;g2&#34;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">	<span class="p">})</span>
+</span></span><span class="line"><span class="cl">	<span class="c1">//p.Wait()
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="nx">ep</span> <span class="o">:=</span> <span class="nx">p</span><span class="p">.</span><span class="nf">WithErrors</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">ep</span><span class="p">.</span><span class="nf">Go</span><span class="p">(</span><span class="kd">func</span><span class="p">()</span> <span class="kt">error</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="c1">//这段代码永远没机会执行,泄漏
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>		<span class="nx">fmt</span><span class="p">.</span><span class="nf">Println</span><span class="p">(</span><span class="s">&#34;with err &#34;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">		<span class="k">return</span> <span class="kc">nil</span>
+</span></span><span class="line"><span class="cl">	<span class="p">})</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">ep</span><span class="p">.</span><span class="nf">Wait</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">	<span class="c1">// 如果我们把p.Wait() 放在ep.Wait()之后
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="nx">p</span><span class="p">.</span><span class="nf">Wait</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></div><p>ep.Go里面的逻辑永远都没机会执行。</p>
+<p>原因就在于，第一个loop创建的时候限制了goroutine数量。然后执行两次p.Go，这样就会创建两个只属于p的workers，同时也让limiter到达限制数。</p>
+<p>当ep想要执行ep.Go的时候，只能执行p.tasks &lt;- f，但是这时候ep还没有机会创建属于自己的worker，所以会阻塞到死。</p>
+<p>我提了一个pr，其实就是把上面的浅拷贝换成深拷贝。</p>
+<p><img src="https://cdn.syst.top/conc6.png" alt="conc"></p>
+<p>但是作者回复说，</p>
+<blockquote>
+<p>Currently calling any configuration methods on the pool after calling pool.Go() is unsupported because the configuration methods take ownership of and mutate the pool. This might not be ideal though since ownership can&rsquo;t actually be enforced with Go. It would be less of a footgun to just return a fully copy each time.</p>
+</blockquote>
+<p>我理解的意思就是目前不支持我这么玩，简单的说不支持在执行pool.Go()后调用这些操作😂。感兴趣可以看下issue43</p>
+]]></content>
+		</item>
 		
 		<item>
 			<title>evio原理解析～有彩蛋</title>
@@ -724,137 +936,6 @@ Resource Manager(RM) 用户维度的角色，管理本地事务处理的资源�
 <h3 id="最后">最后</h3>
 <p>easycar 开发不是很久，它还有好多工作需要去完成。感兴趣的可以一起加入。</p>
 <p>项目地址：https://github.com/wuqinqiang/easycar</p>
-]]></content>
-		</item>
-		
-		<item>
-			<title>Gnet原理解析</title>
-			<link>https://www.syst.top/posts/go/gnet-copy/</link>
-			<pubDate>Tue, 07 Jun 2022 16:23:51 +0800</pubDate>
-			
-			<guid>https://www.syst.top/posts/go/gnet-copy/</guid>
-			<description>距离上次写文章过了一月有余，这段时间着实太躺了。以至于昨晚做了一个噩梦，醒来的时候狠狠的抽了自己两巴掌，不能这么躺了。
-上面当然是个笑话。
-开篇 上一篇我们分析了Go原生网络模型以及部分源码，绝大部分场景下(99%)，使用原生netpoll已经足够了。
-但是在一些海量并发连接下，原生netpoll会为每一个连接都开启一个goroutine处理，也就是1千万的连接就会创建一千万个goroutine。这就给了这些特殊场景下的优化空间，这也是像gnet和cloudwego/netpoll诞生的原因之一吧。
-本质上他们的底层核心都是一样的，都是基于epoll(linux)实现的。
-只是对事件发生后，每个库的处理方式会有所不同。
-本篇文章主要分析gnet的。至于使用姿势就不发了，gnet有对应的demo库，可以自行体验。
-架构 直接引用gnet官网的一张图
-gnet采用的是『主从多 Reactors』。也就是一个主线程负责监听端口连接，当一个客户端连接到来时，就把这个连接根据负载均衡算法分配给其中一个sub线程，由对应的sub线程去处理这个连接的读写事件以及管理它的死亡。
-下面这张图就更清晰了。
-核心结构 我们先解释gnet的一些核心结构。
-engine就是程序最上层的结构了。
-  ln对应的listener就是服务启动后对应监听端口的监听器。
-  lb对应的loadBalancer就是负载均衡器。也就是当客户端连接服务时，负载均衡器会选择一个sub线程，把连接交给此线程处理。
-  mainLoop 就是我们的主线程了，对应的结构eventloop。当然我们的sub线程结构也是eventloop。结构相同，不同的是职责。主线程负责的是监听端口发生的客户端连接事件，然后再由负载均衡器把连接分配给一个sub线程。而sub线程负责的是绑定分配给他的连接(不止一个)，且等待自己管理的所有连接后续读写事件，并进行处理。
-  接着看eventloop。
- netpoll.Poller:每一个 eventloop都对应一个epoll或者kqueue。 buffer用来作为读消息的缓冲区。 connCoun记录当前eventloop存储的tcp连接数。 udpSockets和connetcions分别管理着这个eventloop下所有的udp socket和tcp连接，注意他们的结构map。这里的int类型存储的就是fd。  对应conn结构，
-这里面有几个字段介绍下，
- buffer:存储当前conn对端(client)发送的最新数据，比如发送了三次，那个此时buffer存储的是第三次的数据,代码里有。 inboundBuffer:存储对端发送的且未被用户读取的剩余数据，还是个Ring Buffer。 outboundBuffer:存储还未发送给对端的数据。(比如服务端响应客户端的数据，由于conn fd是不阻塞的，调用write返回不可写的时候，就可以先把数据放到这里)  conn相当于每个连接都会有自己独立的缓存空间。这样做是为了减少集中式管理内存带来的锁问题。使用Ring buffer是为了增加空间的复用性。
-整体结构就这些。
-核心逻辑 当程序启动时，
-会根据用户设置的options明确eventloop循环的数量，也就是有多少个sub线程。再进一步说，在linux环境就是会创建多少个epoll对象。
-那么整个程序的epoll对象就是count(sub)+1(main Listener)。
-上图就是我说的，会根据设置的数量创建对应的eventloop,把对应的eventloop 注册到负载均衡器中。
-当新连接到来时，就可以根据一定的算法(gnet提供了轮询、最少连接以及hash)挑选其中一个eventloop把连接分配给它。
-我们先来看主线程，(由于我使用的是mac,所以后面关于IO多路复用，实现部分就是kqueue代码了，当然原理是一样的)
-Polling就是等待网络事件到来，传递了一个闭包参数，更确切的说是一个事件到来时的回调函数，从名字可以看出，就是处理新连接的。
-至于Polling函数，
-逻辑很简单，一个for循环等待事件到来，然后处理事件。
-主线程的事件分两种，
-一种是正常的fd发生网络连接事件，
-一种是通过NOTE_TRIGGER立即激活的事件。
-通过NOTE_TRIGGER触发告诉你队列里有task任务，去执行task任务。
-如果是正常的网络事件到来，就处理闭包函数，主线程处理的就是上面的accept连接函数。
-accept连接逻辑很简单，拿到连接的fd。设置fd非阻塞模式(想想连接是阻塞的会咋么样?),然后根据负载均衡算法选择一个sub 线程，通过register函数把此连接分配给它。
-register做了两件事，首先需要把当前连接注册到当前sub 线程的epoll or kqueue 对象中,新增read的flag。</description>
-			<content type="html"><![CDATA[<p>距离上次写文章过了一月有余，这段时间着实太躺了。以至于昨晚做了一个噩梦，醒来的时候狠狠的抽了自己两巴掌，不能这么躺了。</p>
-<p>上面当然是个笑话。</p>
-<h3 id="开篇">开篇</h3>
-<p>上一篇我们分析了Go原生网络模型以及部分源码，绝大部分场景下(99%)，使用原生netpoll已经足够了。</p>
-<p>但是在一些海量并发连接下，原生netpoll会为每一个连接都开启一个goroutine处理，也就是1千万的连接就会创建一千万个goroutine。这就给了这些特殊场景下的优化空间，这也是像gnet和cloudwego/netpoll诞生的原因之一吧。</p>
-<p>本质上他们的底层核心都是一样的，都是基于epoll(linux)实现的。</p>
-<p>只是对事件发生后，每个库的处理方式会有所不同。</p>
-<p>本篇文章主要分析gnet的。至于使用姿势就不发了，gnet有对应的demo库，可以自行体验。</p>
-<h3 id="架构">架构</h3>
-<p>直接引用gnet官网的一张图</p>
-<p><img src="https://cdn.syst.top/net1.png" alt="截屏2022-06-02 15.03.18"></p>
-<p>gnet采用的是『主从多 Reactors』。也就是一个主线程负责监听端口连接，当一个客户端连接到来时，就把这个连接根据负载均衡算法分配给其中一个sub线程，由对应的sub线程去处理这个连接的读写事件以及管理它的死亡。</p>
-<p>下面这张图就更清晰了。</p>
-<p><img src="https://cdn.syst.top/net2.png" alt="图片来源gnet官网"></p>
-<h3 id="核心结构">核心结构</h3>
-<p>我们先解释gnet的一些核心结构。</p>
-<p><img src="https://cdn.syst.top/net4.png" alt="image-20220602153051260"></p>
-<p>engine就是程序最上层的结构了。</p>
-<ul>
-<li>
-<p>ln对应的listener就是服务启动后对应监听端口的监听器。</p>
-</li>
-<li>
-<p>lb对应的loadBalancer就是负载均衡器。也就是当客户端连接服务时，负载均衡器会选择一个sub线程，把连接交给此线程处理。</p>
-</li>
-<li>
-<p>mainLoop 就是我们的主线程了，对应的结构eventloop。当然我们的sub线程结构也是eventloop。结构相同，不同的是职责。主线程负责的是监听端口发生的客户端连接事件，然后再由负载均衡器把连接分配给一个sub线程。而sub线程负责的是绑定分配给他的连接(不止一个)，且等待自己管理的所有连接后续读写事件，并进行处理。</p>
-</li>
-</ul>
-<p>接着看eventloop。</p>
-<p><img src="https://cdn.syst.top/net5.png" alt="image-20220602154501439"></p>
-<ul>
-<li>netpoll.Poller:每一个 eventloop都对应一个epoll或者kqueue。</li>
-<li>buffer用来作为读消息的缓冲区。</li>
-<li>connCoun记录当前eventloop存储的tcp连接数。</li>
-<li>udpSockets和connetcions分别管理着这个eventloop下所有的udp socket和tcp连接，注意他们的结构map。这里的int类型存储的就是fd。</li>
-</ul>
-<p>对应conn结构，</p>
-<p><img src="https://cdn.syst.top/net5-1.png" alt="image-20220608175339906"></p>
-<p>这里面有几个字段介绍下，</p>
-<ul>
-<li>buffer:存储当前conn对端(client)发送的最新数据，比如发送了三次，那个此时buffer存储的是第三次的数据,代码里有。</li>
-<li>inboundBuffer:存储对端发送的且未被用户读取的剩余数据，还是个Ring Buffer。</li>
-<li>outboundBuffer:存储还未发送给对端的数据。(比如服务端响应客户端的数据，由于conn fd是不阻塞的，调用write返回不可写的时候，就可以先把数据放到这里)</li>
-</ul>
-<p>conn相当于每个连接都会有自己独立的缓存空间。这样做是为了减少集中式管理内存带来的锁问题。使用Ring buffer是为了增加空间的复用性。</p>
-<p>整体结构就这些。</p>
-<h3 id="核心逻辑">核心逻辑</h3>
-<p>当程序启动时，</p>
-<p><img src="https://cdn.syst.top/net3.png" alt="net3"></p>
-<p>会根据用户设置的options明确eventloop循环的数量，也就是有多少个sub线程。再进一步说，在linux环境就是会创建多少个epoll对象。</p>
-<p>那么整个程序的epoll对象就是count(sub)+1(main Listener)。</p>
-<p><img src="https://cdn.syst.top/net6.png" alt="image-20220608164415565"></p>
-<p>上图就是我说的，会根据设置的数量创建对应的eventloop,把对应的eventloop 注册到负载均衡器中。</p>
-<p>当新连接到来时，就可以根据一定的算法(gnet提供了轮询、最少连接以及hash)挑选其中一个eventloop把连接分配给它。</p>
-<p>我们先来看主线程，(由于我使用的是mac,所以后面关于IO多路复用，实现部分就是kqueue代码了，当然原理是一样的)</p>
-<p><img src="https://cdn.syst.top/net7.png" alt="image-20220608165350443"></p>
-<p>Polling就是等待网络事件到来，传递了一个闭包参数，更确切的说是一个事件到来时的回调函数，从名字可以看出，就是处理新连接的。</p>
-<p>至于Polling函数，</p>
-<p><img src="https://cdn.syst.top/net8.png" alt="image-20220608170912204"></p>
-<p>逻辑很简单，一个for循环等待事件到来，然后处理事件。</p>
-<p>主线程的事件分两种，</p>
-<p>一种是正常的fd发生网络连接事件，</p>
-<p>一种是通过NOTE_TRIGGER立即激活的事件。</p>
-<p><img src="https://cdn.syst.top/net9.png" alt="image-20220608171537730"></p>
-<p>通过NOTE_TRIGGER触发告诉你队列里有task任务，去执行task任务。</p>
-<p>如果是正常的网络事件到来，就处理闭包函数，主线程处理的就是上面的accept连接函数。</p>
-<p><img src="https://cdn.syst.top/net10.png" alt="image-20220608172333749"></p>
-<p>accept连接逻辑很简单，拿到连接的fd。设置fd非阻塞模式(想想连接是阻塞的会咋么样?),然后根据负载均衡算法选择一个sub 线程，通过register函数把此连接分配给它。</p>
-<p><img src="https://cdn.syst.top/net11.png" alt="image-20220608173157607"></p>
-<p>register做了两件事，首先需要把当前连接注册到当前sub 线程的epoll or kqueue 对象中,新增read的flag。</p>
-<p>接着就是把当前连接放入到connections的map结构中 fd-&gt;conn。</p>
-<p>这样当对应的sub线程事件到来时，可以通过事件的fd找到是哪个连接，进行相应的处理。</p>
-<p><img src="https://cdn.syst.top/net12.png" alt="image-20220608174647390"></p>
-<p>如果是可读事件，</p>
-<p><img src="https://cdn.syst.top/net13.png" alt="image-20220608182813931"></p>
-<p>到这里分析差不多就结束了。</p>
-<h3 id="总结">总结</h3>
-<p>在gnet里面，你可以看到，基本上所有的操作都无锁的。</p>
-<p>那是因为事件到来时，采取的都是非阻塞的操作，且是串行处理对应的每个fd(conn)。每个conn操作的都是自身持有的缓存空间。同时处理完一轮触发的所有事件才会循环进入下一次等待，在此层面上解决了并发问题。</p>
-<p>当然这样用户在使用的时候也需要注意一些问题，比如用户在自定义EventHandler中，如果要异步处理逻辑，就不能像下面这样开一个g然后在里面获取本次数据，</p>
-<p><img src="https://cdn.syst.top/net14.png" alt="image-20220608184718192"></p>
-<p>而应该先拿到数据，再异步处理。</p>
-<p><img src="https://cdn.syst.top/net15.png" alt="image-20220608184937855"></p>
-<p>issues上有提到，连接是使用map[int]*conn存储的。gnet本身的场景就是海量并发连接，内存会很大。进而big map存指针会对 GC造成很大的负担，毕竟它不像数组一样，是连续内存空间，易于GC扫描。</p>
-<p>还有一点，在处理buffer数据的时候，就像上面看到的，本质上是将buffer数据copy给用户一份，那么就存在大量copy开销,在这一点上，字节的netpoll实现了Nocopy Buffer，改天研究一下。</p>
 ]]></content>
 		</item>
 		

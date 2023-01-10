@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="zh-hans">
+
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<meta http-equiv="X-UA-Compatible" content="ie=edge">
+	<meta name="theme-color" content="#494f5c">
+	<meta name="msapplication-TileColor" content="#494f5c">
+<meta itemprop="name" content="发现conc并发库一个有趣的问题">
+<meta itemprop="description" content="上周看到一个新库conc，
+ better structured concurrency for go
+ 这个库的目标是，
+ 更难出现goroutine泄漏 优雅处理panic 使并发的代码更易读  我们一条条细说。
+Make it harder to leak goroutines goroutine泄漏还是很常见的。
+日常我们使用go的时候直接go func开启一个goroutine，写上对应的逻辑，g会进入到某个p的本地队列，最终由p绑定的m执行这个goroutine。
+你能保证一个goroutine在某个时刻一定会结束它的生命周期吗？
+搜了下著名开源项目etcd，goroutine leak还真不少。
+看其中一个简单的泄漏bug。
+done是一个无缓冲的chan，一开始接收动作在最下面，因为中间还有一些没展开的代码可能会导致程序不会执行到&lt;-done，然后goroutine就会发生泄漏，解决方法就是通过defer保证一定会执行&lt;-done。
+那么conc是如何做的？
+package main import ( &#34;fmt&#34; &#34;github.com/sourcegraph/conc&#34; ) func main() { var wg conc.WaitGroup wg.Go(func() { fmt.Println(&#34;g1&#34;) }) wg.Go(func() { fmt.Println(&#34;g2&#34;) }) wg.Wait() } ps:这个结构是不是超级熟悉。
+conc的理念是程序中的每一个goroutine由一个owner创建，归属于owner。一个owner确保它拥有的所有goroutine正常退出，这里的owner也就是conc.WaitGroup。
+但是这真的能像他说的那样Make it harder to leak goroutines吗？
+goroutine的泄漏问题取决于用户对goroutine能正确退出的逻辑保证，和你如何封装没关系吧？
+在我看来conc和标准库的sync.WaitGroup一样，等待所有goroutine执行完毕，可以检测到这个行为。
+要是goroutine里面含有泄漏的bug，该泄漏还得泄漏，Wait该等待还得老实等待。
+Handle panics gracefully 如果直接使用go func,那么可能每一个goroutine都得写上recover，所以一般我们在使用goroutine的时候，都是自己封装一个GoSafe函数。这样就可以在里面统一捕获panic，然后打包调用栈一些信息，进一步处理。
+conc里面因为每个goroutine有owner概念，所以是由owner捕获goroutine的panic。"><meta itemprop="datePublished" content="2023-01-10T18:23:51+08:00" />
+<meta itemprop="dateModified" content="2023-01-10T18:23:51+08:00" />
+<meta itemprop="wordCount" content="464">
+<meta itemprop="keywords" content="go,conc," /><meta property="og:title" content="发现conc并发库一个有趣的问题" />
+<meta property="og:description" content="上周看到一个新库conc，
+ better structured concurrency for go
+ 这个库的目标是，
+ 更难出现goroutine泄漏 优雅处理panic 使并发的代码更易读  我们一条条细说。
+Make it harder to leak goroutines goroutine泄漏还是很常见的。
+日常我们使用go的时候直接go func开启一个goroutine，写上对应的逻辑，g会进入到某个p的本地队列，最终由p绑定的m执行这个goroutine。
+你能保证一个goroutine在某个时刻一定会结束它的生命周期吗？
+搜了下著名开源项目etcd，goroutine leak还真不少。
+看其中一个简单的泄漏bug。
+done是一个无缓冲的chan，一开始接收动作在最下面，因为中间还有一些没展开的代码可能会导致程序不会执行到&lt;-done，然后goroutine就会发生泄漏，解决方法就是通过defer保证一定会执行&lt;-done。
+那么conc是如何做的？
+package main import ( &#34;fmt&#34; &#34;github.com/sourcegraph/conc&#34; ) func main() { var wg conc.WaitGroup wg.Go(func() { fmt.Println(&#34;g1&#34;) }) wg.Go(func() { fmt.Println(&#34;g2&#34;) }) wg.Wait() } ps:这个结构是不是超级熟悉。
+conc的理念是程序中的每一个goroutine由一个owner创建，归属于owner。一个owner确保它拥有的所有goroutine正常退出，这里的owner也就是conc.WaitGroup。
+但是这真的能像他说的那样Make it harder to leak goroutines吗？
+goroutine的泄漏问题取决于用户对goroutine能正确退出的逻辑保证，和你如何封装没关系吧？
+在我看来conc和标准库的sync.WaitGroup一样，等待所有goroutine执行完毕，可以检测到这个行为。
+要是goroutine里面含有泄漏的bug，该泄漏还得泄漏，Wait该等待还得老实等待。
+Handle panics gracefully 如果直接使用go func,那么可能每一个goroutine都得写上recover，所以一般我们在使用goroutine的时候，都是自己封装一个GoSafe函数。这样就可以在里面统一捕获panic，然后打包调用栈一些信息，进一步处理。
+conc里面因为每个goroutine有owner概念，所以是由owner捕获goroutine的panic。" />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="https://www.syst.top/posts/go/conc/" /><meta property="article:section" content="posts" />
+<meta property="article:published_time" content="2023-01-10T18:23:51+08:00" />
+<meta property="article:modified_time" content="2023-01-10T18:23:51+08:00" />
+
+<meta name="twitter:card" content="summary"/>
+<meta name="twitter:title" content="发现conc并发库一个有趣的问题"/>
+<meta name="twitter:description" content="上周看到一个新库conc，
+ better structured concurrency for go
+ 这个库的目标是，
+ 更难出现goroutine泄漏 优雅处理panic 使并发的代码更易读  我们一条条细说。
+Make it harder to leak goroutines goroutine泄漏还是很常见的。
+日常我们使用go的时候直接go func开启一个goroutine，写上对应的逻辑，g会进入到某个p的本地队列，最终由p绑定的m执行这个goroutine。
+你能保证一个goroutine在某个时刻一定会结束它的生命周期吗？
+搜了下著名开源项目etcd，goroutine leak还真不少。
+看其中一个简单的泄漏bug。
+done是一个无缓冲的chan，一开始接收动作在最下面，因为中间还有一些没展开的代码可能会导致程序不会执行到&lt;-done，然后goroutine就会发生泄漏，解决方法就是通过defer保证一定会执行&lt;-done。
+那么conc是如何做的？
+package main import ( &#34;fmt&#34; &#34;github.com/sourcegraph/conc&#34; ) func main() { var wg conc.WaitGroup wg.Go(func() { fmt.Println(&#34;g1&#34;) }) wg.Go(func() { fmt.Println(&#34;g2&#34;) }) wg.Wait() } ps:这个结构是不是超级熟悉。
+conc的理念是程序中的每一个goroutine由一个owner创建，归属于owner。一个owner确保它拥有的所有goroutine正常退出，这里的owner也就是conc.WaitGroup。
+但是这真的能像他说的那样Make it harder to leak goroutines吗？
+goroutine的泄漏问题取决于用户对goroutine能正确退出的逻辑保证，和你如何封装没关系吧？
+在我看来conc和标准库的sync.WaitGroup一样，等待所有goroutine执行完毕，可以检测到这个行为。
+要是goroutine里面含有泄漏的bug，该泄漏还得泄漏，Wait该等待还得老实等待。
+Handle panics gracefully 如果直接使用go func,那么可能每一个goroutine都得写上recover，所以一般我们在使用goroutine的时候，都是自己封装一个GoSafe函数。这样就可以在里面统一捕获panic，然后打包调用栈一些信息，进一步处理。
+conc里面因为每个goroutine有owner概念，所以是由owner捕获goroutine的panic。"/>
+
+	<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+	<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+	<link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+	<link rel="manifest" href="/site.webmanifest">
+	<link rel="mask-icon" href="/safari-pinned-tab.svg" color="">
+	<link rel="shortcut icon" href="/favicon.ico">
+
+	<title>发现conc并发库一个有趣的问题</title>
+	<link rel="stylesheet" href="https://www.syst.top/css/style.min.cb0663fd19952012fdb4a1345792a808ae19eb828578bde6eeae217ff1fb1e8b.css">
+	
+</head>
+
+<body id="page">
+	
+	<header id="site-header" class="animated slideInUp faster">
+		<div class="hdr-wrapper section-inner">
+			<div class="hdr-left">
+				<div class="site-branding">
+					<a href="https://www.syst.top">是不是很酷</a>
+				</div>
+				<nav class="site-nav hide-in-mobile">
+					<a href="https://www.syst.top/posts/">文章</a>
+					<a href="https://www.syst.top/leetcode/">刷题</a>
+					<a href="https://www.syst.top/lives/">生活</a>
+					<a href="https://www.syst.top/readings/">读书笔记</a>
+					<a href="https://www.syst.top/friends/">朋友</a>
+					<a href="https://go.aabbccm.com">grpc-shop</a>
+				</nav>
+			</div>
+			<div class="hdr-right hdr-icons">
+				<button id="toc-btn" class="hdr-btn desktop-only-ib" title="Table of Contents"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-list"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3" y2="6"></line><line x1="3" y1="12" x2="3" y2="12"></line><line x1="3" y1="18" x2="3" y2="18"></line></svg></button><span class="hdr-social hide-in-mobile"><a href="https://github.com/wuqinqiang" target="_blank" rel="noopener me" title="Github"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-github"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"></path></svg></a></span><button id="menu-btn" class="hdr-btn" title="Menu"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-menu"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg></button>
+			</div>
+		</div>
+	</header>
+	<div id="mobile-menu" class="animated fast">
+		<ul>
+			<li><a href="https://www.syst.top/posts/">文章</a></li>
+			<li><a href="https://www.syst.top/tags/">标签</a></li>
+			<li><a href="https://www.syst.top/about/">关于</a></li>
+		</ul>
+	</div>
+
+
+	<main class="site-main section-inner animated fadeIn faster">
+		<article class="thin">
+			<header class="post-header">
+				<div class="post-meta"><span>Jan 10, 2023</span></div>
+				<h1>发现conc并发库一个有趣的问题</h1>
+			</header>
+			<div class="content">
+				<p>上周看到一个新库conc，</p>
+<blockquote>
+<p>better structured concurrency for go</p>
+</blockquote>
+<p>这个库的目标是，</p>
+<ul>
+<li>更难出现goroutine泄漏</li>
+<li>优雅处理panic</li>
+<li>使并发的代码更易读</li>
+</ul>
+<p>我们一条条细说。</p>
+<h4 id="make-it-harder-to-leak-goroutines">Make it harder to leak goroutines<a href="#make-it-harder-to-leak-goroutines" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h4>
+<p>goroutine泄漏还是很常见的。</p>
+<p>日常我们使用go的时候直接go func开启一个goroutine，写上对应的逻辑，g会进入到某个p的本地队列，最终由p绑定的m执行这个goroutine。</p>
+<p>你能保证一个goroutine在某个时刻一定会结束它的生命周期吗？</p>
+<p>搜了下著名开源项目etcd，goroutine leak还真不少。</p>
+<p><img src="https://cdn.syst.top/conc1.png" alt="conc"></p>
+<p>看其中一个简单的泄漏bug。</p>
+<p><img src="https://cdn.syst.top/conc2.png" alt="conc"></p>
+<p>done是一个无缓冲的chan，一开始接收动作在最下面，因为中间还有一些没展开的代码可能会导致程序不会执行到&lt;-done，然后goroutine就会发生泄漏，解决方法就是通过defer保证一定会执行&lt;-done。</p>
+<p>那么conc是如何做的？</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="kn">package</span> <span class="nx">main</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="kn">import</span> <span class="p">(</span>
+</span></span><span class="line"><span class="cl">	<span class="s">&#34;fmt&#34;</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">	<span class="s">&#34;github.com/sourcegraph/conc&#34;</span>
+</span></span><span class="line"><span class="cl"><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="kd">func</span> <span class="nf">main</span><span class="p">()</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">	<span class="kd">var</span> <span class="nx">wg</span> <span class="nx">conc</span><span class="p">.</span><span class="nx">WaitGroup</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">wg</span><span class="p">.</span><span class="nf">Go</span><span class="p">(</span><span class="kd">func</span><span class="p">()</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">fmt</span><span class="p">.</span><span class="nf">Println</span><span class="p">(</span><span class="s">&#34;g1&#34;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">	<span class="p">})</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">wg</span><span class="p">.</span><span class="nf">Go</span><span class="p">(</span><span class="kd">func</span><span class="p">()</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">fmt</span><span class="p">.</span><span class="nf">Println</span><span class="p">(</span><span class="s">&#34;g2&#34;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">	<span class="p">})</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">wg</span><span class="p">.</span><span class="nf">Wait</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></div><p>ps:这个结构是不是超级熟悉。</p>
+<p>conc的理念是程序中的每一个goroutine由一个owner创建，归属于owner。一个owner确保它拥有的所有goroutine正常退出，这里的owner也就是conc.WaitGroup。</p>
+<p>但是这真的能像他说的那样Make it harder to leak goroutines吗？</p>
+<p>goroutine的泄漏问题取决于用户对goroutine能正确退出的逻辑保证，和你如何封装没关系吧？</p>
+<p>在我看来conc和标准库的sync.WaitGroup一样，等待所有goroutine执行完毕，可以检测到这个行为。</p>
+<p>要是goroutine里面含有泄漏的bug，该泄漏还得泄漏，Wait该等待还得老实等待。</p>
+<h4 id="handle-panics-gracefully">Handle panics gracefully<a href="#handle-panics-gracefully" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h4>
+<p>如果直接使用go func,那么可能每一个goroutine都得写上recover，所以一般我们在使用goroutine的时候，都是自己封装一个GoSafe函数。这样就可以在里面统一捕获panic，然后打包调用栈一些信息，进一步处理。</p>
+<p>conc里面因为每个goroutine有owner概念，所以是由owner捕获goroutine的panic。</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="kd">func</span> <span class="p">(</span><span class="nx">p</span> <span class="o">*</span><span class="nx">Catcher</span><span class="p">)</span> <span class="nf">tryRecover</span><span class="p">()</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">	<span class="k">if</span> <span class="nx">val</span> <span class="o">:=</span> <span class="nb">recover</span><span class="p">();</span> <span class="nx">val</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">rp</span> <span class="o">:=</span> <span class="nf">NewRecoveredPanic</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="nx">val</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">p</span><span class="p">.</span><span class="nx">recovered</span><span class="p">.</span><span class="nf">CompareAndSwap</span><span class="p">(</span><span class="kc">nil</span><span class="p">,</span> <span class="o">&amp;</span><span class="nx">rp</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></div><p>只会记录第一个panic的goroutine堆栈信息。然后在Wait操作的时候，</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="kd">func</span> <span class="p">(</span><span class="nx">h</span> <span class="o">*</span><span class="nx">WaitGroup</span><span class="p">)</span> <span class="nf">Wait</span><span class="p">()</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">h</span><span class="p">.</span><span class="nx">wg</span><span class="p">.</span><span class="nf">Wait</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">	<span class="c1">// Propagate a panic if we caught one from a child goroutine.
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="nx">h</span><span class="p">.</span><span class="nx">pc</span><span class="p">.</span><span class="nf">Repanic</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="kd">func</span> <span class="p">(</span><span class="nx">p</span> <span class="o">*</span><span class="nx">Catcher</span><span class="p">)</span> <span class="nf">Repanic</span><span class="p">()</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">	<span class="k">if</span> <span class="nx">val</span> <span class="o">:=</span> <span class="nx">p</span><span class="p">.</span><span class="nf">Recovered</span><span class="p">();</span> <span class="nx">val</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="nb">panic</span><span class="p">(</span><span class="nx">val</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></div><p>超级粗暴。当conc.WaitGroup里面任何一个goroutine发生panic，调用wg.Wait()的时候就会panic，把goroutine panic的堆栈信息作为panic的值。</p>
+<p>写这篇文章的时候已经看到他们在issue上讨论添加一个类似WaitSafe()函数了。</p>
+<h4 id="make-concurrent-code-easier-to-read">Make concurrent code easier to read<a href="#make-concurrent-code-easier-to-read" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h4>
+<p>这个还是节省了一些工作的，作者给了几个例子。</p>
+<p>上面我们看到的WaitGroup，不再需要用户执行Add和Done操作了。同时内部捕获panic，虽然处理有点粗暴。</p>
+<p><img src="https://cdn.syst.top/conc3.png" alt="conc"></p>
+<p>比如控制并发goroutine数量来并发处理批量数据的例子。</p>
+<p><img src="https://cdn.syst.top/conc4.png" alt="conc"></p>
+<p><img src="https://cdn.syst.top/conc5.png" alt="conc"></p>
+<p>可以看出，确实省了很多的操作，其他例子可以自行查看。</p>
+<p>上面我们说到pool，其实就是一个并发执行任务的worker池，之前文章也介绍过这种模式。</p>
+<p>conc里面有几个类型的pool:ContextPool，ErrorPool，ResultPool，ResultContextPool，ResultErrorPool。</p>
+<p>它们都基于最基础的Pool结构。</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="kd">type</span> <span class="nx">Pool</span> <span class="kd">struct</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">handle</span>   <span class="nx">conc</span><span class="p">.</span><span class="nx">WaitGroup</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">limiter</span>  <span class="nx">limiter</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">tasks</span>    <span class="kd">chan</span> <span class="kd">func</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">initOnce</span> <span class="nx">sync</span><span class="p">.</span><span class="nx">Once</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></div><p>limiter就是一个很简单的用chan控制worker goroutine数量。</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="kd">type</span> <span class="nx">limiter</span> <span class="kd">chan</span> <span class="kd">struct</span><span class="p">{}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="kd">func</span> <span class="p">(</span><span class="nx">l</span> <span class="nx">limiter</span><span class="p">)</span> <span class="nf">limit</span><span class="p">()</span> <span class="kt">int</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">	<span class="k">return</span> <span class="nb">cap</span><span class="p">(</span><span class="nx">l</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="kd">func</span> <span class="p">(</span><span class="nx">l</span> <span class="nx">limiter</span><span class="p">)</span> <span class="nf">release</span><span class="p">()</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">	<span class="k">if</span> <span class="nx">l</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="o">&lt;-</span><span class="nx">l</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></div><p>核心逻辑也很简单，</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="kd">func</span> <span class="p">(</span><span class="nx">p</span> <span class="o">*</span><span class="nx">Pool</span><span class="p">)</span> <span class="nf">Go</span><span class="p">(</span><span class="nx">f</span> <span class="kd">func</span><span class="p">())</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">p</span><span class="p">.</span><span class="nf">init</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">	<span class="k">if</span> <span class="nx">p</span><span class="p">.</span><span class="nx">limiter</span> <span class="o">==</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="c1">// No limit on the number of goroutines.
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>		<span class="k">select</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="k">case</span> <span class="nx">p</span><span class="p">.</span><span class="nx">tasks</span> <span class="o">&lt;-</span> <span class="nx">f</span><span class="p">:</span>
+</span></span><span class="line"><span class="cl">			<span class="c1">// A goroutine was available to handle the task.
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>		<span class="k">default</span><span class="p">:</span>
+</span></span><span class="line"><span class="cl">			<span class="c1">// No goroutine was available to handle the task.
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>			<span class="c1">// Spawn a new one and send it the task.
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>			<span class="nx">p</span><span class="p">.</span><span class="nx">handle</span><span class="p">.</span><span class="nf">Go</span><span class="p">(</span><span class="nx">p</span><span class="p">.</span><span class="nx">worker</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">			<span class="nx">p</span><span class="p">.</span><span class="nx">tasks</span> <span class="o">&lt;-</span> <span class="nx">f</span>
+</span></span><span class="line"><span class="cl">		<span class="p">}</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="k">select</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="k">case</span> <span class="nx">p</span><span class="p">.</span><span class="nx">limiter</span> <span class="o">&lt;-</span> <span class="kd">struct</span><span class="p">{}{}:</span>
+</span></span><span class="line"><span class="cl">			<span class="c1">// If we are below our limit, spawn a new worker rather
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>			<span class="c1">// than waiting for one to become available.
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>			<span class="nx">p</span><span class="p">.</span><span class="nx">handle</span><span class="p">.</span><span class="nf">Go</span><span class="p">(</span><span class="nx">p</span><span class="p">.</span><span class="nx">worker</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">			<span class="c1">// We know there is at least one worker running, so wait
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>			<span class="c1">// for it to become available. This ensures we never spawn
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>			<span class="c1">// more workers than the number of tasks.
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>			<span class="nx">p</span><span class="p">.</span><span class="nx">tasks</span> <span class="o">&lt;-</span> <span class="nx">f</span>
+</span></span><span class="line"><span class="cl">		<span class="k">case</span> <span class="nx">p</span><span class="p">.</span><span class="nx">tasks</span> <span class="o">&lt;-</span> <span class="nx">f</span><span class="p">:</span>
+</span></span><span class="line"><span class="cl">			<span class="c1">// A worker is available and has accepted the task.
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>			<span class="k">return</span>
+</span></span><span class="line"><span class="cl">		<span class="p">}</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></div><p>如果没有设置limiter，那么优先找空闲的worker。否则就创建一个新worker，然后投递任务进去。</p>
+<p>设置了limiter，</p>
+<p>如果达到了limter worker数量上限，那就只能把任务投递给空闲的worker，没有空闲就阻塞等着。</p>
+<p>没有达到上限，空闲worker也存在，那就由select随机选择，否则的话就创建一个新的worker。</p>
+<h4 id="彩蛋">彩蛋<a href="#彩蛋" class="anchor" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path><line x1="8" y1="12" x2="16" y2="12"></line></svg></a></h4>
+<p>看代码的时候发现这里面有个问题，</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="kd">func</span> <span class="p">(</span><span class="nx">p</span> <span class="o">*</span><span class="nx">Pool</span><span class="p">)</span> <span class="nf">deref</span><span class="p">()</span> <span class="nx">Pool</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">	<span class="k">return</span> <span class="nx">Pool</span><span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">limiter</span><span class="p">:</span> <span class="nx">p</span><span class="p">.</span><span class="nx">limiter</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></div><p>这个函数会返回一个新的Pool，上面我说过limiter是一个chan结构，在go中chan是一个引用类型，所以这里对limiter就是一个浅拷贝。</p>
+<p>因此，下面这段代码，</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="kd">func</span> <span class="nf">TestErrorPool</span><span class="p">(</span><span class="nx">t</span> <span class="o">*</span><span class="nx">testing</span><span class="p">.</span><span class="nx">T</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">p</span> <span class="o">:=</span> <span class="nf">New</span><span class="p">().</span><span class="nf">WithMaxGoroutines</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">p</span><span class="p">.</span><span class="nf">Go</span><span class="p">(</span><span class="kd">func</span><span class="p">()</span> <span class="p">{})</span>
+</span></span><span class="line"><span class="cl">  <span class="c1">//p.limiter长度是1
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="nx">require</span><span class="p">.</span><span class="nf">Equal</span><span class="p">(</span><span class="nx">t</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="nx">p</span><span class="p">.</span><span class="nx">limiter</span><span class="p">),</span> <span class="mi">1</span><span class="p">)</span> 
+</span></span><span class="line"><span class="cl">  <span class="c1">//新的ErrorPool:里面的pool是调用p.deref得到的.
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="nx">ep</span> <span class="o">:=</span> <span class="nx">p</span><span class="p">.</span><span class="nf">WithErrors</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">require</span><span class="p">.</span><span class="nf">Equal</span><span class="p">(</span><span class="nx">t</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="nx">ep</span><span class="p">.</span><span class="nx">pool</span><span class="p">.</span><span class="nx">limiter</span><span class="p">),</span> <span class="mi">0</span><span class="p">)</span> 
+</span></span><span class="line"><span class="cl">  <span class="c1">//这里的ep.limiter的长度也是1，尽管ep没有调用一次ep.Go()
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="p">}</span>
+</span></span></code></pre></div><p>正因为这种“特性”,如果我们写了下面的代码，</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="kd">func</span> <span class="nf">main</span><span class="p">()</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">p</span> <span class="o">:=</span> <span class="nx">pool</span><span class="p">.</span><span class="nf">New</span><span class="p">().</span><span class="nf">WithMaxGoroutines</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">p</span><span class="p">.</span><span class="nf">Go</span><span class="p">(</span><span class="kd">func</span><span class="p">()</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">fmt</span><span class="p">.</span><span class="nf">Println</span><span class="p">(</span><span class="s">&#34;g1&#34;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">	<span class="p">})</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">p</span><span class="p">.</span><span class="nf">Go</span><span class="p">(</span><span class="kd">func</span><span class="p">()</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">fmt</span><span class="p">.</span><span class="nf">Println</span><span class="p">(</span><span class="s">&#34;g2&#34;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">	<span class="p">})</span>
+</span></span><span class="line"><span class="cl">	<span class="c1">//p.Wait()
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="nx">ep</span> <span class="o">:=</span> <span class="nx">p</span><span class="p">.</span><span class="nf">WithErrors</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">ep</span><span class="p">.</span><span class="nf">Go</span><span class="p">(</span><span class="kd">func</span><span class="p">()</span> <span class="kt">error</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="c1">//这段代码永远没机会执行,泄漏
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>		<span class="nx">fmt</span><span class="p">.</span><span class="nf">Println</span><span class="p">(</span><span class="s">&#34;with err &#34;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">		<span class="k">return</span> <span class="kc">nil</span>
+</span></span><span class="line"><span class="cl">	<span class="p">})</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">ep</span><span class="p">.</span><span class="nf">Wait</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">	<span class="c1">// 如果我们把p.Wait() 放在ep.Wait()之后
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="nx">p</span><span class="p">.</span><span class="nf">Wait</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></div><p>ep.Go里面的逻辑永远都没机会执行。</p>
+<p>原因就在于，第一个loop创建的时候限制了goroutine数量。然后执行两次p.Go，这样就会创建两个只属于p的workers，同时也让limiter到达限制数。</p>
+<p>当ep想要执行ep.Go的时候，只能执行p.tasks &lt;- f，但是这时候ep还没有机会创建属于自己的worker，所以会阻塞到死。</p>
+<p>我提了一个pr，其实就是把上面的浅拷贝换成深拷贝。</p>
+<p><img src="https://cdn.syst.top/conc6.png" alt="conc"></p>
+<p>但是作者回复说，</p>
+<blockquote>
+<p>Currently calling any configuration methods on the pool after calling pool.Go() is unsupported because the configuration methods take ownership of and mutate the pool. This might not be ideal though since ownership can&rsquo;t actually be enforced with Go. It would be less of a footgun to just return a fully copy each time.</p>
+</blockquote>
+<p>我理解的意思就是目前不支持我这么玩，简单的说不支持在执行pool.Go()后调用这些操作😂。感兴趣可以看下issue43</p>
+
+			</div>
+			<div class="content"><br><img src="https://cdn.syst.top/wechat2.png"></div>
+			<hr class="post-end">
+			<footer class="post-info">
+				<p>
+					<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-tag meta-icon"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"></path><line x1="7" y1="7" x2="7" y2="7"></line></svg><span class="tag"><a href="https://www.syst.top/tags/go">go</a></span><span class="tag"><a href="https://www.syst.top/tags/conc">conc</a></span>
+				</p>
+				<p><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-file-text"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>464 Words</p>
+				<p><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-calendar"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>2023-01-10 18:23 &#43;0800</p>
+			</footer>
+		</article>
+		<aside id="toc" class="show-toc">
+			<div class="toc-title">Table of Contents</div>
+			<nav id="TableOfContents">
+  <ul>
+    <li>
+      <ul>
+        <li></li>
+      </ul>
+    </li>
+  </ul>
+</nav>
+		</aside>
+		<div class="post-nav thin">
+			<a class="prev-post" href="https://www.syst.top/posts/go/evio/">
+				<span class="post-nav-label">Older&nbsp;<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-arrow-right"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg></span><br><span>evio原理解析～有彩蛋</span>
+			</a>
+		</div>
+		<div id="comments" class="thin">
+			<script src="https://utteranc.es/client.js"
+        repo="wuqinqiang/blog"
+        issue-term="pathname"
+        theme="github-light"
+        crossorigin="anonymous"
+        async>
+</script>
+		</div>
+	</main>
+
+	<footer id="site-footer" class="section-inner thin animated fadeIn faster">
+		<p>&copy; 2018 - 2023 <a href="https://www.syst.top">Remember</a> &#183; <a href="http://beian.miit.gov.cn/">浙ICP备18028603号-2</a></p>
+		<p>
+			Made with <a href="https://gohugo.io/" target="_blank" rel="noopener">Hugo</a> &#183; Theme <a href="https://github.com/Track3/hermit" target="_blank" rel="noopener">Hermit</a> &#183; <a href="https://www.syst.top/post/index.xml" target="_blank" title="rss"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-rss"><path d="M4 11a9 9 0 0 1 9 9"></path><path d="M4 4a16 16 0 0 1 16 16"></path><circle cx="5" cy="19" r="1"></circle></svg></a>
+		</p>
+	</footer>
+
+
+	<script src="https://www.syst.top/js/main.min.c8a831e54547e9c081939713d77308bf58ae5fed99a75acbcaaa14c5ce45bf89.js"></script>
+<script type="application/javascript">
+var doNotTrack = false;
+if (!doNotTrack) {
+	window.ga=window.ga||function(){(ga.q=ga.q||[]).push(arguments)};ga.l=+new Date;
+	ga('create', 'UA-166045776-1', 'auto');
+	
+	ga('send', 'pageview');
+}
+</script>
+<script async src='https://www.google-analytics.com/analytics.js'></script>
+
+
+</body>
+
+</html>
