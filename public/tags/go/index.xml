@@ -7,7 +7,32 @@
     <generator>Hugo -- gohugo.io</generator>
     <language>zh-hans</language>
     <copyright>This work is licensed under a Creative Commons Attribution-NonCommercial 4.0 International License.</copyright>
-    <lastBuildDate>Tue, 10 Jan 2023 18:23:51 +0800</lastBuildDate><atom:link href="https://www.syst.top/tags/go/index.xml" rel="self" type="application/rss+xml" />
+    <lastBuildDate>Tue, 21 Feb 2023 18:23:51 +0800</lastBuildDate><atom:link href="https://www.syst.top/tags/go/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>HelloWord一个go开发的学习英语单词工具</title>
+      <link>https://www.syst.top/posts/go/helloword/</link>
+      <pubDate>Tue, 21 Feb 2023 18:23:51 +0800</pubDate>
+      
+      <guid>https://www.syst.top/posts/go/helloword/</guid>
+      <description>图片拍摄于2023年02月19日 杭州玉鸟集
+背景 Hello Word是我在背单词过程中产生的一个想法。
+在学习英语时，词汇量是非常重要的。但是仅仅死记硬背单词，没有语境感，效率是很低的。
+虽然一些应用程序可以根据单词的多个词义为单词组成一小段句子，稍微增强语境感。但是单词仍然过于零散。
+因此，我们是否可以将每天背诵的多个单词组合成一段小短文，以便复习这一批单词呢？这就是Hello Word的初衷。
+当然，ChatGPT API暂时是实现这个想法的工具。 除此之外，程序还配套了几个周边小游戏。
+单词短语推送器 指定单词数量，随机选择单词，生成一段小短文，推送到用户指定平台。
+这个脚本有以下可选项：
+ files：默认导入 CET4.txt 单词文件，你可以通过逗号同时导入多个单词文件，它们都存储在 library 文件夹下。 spec：表示推送频率设置，默认为每小时生成一个新的短语，具体时间规则使用的是 robif/cron 库，请参考该库的文档自行设置。 word-number：表示生成一次短语使用的单词数量，默认为 5 个，最多不超过 10 个  效果
+单词选择规则，
+ 默认:随机 最近最少推送(todo)  单词游戏 单词接龙 这是一个单词接龙游戏，游戏开始时系统会随机选择一个单词。玩家需要以该单词的最后一个字母为开头输入一个新单词，接着程序又以玩家输入单词的最后一个字母为开头输出新单词。游戏会持续进行，直到有一方出现错误。
+在一局游戏中，每个单词只能被使用一次。
+使用
+效果
+后续规划
+ 单词正确性校验，是否是合法的英语单词(todo) 超时控制，用户每个回合指定时间内未输出，游戏结束(todo) 错误机会，一局游戏可以错误次数(todo)  其他游戏 单词拼写(todo)、单词填空(todo) 项目地址在: https://github.com/wuqinqiang/helloword
+觉得不错可以点个star，感兴趣可以一起开发。</description>
+    </item>
+    
     <item>
       <title>发现conc并发库一个有趣的问题</title>
       <link>https://www.syst.top/posts/go/conc/</link>
@@ -64,6 +89,20 @@ conc里面因为每个goroutine有owner概念，所以是由owner捕获goroutine
  当一个新的客户端连接到来时，会发生什么？ 读写数据是如何流动的？ 同一个epoll里多个fd读写事件ready，程序是如何处理的？  看完下面，再回来回答这三个问题。
 代码细节 运行一个简单demo，
 package main import ( &amp;#34;fmt&amp;#34; &amp;#34;github.com/tidwall/evio&amp;#34; &amp;#34;log&amp;#34; ) func main() { var events evio.Events events.NumLoops = 3 events.Serving = func(srv evio.Server) (action evio.Action) { log.</description>
+    </item>
+    
+    <item>
+      <title>nbio原理解析</title>
+      <link>https://www.syst.top/posts/go/nbio/</link>
+      <pubDate>Fri, 06 Jan 2023 19:23:51 +0800</pubDate>
+      
+      <guid>https://www.syst.top/posts/go/nbio/</guid>
+      <description>上一篇文章我们介绍了evio，它是最早开源实现自定义go netpoll 实现，我们也提到它存在一些问题，这篇文章我们继续分析其他实现:nbio。
+nbio项目也包含了在nbio之上构建的nbhttp，这个不在我们讨论范围。
+老规矩，先来一段运行nbio程序代码，
+Server:
+package main import ( &amp;#34;fmt&amp;#34; &amp;#34;github.com/lesismal/nbio&amp;#34; ) func main() { g := nbio.NewGopher(nbio.Config{ Network: &amp;#34;tcp&amp;#34;, Addrs: []string{&amp;#34;:8888&amp;#34;}, MaxWriteBufferSize: 6 * 1024 * 1024, }) g.OnData(func(c *nbio.Conn, data []byte) { c.Write(append([]byte{}, data...)) }) err := g.Start() if err != nil { fmt.Printf(&amp;#34;nbio.Start failed: %v\n&amp;#34;, err) return } defer g.Stop() g.Wait() } Client:
+package main import ( &amp;#34;bytes&amp;#34; &amp;#34;context&amp;#34; &amp;#34;fmt&amp;#34; &amp;#34;math/rand&amp;#34; &amp;#34;time&amp;#34; &amp;#34;github.com/lesismal/nbio&amp;#34; &amp;#34;github.com/lesismal/nbio/logging&amp;#34; ) func main() { var ( ret []byte buf = make([]byte, 1024*1024*4) addr = &amp;#34;localhost:8888&amp;#34; ctx, _ = context.</description>
     </item>
     
     <item>
@@ -266,52 +305,6 @@ package main import ( &amp;#34;fmt&amp;#34; &amp;#34;github.com/wuqinqiang/easyf
 其他方面的应用可以自行体验。
 总结 这篇文章主要带你们体验下泛型的基本使用，以及对应的类型约束，最后还简单实验了两个泛型的场景demo，感兴趣的可以自行体验。更多内容，欢迎留言区域交流。
 附录  https://go.dev/doc/tutorial/generics https://teivah.medium.com/when-to-use-generics-in-go-36d49c1aeda https://github.com/mattn/go-generics-example  </description>
-    </item>
-    
-    <item>
-      <title>那些用Go实现的分布式事务框架</title>
-      <link>https://www.syst.top/posts/go/transaction/</link>
-      <pubDate>Wed, 08 Dec 2021 22:25:52 +0800</pubDate>
-      
-      <guid>https://www.syst.top/posts/go/transaction/</guid>
-      <description>开篇 不知不觉竟然一个月没更新了，人一旦懒下来只会越来越懒。
-最近对分布式事务产生了一些兴趣，查阅了一些文章以及论文。这篇文章主要介绍我看的两个项目，不涉及一些理论知识。
- 阿里开源版本的Seata，主要看了Go实现的seata-golang(落后java版) 以及前段时间很多公众号都发的dtm。  Seata简介 Seata是由阿里开源的分布式事务服务，目前为用户提供了AT、TCC、SAGA、XA的事务模式，整体采用的是两阶段提交协议。Go版的seata-golang 目前好像只实现了mysql的AT、TCC模式，作者现在不咋更新了。
-Seata 有几个核心角色：
- TC(Transaction Coordinator) -事务协调者。(维护全局和分支事务的状态，驱动全局事务提交或回滚) TM(Transaction Manager)-事务管理器。(定义全局事务的范围：开始全局事务、提交或回滚全局事务。) RM(Resource Manager)-资源管理器。(管理分支事务处理的资源，与TC交谈以注册分支事务和报告分支事务的状态，并驱动分支事务提交或回滚)  当然这样看，可能还不是很理解，我拿一张官网的图加以解释。
-从上图中可以看出，这三个角色所负责的工作如下，
-TC
- 维护全局和分支事务状态，需要进行存储。 当一个分布式事务处理结束，需要通知到每个RM是commit还是rollback。  TM
- 向TC请求开启一个分布式事务，得到一个全局唯一的分布式id。 根据每个参与分布式事务的RM一阶段的反馈，决定二阶段向TC请求此次分布式事务是commit还是rollback(绝大部分场景下，一阶段任一RM失败，本次分布式事务失败)  RM
-说的白一点就是管理参与分布式事务的各个服务(比如经典下单场景中涉及到的:订单服务、库存服务、营销服务等)
-ps:个人感觉，这里的RM有点类似微服务中的中间处理层(专业术语他们管这叫bff-&amp;gt;backend for fronted)。
-  一阶段 prepare 行为(主动)：每个RM调用 自定义 的 prepare 逻辑。
-  二阶段 commit 行为(被动触发)：如果本次分布式事务第一阶段全部RM成功，TC处理完自身状态变更后，调用各个RM自定义 的 commit 逻辑。(一阶段RM全部成功)
-  二阶段 rollback 行为(被动触发)：如果本次分布式事务第一阶段任一RM失败，TC处理完自身状态变更后，调用各个RM自定义 的 rollback 逻辑。(一阶段任意RM失败)
-  好了。下面可以看看seata-golang 实现的一些细节了，seata-golang 底层采用gRPC进行通信。
-seata-golang 我们先看RM部分结构。</description>
-    </item>
-    
-    <item>
-      <title>那些用Go实现的分布式事务框架(2)</title>
-      <link>https://www.syst.top/posts/go/transaction2/</link>
-      <pubDate>Wed, 08 Dec 2021 22:25:52 +0800</pubDate>
-      
-      <guid>https://www.syst.top/posts/go/transaction2/</guid>
-      <description>开篇 上一篇我们主要介绍的是seata-golang。一个对标seata的go语言实现，当然版本还是落后Java版很多的。
-这次我们来介绍一下另一个go实现的分布式事务:dtm。
-首先来看下dtm整体架构图(来源官网)。
-再来看之前的seata架构图。
-从架构上来看，大差不差。
-seata中的TC对标dam的TM。
-RM两边意思一致。
-seata中的TM对标dtm事务SDK。作用都是一样:第一阶段开启一个全局事务,执行各RM分支事务，第二阶段根据RM第一阶段执行结果，决定调用TC(seata)|TM(dtm) commit或者rollback。
-架构上，个人感觉只是因为模块名称以及图画不一样的差别。
-当然在实现细节上还是有很大差别的。
-我们先简单介绍下DTM各个模块。
-TM TM 层在代码中是没有具体的主体结构的，开始都是函数之前的调用。
-启动TM实际上开启了两个服务，http以及grpc这两个服务。
-// StartSvr StartSvr func StartSvr() { app := common.GetGinApp() app = httpMetrics(app) addRoute(app) dtmimp.Logf(&amp;#34;dtmsvr listen at: %d&amp;#34;, common.DtmHttpPort) go app.Run(fmt.Sprintf(&amp;#34;:%d&amp;#34;, common.DtmHttpPort)) lis, err := net.Listen(&amp;#34;tcp&amp;#34;, fmt.Sprintf(&amp;#34;:%d&amp;#34;, common.DtmGrpcPort)) dtmimp.FatalIfError(err) s := grpc.NewServer( grpc.UnaryInterceptor(grpc_middleware.ChainUnaryServer( grpc.UnaryServerInterceptor(grpcMetrics), grpc.UnaryServerInterceptor(dtmgimp.GrpcServerLog)), )) dtmgimp.RegisterDtmServer(s, &amp;amp;dtmServer{}) dtmimp.Logf(&amp;#34;grpc listening at %v&amp;#34;, lis.Addr()) go func() { err := s.Serve(lis) dtmimp.FatalIfError(err) }() go updateBranchAsync() // 省略代码 } http路由，</description>
     </item>
     
   </channel>

@@ -283,4 +283,4 @@ ep.Go里面的逻辑永远都没机会执行。
 
 > Currently calling any configuration methods on the pool after calling pool.Go() is unsupported because the configuration methods take ownership of and mutate the pool. This might not be ideal though since ownership can't actually be enforced with Go. It would be less of a footgun to just return a fully copy each time.
 
-我理解的意思就是目前不支持我这么玩，简单的说不支持在执行pool.Go()后调用这些操作😂。感兴趣可以看下issue43
+我理解的意思就是目前不支持我这么玩，简单的说不支持在执行pool.Go()后调用这些操作😂。

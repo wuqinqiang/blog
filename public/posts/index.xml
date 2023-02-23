@@ -6,8 +6,76 @@
 		<generator>Hugo -- gohugo.io</generator>
 		<language>zh-hans</language>
 		<copyright>This work is licensed under a Creative Commons Attribution-NonCommercial 4.0 International License.</copyright>
-		<lastBuildDate>Tue, 10 Jan 2023 18:23:51 +0800</lastBuildDate>
+		<lastBuildDate>Tue, 21 Feb 2023 18:23:51 +0800</lastBuildDate>
 		<atom:link href="https://www.syst.top/posts/index.xml" rel="self" type="application/rss+xml" />
+		
+		<item>
+			<title>HelloWord一个go开发的学习英语单词工具</title>
+			<link>https://www.syst.top/posts/go/helloword/</link>
+			<pubDate>Tue, 21 Feb 2023 18:23:51 +0800</pubDate>
+			
+			<guid>https://www.syst.top/posts/go/helloword/</guid>
+			<description>图片拍摄于2023年02月19日 杭州玉鸟集
+背景 Hello Word是我在背单词过程中产生的一个想法。
+在学习英语时，词汇量是非常重要的。但是仅仅死记硬背单词，没有语境感，效率是很低的。
+虽然一些应用程序可以根据单词的多个词义为单词组成一小段句子，稍微增强语境感。但是单词仍然过于零散。
+因此，我们是否可以将每天背诵的多个单词组合成一段小短文，以便复习这一批单词呢？这就是Hello Word的初衷。
+当然，ChatGPT API暂时是实现这个想法的工具。 除此之外，程序还配套了几个周边小游戏。
+单词短语推送器 指定单词数量，随机选择单词，生成一段小短文，推送到用户指定平台。
+这个脚本有以下可选项：
+ files：默认导入 CET4.txt 单词文件，你可以通过逗号同时导入多个单词文件，它们都存储在 library 文件夹下。 spec：表示推送频率设置，默认为每小时生成一个新的短语，具体时间规则使用的是 robif/cron 库，请参考该库的文档自行设置。 word-number：表示生成一次短语使用的单词数量，默认为 5 个，最多不超过 10 个  效果
+单词选择规则，
+ 默认:随机 最近最少推送(todo)  单词游戏 单词接龙 这是一个单词接龙游戏，游戏开始时系统会随机选择一个单词。玩家需要以该单词的最后一个字母为开头输入一个新单词，接着程序又以玩家输入单词的最后一个字母为开头输出新单词。游戏会持续进行，直到有一方出现错误。
+在一局游戏中，每个单词只能被使用一次。
+使用
+效果
+后续规划
+ 单词正确性校验，是否是合法的英语单词(todo) 超时控制，用户每个回合指定时间内未输出，游戏结束(todo) 错误机会，一局游戏可以错误次数(todo)  其他游戏 单词拼写(todo)、单词填空(todo) 项目地址在: https://github.com/wuqinqiang/helloword
+觉得不错可以点个star，感兴趣可以一起开发。</description>
+			<content type="html"><![CDATA[<p><img src="https://cdn.syst.top/WechatIMG92.jpeg" alt="img"></p>
+<p>图片拍摄于2023年02月19日 杭州玉鸟集</p>
+<h3 id="背景">背景</h3>
+<p><a href="https://github.com/wuqinqiang/helloword">Hello Word</a>是我在背单词过程中产生的一个想法。</p>
+<p>在学习英语时，词汇量是非常重要的。但是仅仅死记硬背单词，没有语境感，效率是很低的。</p>
+<p>虽然一些应用程序可以根据单词的多个词义为单词组成一小段句子，稍微增强语境感。但是单词仍然过于零散。</p>
+<p>因此，我们是否可以将每天背诵的多个单词组合成一段小短文，以便复习这一批单词呢？这就是Hello Word的初衷。</p>
+<p>当然，ChatGPT API暂时是实现这个想法的工具。 除此之外，程序还配套了几个周边小游戏。</p>
+<h3 id="单词短语推送器">单词短语推送器</h3>
+<p>指定单词数量，随机选择单词，生成一段小短文，推送到用户指定平台。</p>
+<p><img src="https://cdn.syst.top/hello1.png" alt="img"></p>
+<p>这个脚本有以下可选项：</p>
+<ul>
+<li>files：默认导入 CET4.txt 单词文件，你可以通过逗号同时导入多个单词文件，它们都存储在 library 文件夹下。</li>
+<li>spec：表示推送频率设置，默认为每小时生成一个新的短语，具体时间规则使用的是 robif/cron 库，请参考该库的文档自行设置。</li>
+<li>word-number：表示生成一次短语使用的单词数量，默认为 5 个，最多不超过 10 个</li>
+</ul>
+<p>效果</p>
+<p><img src="https://cdn.syst.top/hello2.png" alt="img"></p>
+<p>单词选择规则，</p>
+<ul>
+<li>默认:随机</li>
+<li>最近最少推送(todo)</li>
+</ul>
+<h3 id="单词游戏">单词游戏</h3>
+<h3 id="单词接龙">单词接龙</h3>
+<p>这是一个单词接龙游戏，游戏开始时系统会随机选择一个单词。玩家需要以该单词的最后一个字母为开头输入一个新单词，接着程序又以玩家输入单词的最后一个字母为开头输出新单词。游戏会持续进行，直到有一方出现错误。</p>
+<p>在一局游戏中，每个单词只能被使用一次。</p>
+<p>使用</p>
+<p><img src="https://cdn.syst.top/hello3.png" alt="img"></p>
+<p>效果</p>
+<p><img src="https://cdn.syst.top/hello4.png" alt="img"></p>
+<p>后续规划</p>
+<ul>
+<li>单词正确性校验，是否是合法的英语单词(todo)</li>
+<li>超时控制，用户每个回合指定时间内未输出，游戏结束(todo)</li>
+<li>错误机会，一局游戏可以错误次数(todo)</li>
+</ul>
+<h3 id="其他游戏">其他游戏</h3>
+<h3 id="单词拼写todo单词填空todo">单词拼写(todo)、单词填空(todo)</h3>
+<p>项目地址在: <a href="https://github.com/wuqinqiang/helloword">https://github.com/wuqinqiang/helloword</a></p>
+<p>觉得不错可以点个star，感兴趣可以一起开发。</p>
+]]></content>
+		</item>
 		
 		<item>
 			<title>发现conc并发库一个有趣的问题</title>
@@ -217,7 +285,7 @@ conc里面因为每个goroutine有owner概念，所以是由owner捕获goroutine
 <blockquote>
 <p>Currently calling any configuration methods on the pool after calling pool.Go() is unsupported because the configuration methods take ownership of and mutate the pool. This might not be ideal though since ownership can&rsquo;t actually be enforced with Go. It would be less of a footgun to just return a fully copy each time.</p>
 </blockquote>
-<p>我理解的意思就是目前不支持我这么玩，简单的说不支持在执行pool.Go()后调用这些操作😂。感兴趣可以看下issue43</p>
+<p>我理解的意思就是目前不支持我这么玩，简单的说不支持在执行pool.Go()后调用这些操作😂。</p>
 ]]></content>
 		</item>
 		
@@ -754,6 +822,111 @@ package main import ( &amp;#34;fmt&amp;#34; &amp;#34;github.com/tidwall/evio&amp
 <p>evio会通过不断修改conn fd的事件来唤醒epoll，达到逻辑上的正确性。频繁唤醒的方式并不是很妥，这种方式是存在开销的。</p>
 <p>这篇文章到这里就结束了，分析完go自建netpoll &ldquo;鼻祖&rdquo; evio，以及它存在局限性，就可以继续学习后续其他框架的设计了。</p>
 ]]></content>
+		</item>
+		
+		<item>
+			<title>nbio原理解析</title>
+			<link>https://www.syst.top/posts/go/nbio/</link>
+			<pubDate>Fri, 06 Jan 2023 19:23:51 +0800</pubDate>
+			
+			<guid>https://www.syst.top/posts/go/nbio/</guid>
+			<description>上一篇文章我们介绍了evio，它是最早开源实现自定义go netpoll 实现，我们也提到它存在一些问题，这篇文章我们继续分析其他实现:nbio。
+nbio项目也包含了在nbio之上构建的nbhttp，这个不在我们讨论范围。
+老规矩，先来一段运行nbio程序代码，
+Server:
+package main import ( &amp;#34;fmt&amp;#34; &amp;#34;github.com/lesismal/nbio&amp;#34; ) func main() { g := nbio.NewGopher(nbio.Config{ Network: &amp;#34;tcp&amp;#34;, Addrs: []string{&amp;#34;:8888&amp;#34;}, MaxWriteBufferSize: 6 * 1024 * 1024, }) g.OnData(func(c *nbio.Conn, data []byte) { c.Write(append([]byte{}, data...)) }) err := g.Start() if err != nil { fmt.Printf(&amp;#34;nbio.Start failed: %v\n&amp;#34;, err) return } defer g.Stop() g.Wait() } Client:
+package main import ( &amp;#34;bytes&amp;#34; &amp;#34;context&amp;#34; &amp;#34;fmt&amp;#34; &amp;#34;math/rand&amp;#34; &amp;#34;time&amp;#34; &amp;#34;github.com/lesismal/nbio&amp;#34; &amp;#34;github.com/lesismal/nbio/logging&amp;#34; ) func main() { var ( ret []byte buf = make([]byte, 1024*1024*4) addr = &amp;#34;localhost:8888&amp;#34; ctx, _ = context.</description>
+			<content type="html"><![CDATA[<p>上一篇文章我们介绍了evio，它是最早开源实现自定义go netpoll 实现，我们也提到它存在一些问题，这篇文章我们继续分析其他实现:nbio。</p>
+<p>nbio项目也包含了在nbio之上构建的nbhttp，这个不在我们讨论范围。</p>
+<p>老规矩，先来一段运行nbio程序代码，</p>
+<p>Server:</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="kn">package</span> <span class="nx">main</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="kn">import</span> <span class="p">(</span>
+</span></span><span class="line"><span class="cl">	<span class="s">&#34;fmt&#34;</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">	<span class="s">&#34;github.com/lesismal/nbio&#34;</span>
+</span></span><span class="line"><span class="cl"><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="kd">func</span> <span class="nf">main</span><span class="p">()</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">g</span> <span class="o">:=</span> <span class="nx">nbio</span><span class="p">.</span><span class="nf">NewGopher</span><span class="p">(</span><span class="nx">nbio</span><span class="p">.</span><span class="nx">Config</span><span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">Network</span><span class="p">:</span>            <span class="s">&#34;tcp&#34;</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">Addrs</span><span class="p">:</span>              <span class="p">[]</span><span class="kt">string</span><span class="p">{</span><span class="s">&#34;:8888&#34;</span><span class="p">},</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">MaxWriteBufferSize</span><span class="p">:</span> <span class="mi">6</span> <span class="o">*</span> <span class="mi">1024</span> <span class="o">*</span> <span class="mi">1024</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">	<span class="p">})</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">	<span class="nx">g</span><span class="p">.</span><span class="nf">OnData</span><span class="p">(</span><span class="kd">func</span><span class="p">(</span><span class="nx">c</span> <span class="o">*</span><span class="nx">nbio</span><span class="p">.</span><span class="nx">Conn</span><span class="p">,</span> <span class="nx">data</span> <span class="p">[]</span><span class="kt">byte</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">c</span><span class="p">.</span><span class="nf">Write</span><span class="p">(</span><span class="nb">append</span><span class="p">([]</span><span class="kt">byte</span><span class="p">{},</span> <span class="nx">data</span><span class="o">...</span><span class="p">))</span>
+</span></span><span class="line"><span class="cl">	<span class="p">})</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">	<span class="nx">err</span> <span class="o">:=</span> <span class="nx">g</span><span class="p">.</span><span class="nf">Start</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">	<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">fmt</span><span class="p">.</span><span class="nf">Printf</span><span class="p">(</span><span class="s">&#34;nbio.Start failed: %v\n&#34;</span><span class="p">,</span> <span class="nx">err</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">		<span class="k">return</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}</span>
+</span></span><span class="line"><span class="cl">	<span class="k">defer</span> <span class="nx">g</span><span class="p">.</span><span class="nf">Stop</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">	<span class="nx">g</span><span class="p">.</span><span class="nf">Wait</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></div><p>Client:</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="kn">package</span> <span class="nx">main</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="kn">import</span> <span class="p">(</span>
+</span></span><span class="line"><span class="cl">	<span class="s">&#34;bytes&#34;</span>
+</span></span><span class="line"><span class="cl">	<span class="s">&#34;context&#34;</span>
+</span></span><span class="line"><span class="cl">	<span class="s">&#34;fmt&#34;</span>
+</span></span><span class="line"><span class="cl">	<span class="s">&#34;math/rand&#34;</span>
+</span></span><span class="line"><span class="cl">	<span class="s">&#34;time&#34;</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">	<span class="s">&#34;github.com/lesismal/nbio&#34;</span>
+</span></span><span class="line"><span class="cl">	<span class="s">&#34;github.com/lesismal/nbio/logging&#34;</span>
+</span></span><span class="line"><span class="cl"><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="kd">func</span> <span class="nf">main</span><span class="p">()</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">	<span class="kd">var</span> <span class="p">(</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">ret</span>    <span class="p">[]</span><span class="kt">byte</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">buf</span>    <span class="p">=</span> <span class="nb">make</span><span class="p">([]</span><span class="kt">byte</span><span class="p">,</span> <span class="mi">1024</span><span class="o">*</span><span class="mi">1024</span><span class="o">*</span><span class="mi">4</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">addr</span>   <span class="p">=</span> <span class="s">&#34;localhost:8888&#34;</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">ctx</span><span class="p">,</span> <span class="nx">_</span> <span class="p">=</span> <span class="nx">context</span><span class="p">.</span><span class="nf">WithTimeout</span><span class="p">(</span><span class="nx">context</span><span class="p">.</span><span class="nf">Background</span><span class="p">(),</span> <span class="mi">60</span><span class="o">*</span><span class="nx">time</span><span class="p">.</span><span class="nx">Second</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">	<span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">	<span class="nx">logging</span><span class="p">.</span><span class="nf">SetLevel</span><span class="p">(</span><span class="nx">logging</span><span class="p">.</span><span class="nx">LevelInfo</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">	<span class="nx">rand</span><span class="p">.</span><span class="nf">Read</span><span class="p">(</span><span class="nx">buf</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">	<span class="nx">g</span> <span class="o">:=</span> <span class="nx">nbio</span><span class="p">.</span><span class="nf">NewGopher</span><span class="p">(</span><span class="nx">nbio</span><span class="p">.</span><span class="nx">Config</span><span class="p">{})</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">	<span class="nx">done</span> <span class="o">:=</span> <span class="nb">make</span><span class="p">(</span><span class="kd">chan</span> <span class="kt">int</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">g</span><span class="p">.</span><span class="nf">OnData</span><span class="p">(</span><span class="kd">func</span><span class="p">(</span><span class="nx">c</span> <span class="o">*</span><span class="nx">nbio</span><span class="p">.</span><span class="nx">Conn</span><span class="p">,</span> <span class="nx">data</span> <span class="p">[]</span><span class="kt">byte</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">ret</span> <span class="p">=</span> <span class="nb">append</span><span class="p">(</span><span class="nx">ret</span><span class="p">,</span> <span class="nx">data</span><span class="o">...</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">		<span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="nx">ret</span><span class="p">)</span> <span class="o">==</span> <span class="nb">len</span><span class="p">(</span><span class="nx">buf</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">			<span class="k">if</span> <span class="nx">bytes</span><span class="p">.</span><span class="nf">Equal</span><span class="p">(</span><span class="nx">buf</span><span class="p">,</span> <span class="nx">ret</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">				<span class="nb">close</span><span class="p">(</span><span class="nx">done</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">			<span class="p">}</span>
+</span></span><span class="line"><span class="cl">		<span class="p">}</span>
+</span></span><span class="line"><span class="cl">	<span class="p">})</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">	<span class="nx">err</span> <span class="o">:=</span> <span class="nx">g</span><span class="p">.</span><span class="nf">Start</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">	<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">fmt</span><span class="p">.</span><span class="nf">Printf</span><span class="p">(</span><span class="s">&#34;Start failed: %v\n&#34;</span><span class="p">,</span> <span class="nx">err</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}</span>
+</span></span><span class="line"><span class="cl">	<span class="k">defer</span> <span class="nx">g</span><span class="p">.</span><span class="nf">Stop</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">	<span class="nx">c</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">nbio</span><span class="p">.</span><span class="nf">Dial</span><span class="p">(</span><span class="s">&#34;tcp&#34;</span><span class="p">,</span> <span class="nx">addr</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">	<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">fmt</span><span class="p">.</span><span class="nf">Printf</span><span class="p">(</span><span class="s">&#34;Dial failed: %v\n&#34;</span><span class="p">,</span> <span class="nx">err</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">g</span><span class="p">.</span><span class="nf">AddConn</span><span class="p">(</span><span class="nx">c</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">c</span><span class="p">.</span><span class="nf">Write</span><span class="p">(</span><span class="nx">buf</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">	<span class="k">select</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">	<span class="k">case</span> <span class="o">&lt;-</span><span class="nx">ctx</span><span class="p">.</span><span class="nf">Done</span><span class="p">():</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">logging</span><span class="p">.</span><span class="nf">Error</span><span class="p">(</span><span class="s">&#34;timeout&#34;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">	<span class="k">case</span> <span class="o">&lt;-</span><span class="nx">done</span><span class="p">:</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">logging</span><span class="p">.</span><span class="nf">Info</span><span class="p">(</span><span class="s">&#34;success&#34;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></div>]]></content>
 		</item>
 		
 		<item>

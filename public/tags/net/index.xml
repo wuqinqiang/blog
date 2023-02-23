@@ -40,6 +40,20 @@ package main import ( &amp;#34;fmt&amp;#34; &amp;#34;github.com/tidwall/evio&amp
     </item>
     
     <item>
+      <title>nbio原理解析</title>
+      <link>https://www.syst.top/posts/go/nbio/</link>
+      <pubDate>Fri, 06 Jan 2023 19:23:51 +0800</pubDate>
+      
+      <guid>https://www.syst.top/posts/go/nbio/</guid>
+      <description>上一篇文章我们介绍了evio，它是最早开源实现自定义go netpoll 实现，我们也提到它存在一些问题，这篇文章我们继续分析其他实现:nbio。
+nbio项目也包含了在nbio之上构建的nbhttp，这个不在我们讨论范围。
+老规矩，先来一段运行nbio程序代码，
+Server:
+package main import ( &amp;#34;fmt&amp;#34; &amp;#34;github.com/lesismal/nbio&amp;#34; ) func main() { g := nbio.NewGopher(nbio.Config{ Network: &amp;#34;tcp&amp;#34;, Addrs: []string{&amp;#34;:8888&amp;#34;}, MaxWriteBufferSize: 6 * 1024 * 1024, }) g.OnData(func(c *nbio.Conn, data []byte) { c.Write(append([]byte{}, data...)) }) err := g.Start() if err != nil { fmt.Printf(&amp;#34;nbio.Start failed: %v\n&amp;#34;, err) return } defer g.Stop() g.Wait() } Client:
+package main import ( &amp;#34;bytes&amp;#34; &amp;#34;context&amp;#34; &amp;#34;fmt&amp;#34; &amp;#34;math/rand&amp;#34; &amp;#34;time&amp;#34; &amp;#34;github.com/lesismal/nbio&amp;#34; &amp;#34;github.com/lesismal/nbio/logging&amp;#34; ) func main() { var ( ret []byte buf = make([]byte, 1024*1024*4) addr = &amp;#34;localhost:8888&amp;#34; ctx, _ = context.</description>
+    </item>
+    
+    <item>
       <title>Gnet原理解析</title>
       <link>https://www.syst.top/posts/go/gnet/</link>
       <pubDate>Tue, 07 Jun 2022 16:23:51 +0800</pubDate>

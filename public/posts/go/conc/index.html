@@ -309,7 +309,7 @@ conc里面因为每个goroutine有owner概念，所以是由owner捕获goroutine
 <blockquote>
 <p>Currently calling any configuration methods on the pool after calling pool.Go() is unsupported because the configuration methods take ownership of and mutate the pool. This might not be ideal though since ownership can&rsquo;t actually be enforced with Go. It would be less of a footgun to just return a fully copy each time.</p>
 </blockquote>
-<p>我理解的意思就是目前不支持我这么玩，简单的说不支持在执行pool.Go()后调用这些操作😂。感兴趣可以看下issue43</p>
+<p>我理解的意思就是目前不支持我这么玩，简单的说不支持在执行pool.Go()后调用这些操作😂。</p>
 
 			</div>
 			<div class="content"><br><img src="https://cdn.syst.top/wechat2.png"></div>
@@ -335,6 +335,9 @@ conc里面因为每个goroutine有owner概念，所以是由owner捕获goroutine
 </nav>
 		</aside>
 		<div class="post-nav thin">
+			<a class="next-post" href="https://www.syst.top/posts/go/helloword/">
+				<span class="post-nav-label"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-arrow-left"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>&nbsp;Newer</span><br><span>HelloWord一个go开发的学习英语单词工具</span>
+			</a>
 			<a class="prev-post" href="https://www.syst.top/posts/go/evio/">
 				<span class="post-nav-label">Older&nbsp;<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-arrow-right"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg></span><br><span>evio原理解析～有彩蛋</span>
 			</a>
