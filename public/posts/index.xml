@@ -16,17 +16,17 @@
 			
 			<guid>https://www.syst.top/posts/go/nbio/</guid>
 			<description>之前更新的一系列，好久没更新了，差点烂尾，我不允许这样的事情在我身上发生(虽然已经烂尾好几次了😭)。
-上一篇文章我们介绍了evio，它应该是最早基于epoll实现的Go Netpoll框架，我们也提到它存在的一些问题，这篇文章我们继续分析其他的实现框架: nbio。
+在上一篇文章中，我们探讨了基于 epoll 的 Go Netpoll 框架的早期实现——evio。我们还指出了它存在的一些问题。在本篇文章中，我们将继续深入分析另一个高性能的网络编程框架：nbio。
 nbio项目里也包含了在nbio之上构建的nbhttp，这个不在我们讨论范围。
-nbio使用的也是经典的Reactor模式，go的这几个异步网络框架都是Reactor模式。
+nbio同样采用了经典的Reactor模式，事实上，Go语言中的许多异步网络框架都是基于这种模式设计的。
 老规矩，先运行nbio程序代码，
 Server:
 package main import ( &amp;#34;fmt&amp;#34; &amp;#34;github.com/lesismal/nbio&amp;#34; ) func main() { g := nbio.NewGopher(nbio.Config{ Network: &amp;#34;tcp&amp;#34;, Addrs: []string{&amp;#34;:8888&amp;#34;}, MaxWriteBufferSize: 6 * 1024 * 1024, }) g.OnData(func(c *nbio.Conn, data []byte) { c.Write(append([]byte{}, data...)) }) err := g.Start() if err != nil { fmt.Printf(&amp;#34;nbio.Start failed: %v\n&amp;#34;, err) return } defer g.Stop() g.Wait() } 使用nbio.NewGopher()函数创建一个新的Engine实例。传入nbio.Config结构体来配置 Engine 实例，包括：
  Network: 使用的网络类型，这里是tcp。 Addrs: 服务器要监听的地址和端口，这里是 &amp;ldquo;:8888&amp;rdquo;（即监听本机的8888端口）。 MaxWriteBufferSize: 写缓冲区的最大大小，这里设置为 6MB。  其他配置可以自行查看。然后使用g.</description>
 			<content type="html"><![CDATA[<p>之前更新的一系列，好久没更新了，差点烂尾，我不允许这样的事情在我身上发生(虽然已经烂尾好几次了😭)。</p>
-<p>上一篇文章我们介绍了evio，它应该是最早基于epoll实现的Go Netpoll框架，我们也提到它存在的一些问题，这篇文章我们继续分析其他的实现框架: nbio。</p>
+<p>在上一篇文章中，我们探讨了基于 epoll 的 Go Netpoll 框架的早期实现——evio。我们还指出了它存在的一些问题。在本篇文章中，我们将继续深入分析另一个高性能的网络编程框架：nbio。</p>
 <p>nbio项目里也包含了在nbio之上构建的nbhttp，这个不在我们讨论范围。</p>
-<p>nbio使用的也是经典的Reactor模式，go的这几个异步网络框架都是Reactor模式。</p>
+<p>nbio同样采用了经典的Reactor模式，事实上，Go语言中的许多异步网络框架都是基于这种模式设计的。</p>
 <p>老规矩，先运行nbio程序代码，</p>
 <p>Server:</p>
 <div class="highlight"><pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="kn">package</span> <span class="nx">main</span>
@@ -342,6 +342,7 @@ package main import ( &amp;#34;fmt&amp;#34; &amp;#34;github.com/lesismal/nbio&am
 </span></span><span class="line"><span class="cl">      <span class="nx">logging</span><span class="p">.</span><span class="nf">Error</span><span class="p">(</span><span class="s">&#34;[%v] add read event failed: %v&#34;</span><span class="p">,</span> <span class="nx">c</span><span class="p">.</span><span class="nx">fd</span><span class="p">,</span> <span class="nx">err</span><span class="p">)</span>
 </span></span><span class="line"><span class="cl">   <span class="p">}</span>
 </span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
 </span></span></code></pre></div><p>这里一个有趣的设计，在管理conns上，结构是slice，作者直接使用的conn的fd来作为下标。</p>
 <p>这样还是有好处的,</p>
 <ul>
@@ -517,7 +518,8 @@ package main import ( &amp;#34;fmt&amp;#34; &amp;#34;github.com/lesismal/nbio&am
 </span></span><span class="line"><span class="cl">  <span class="c1">//.....
 </span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="k">return</span> <span class="nx">n</span><span class="p">,</span> <span class="nx">err</span>
 </span></span><span class="line"><span class="cl"><span class="p">}</span>
-</span></span></code></pre></div><div class="highlight"><pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="kd">func</span> <span class="p">(</span><span class="nx">c</span> <span class="o">*</span><span class="nx">Conn</span><span class="p">)</span> <span class="nf">write</span><span class="p">(</span><span class="nx">b</span> <span class="p">[]</span><span class="kt">byte</span><span class="p">)</span> <span class="p">(</span><span class="kt">int</span><span class="p">,</span> <span class="kt">error</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="kd">func</span> <span class="p">(</span><span class="nx">c</span> <span class="o">*</span><span class="nx">Conn</span><span class="p">)</span> <span class="nf">write</span><span class="p">(</span><span class="nx">b</span> <span class="p">[]</span><span class="kt">byte</span><span class="p">)</span> <span class="p">(</span><span class="kt">int</span><span class="p">,</span> <span class="kt">error</span><span class="p">)</span> <span class="p">{</span>
 </span></span><span class="line"><span class="cl">  <span class="c1">//...
 </span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="nx">c</span><span class="p">.</span><span class="nx">writeBuffer</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span> <span class="p">{</span>
 </span></span><span class="line"><span class="cl">		<span class="nx">n</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">c</span><span class="p">.</span><span class="nf">doWrite</span><span class="p">(</span><span class="nx">b</span><span class="p">)</span>

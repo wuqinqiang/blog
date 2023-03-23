@@ -12,11 +12,11 @@ tags :
 
 之前更新的一系列，好久没更新了，差点烂尾，我不允许这样的事情在我身上发生(虽然已经烂尾好几次了😭)。
 
-上一篇文章我们介绍了evio，它应该是最早基于epoll实现的Go Netpoll框架，我们也提到它存在的一些问题，这篇文章我们继续分析其他的实现框架: nbio。
+在上一篇文章中，我们探讨了基于 epoll 的 Go Netpoll 框架的早期实现——evio。我们还指出了它存在的一些问题。在本篇文章中，我们将继续深入分析另一个高性能的网络编程框架：nbio。
 
 nbio项目里也包含了在nbio之上构建的nbhttp，这个不在我们讨论范围。
 
-nbio使用的也是经典的Reactor模式，go的这几个异步网络框架都是Reactor模式。
+nbio同样采用了经典的Reactor模式，事实上，Go语言中的许多异步网络框架都是基于这种模式设计的。
 
 老规矩，先运行nbio程序代码，
 
@@ -391,6 +391,7 @@ func (p *poller) addConn(c *Conn) {
       logging.Error("[%v] add read event failed: %v", c.fd, err)
    }
 }
+}
 ```
 
 这里一个有趣的设计，在管理conns上，结构是slice，作者直接使用的conn的fd来作为下标。
@@ -612,9 +613,7 @@ func (c *Conn) Write(b []byte) (int, error) {
   //.....
 	return n, err
 }
-```
 
-```go
 func (c *Conn) write(b []byte) (int, error) {
   //...
 	if len(c.writeBuffer) == 0 {

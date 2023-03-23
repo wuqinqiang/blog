@@ -24,9 +24,9 @@
       
       <guid>https://www.syst.top/posts/go/nbio/</guid>
       <description>之前更新的一系列，好久没更新了，差点烂尾，我不允许这样的事情在我身上发生(虽然已经烂尾好几次了😭)。
-上一篇文章我们介绍了evio，它应该是最早基于epoll实现的Go Netpoll框架，我们也提到它存在的一些问题，这篇文章我们继续分析其他的实现框架: nbio。
+在上一篇文章中，我们探讨了基于 epoll 的 Go Netpoll 框架的早期实现——evio。我们还指出了它存在的一些问题。在本篇文章中，我们将继续深入分析另一个高性能的网络编程框架：nbio。
 nbio项目里也包含了在nbio之上构建的nbhttp，这个不在我们讨论范围。
-nbio使用的也是经典的Reactor模式，go的这几个异步网络框架都是Reactor模式。
+nbio同样采用了经典的Reactor模式，事实上，Go语言中的许多异步网络框架都是基于这种模式设计的。
 老规矩，先运行nbio程序代码，
 Server:
 package main import ( &amp;#34;fmt&amp;#34; &amp;#34;github.com/lesismal/nbio&amp;#34; ) func main() { g := nbio.NewGopher(nbio.Config{ Network: &amp;#34;tcp&amp;#34;, Addrs: []string{&amp;#34;:8888&amp;#34;}, MaxWriteBufferSize: 6 * 1024 * 1024, }) g.OnData(func(c *nbio.Conn, data []byte) { c.Write(append([]byte{}, data...)) }) err := g.Start() if err != nil { fmt.Printf(&amp;#34;nbio.Start failed: %v\n&amp;#34;, err) return } defer g.Stop() g.Wait() } 使用nbio.NewGopher()函数创建一个新的Engine实例。传入nbio.Config结构体来配置 Engine 实例，包括：
