@@ -6,8 +6,159 @@
 		<generator>Hugo -- gohugo.io</generator>
 		<language>zh-hans</language>
 		<copyright>This work is licensed under a Creative Commons Attribution-NonCommercial 4.0 International License.</copyright>
-		<lastBuildDate>Thu, 23 Feb 2023 23:23:51 +0800</lastBuildDate>
+		<lastBuildDate>Sat, 03 Jun 2023 17:06:51 +0800</lastBuildDate>
 		<atom:link href="https://www.syst.top/posts/index.xml" rel="self" type="application/rss+xml" />
+		
+		<item>
+			<title>easyio:最小化的netpoll实现</title>
+			<link>https://www.syst.top/posts/go/easyio/</link>
+			<pubDate>Sat, 03 Jun 2023 17:06:51 +0800</pubDate>
+			
+			<guid>https://www.syst.top/posts/go/easyio/</guid>
+			<description>目前Go圈有很多款异步的网络框架:
+ https://github.com/tidwall/evio https://github.com/lesismal/nbio https://github.com/panjf2000/gnet https://github.com/cloudwego/netpoll &amp;hellip;&amp;hellip;.  排名不分先后。
+这里面最早的实现是evio。evio也存在一些问题，之前也写过evio文章介绍过。 其他比如nbio和gnet也写过一些源码分析。
+为什么会出现这些框架？之前也提到过，由于标准库netpoll的一些特性:
+ 一个conn一个goroutine导致利用率低 用户无法感知conn状态 &amp;hellip;..  这些框架在应用层上做了很多优化，比如:Worker Pool,Buffer,Ring Buffer,NoCopy&amp;hellip;&amp;hellip;。
+都分析了好几篇的代码了，那么咋么说也得自己动手搞一个来达成学习目的。
+没错，这就是easyio的由来。
+它是一个最小化的IO框架，只实现最核心的部分，加起来不超过500行代码。
+也没有用户端上层应用的优化，且目前只实现了linux的epoll，以及只能运行tcp协议。
+大概结构如下，具体可以看代码～～，
+简单的demo，
+服务端:
+package main import ( &amp;#34;context&amp;#34; &amp;#34;fmt&amp;#34; &amp;#34;os&amp;#34; &amp;#34;os/signal&amp;#34; &amp;#34;syscall&amp;#34; &amp;#34;github.com/wuqinqiang/easyio&amp;#34; ) var _ easyio.EventHandler = (*Handler)(nil) type Handler struct{} type EasyioKey struct{} type Message struct{ Msg string } var CtxKey EasyioKey func (h Handler) OnOpen(c easyio.Conn) context.Context { return context.WithValue(context.Background(), CtxKey, Message{Msg: &amp;#34;helloword&amp;#34;}) } func (h Handler) OnRead(ctx context.</description>
+			<content type="html"><![CDATA[<p>目前Go圈有很多款异步的网络框架:</p>
+<ul>
+<li><a href="https://github.com/tidwall/evio">https://github.com/tidwall/evio</a></li>
+<li><a href="https://github.com/lesismal/nbio">https://github.com/lesismal/nbio</a></li>
+<li><a href="https://github.com/panjf2000/gnet">https://github.com/panjf2000/gnet</a></li>
+<li><a href="https://github.com/cloudwego/netpoll">https://github.com/cloudwego/netpoll</a></li>
+<li>&hellip;&hellip;.</li>
+</ul>
+<p>排名不分先后。</p>
+<p>这里面最早的实现是evio。evio也存在一些问题，之前也写过<a href="https://www.syst.top/posts/go/evio/">evio</a>文章介绍过。 其他比如nbio和gnet也写过一些源码分析。</p>
+<p>为什么会出现这些框架？之前也提到过，由于标准库netpoll的一些特性:</p>
+<ul>
+<li>一个conn一个goroutine导致利用率低</li>
+<li>用户无法感知conn状态</li>
+<li>&hellip;..</li>
+</ul>
+<p>这些框架在应用层上做了很多优化，比如:Worker Pool,Buffer,Ring Buffer,NoCopy&hellip;&hellip;。</p>
+<p>都分析了好几篇的代码了，那么咋么说也得自己动手搞一个来达成学习目的。</p>
+<p>没错，这就是easyio的由来。</p>
+<p>它是一个最小化的IO框架，只实现最核心的部分，加起来不超过500行代码。</p>
+<p>也没有用户端上层应用的优化，且目前只实现了linux的epoll，以及只能运行tcp协议。</p>
+<p>大概结构如下，具体可以看代码～～，</p>
+<p><img src="https://cdn.syst.top/%E6%88%AA%E5%B1%8F2023-06-11%2010.19.57.png" alt="截屏2023-06-03 23.28.59"></p>
+<p>简单的demo，</p>
+<p>服务端:</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="kn">package</span> <span class="nx">main</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="kn">import</span> <span class="p">(</span>
+</span></span><span class="line"><span class="cl">	<span class="s">&#34;context&#34;</span>
+</span></span><span class="line"><span class="cl">	<span class="s">&#34;fmt&#34;</span>
+</span></span><span class="line"><span class="cl">	<span class="s">&#34;os&#34;</span>
+</span></span><span class="line"><span class="cl">	<span class="s">&#34;os/signal&#34;</span>
+</span></span><span class="line"><span class="cl">	<span class="s">&#34;syscall&#34;</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">	<span class="s">&#34;github.com/wuqinqiang/easyio&#34;</span>
+</span></span><span class="line"><span class="cl"><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="kd">var</span> <span class="nx">_</span> <span class="nx">easyio</span><span class="p">.</span><span class="nx">EventHandler</span> <span class="p">=</span> <span class="p">(</span><span class="o">*</span><span class="nx">Handler</span><span class="p">)(</span><span class="kc">nil</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="kd">type</span> <span class="nx">Handler</span> <span class="kd">struct</span><span class="p">{}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="kd">type</span> <span class="nx">EasyioKey</span> <span class="kd">struct</span><span class="p">{}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="kd">type</span> <span class="nx">Message</span> <span class="kd">struct</span><span class="p">{</span> <span class="nx">Msg</span> <span class="kt">string</span> <span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="kd">var</span> <span class="nx">CtxKey</span> <span class="nx">EasyioKey</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="kd">func</span> <span class="p">(</span><span class="nx">h</span> <span class="nx">Handler</span><span class="p">)</span> <span class="nf">OnOpen</span><span class="p">(</span><span class="nx">c</span> <span class="nx">easyio</span><span class="p">.</span><span class="nx">Conn</span><span class="p">)</span> <span class="nx">context</span><span class="p">.</span><span class="nx">Context</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">	<span class="k">return</span> <span class="nx">context</span><span class="p">.</span><span class="nf">WithValue</span><span class="p">(</span><span class="nx">context</span><span class="p">.</span><span class="nf">Background</span><span class="p">(),</span> <span class="nx">CtxKey</span><span class="p">,</span> <span class="nx">Message</span><span class="p">{</span><span class="nx">Msg</span><span class="p">:</span> <span class="s">&#34;helloword&#34;</span><span class="p">})</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="kd">func</span> <span class="p">(</span><span class="nx">h</span> <span class="nx">Handler</span><span class="p">)</span> <span class="nf">OnRead</span><span class="p">(</span><span class="nx">ctx</span> <span class="nx">context</span><span class="p">.</span><span class="nx">Context</span><span class="p">,</span> <span class="nx">c</span> <span class="nx">easyio</span><span class="p">.</span><span class="nx">Conn</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">_</span><span class="p">,</span> <span class="nx">ok</span> <span class="o">:=</span> <span class="nx">ctx</span><span class="p">.</span><span class="nf">Value</span><span class="p">(</span><span class="nx">CtxKey</span><span class="p">).(</span><span class="nx">Message</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">	<span class="k">if</span> <span class="p">!</span><span class="nx">ok</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="k">return</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}</span>
+</span></span><span class="line"><span class="cl">	<span class="kd">var</span> <span class="nx">b</span> <span class="p">=</span> <span class="nb">make</span><span class="p">([]</span><span class="kt">byte</span><span class="p">,</span> <span class="mi">100</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">_</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">c</span><span class="p">.</span><span class="nf">Read</span><span class="p">(</span><span class="nx">b</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">	<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">fmt</span><span class="p">.</span><span class="nf">Println</span><span class="p">(</span><span class="s">&#34;err:&#34;</span><span class="p">,</span> <span class="nx">err</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">fmt</span><span class="p">.</span><span class="nf">Println</span><span class="p">(</span><span class="s">&#34;[Handler] read data:&#34;</span><span class="p">,</span> <span class="nb">string</span><span class="p">(</span><span class="nx">b</span><span class="p">))</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">	<span class="k">if</span> <span class="nx">_</span><span class="p">,</span> <span class="nx">err</span> <span class="p">=</span> <span class="nx">c</span><span class="p">.</span><span class="nf">Write</span><span class="p">(</span><span class="nx">b</span><span class="p">);</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="nb">panic</span><span class="p">(</span><span class="nx">err</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="kd">func</span> <span class="p">(</span><span class="nx">h</span> <span class="nx">Handler</span><span class="p">)</span> <span class="nf">OnClose</span><span class="p">(</span><span class="nx">_</span> <span class="nx">context</span><span class="p">.</span><span class="nx">Context</span><span class="p">,</span> <span class="nx">c</span> <span class="nx">easyio</span><span class="p">.</span><span class="nx">Conn</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">fmt</span><span class="p">.</span><span class="nf">Println</span><span class="p">(</span><span class="s">&#34;[Handler] closed&#34;</span><span class="p">,</span> <span class="nx">c</span><span class="p">.</span><span class="nf">Fd</span><span class="p">())</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="kd">func</span> <span class="nf">main</span><span class="p">()</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">e</span> <span class="o">:=</span> <span class="nx">easyio</span><span class="p">.</span><span class="nf">New</span><span class="p">(</span><span class="s">&#34;tcp&#34;</span><span class="p">,</span> <span class="s">&#34;:8090&#34;</span><span class="p">,</span><span class="nx">easyio</span><span class="p">.</span><span class="nf">WithNumPoller</span><span class="p">(</span><span class="mi">4</span><span class="p">),</span> <span class="nx">easyio</span><span class="p">.</span><span class="nf">WithEventHandler</span><span class="p">(</span><span class="nx">Handler</span><span class="p">{}))</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">	<span class="k">if</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">e</span><span class="p">.</span><span class="nf">Start</span><span class="p">();</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="nb">panic</span><span class="p">(</span><span class="nx">err</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">	<span class="k">defer</span> <span class="nx">e</span><span class="p">.</span><span class="nf">Stop</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">	<span class="nx">c</span> <span class="o">:=</span> <span class="nb">make</span><span class="p">(</span><span class="kd">chan</span> <span class="nx">os</span><span class="p">.</span><span class="nx">Signal</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">signal</span><span class="p">.</span><span class="nf">Notify</span><span class="p">(</span><span class="nx">c</span><span class="p">,</span> <span class="nx">syscall</span><span class="p">.</span><span class="nx">SIGTERM</span><span class="p">,</span> <span class="nx">syscall</span><span class="p">.</span><span class="nx">SIGQUIT</span><span class="p">,</span> <span class="nx">syscall</span><span class="p">.</span><span class="nx">SIGINT</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">	<span class="o">&lt;-</span><span class="nx">c</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></div><p>上面的代码，初始化一个easyio，启动一个tcp服务，监听端口8090，options里面设置epoll的数量，以及设置事件处理器。</p>
+<p>当一个新连接到来时会回调 OnOpen函数，此时你可以设置自定义的ctx，那么当对应连接读事件到来OnRead回调，你可以拿到之前设置的ctx，调用conn.Read读取数据，且通过Write向对端写数据。</p>
+<p>这里需要注意的是，一个连接如果数据没读完，当OnRead执行结束，下一轮会继续触发回调代码，因为底层epoll采用的是LT触发方式。</p>
+<p>简单的客户端</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="kn">package</span> <span class="nx">main</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="kn">import</span> <span class="p">(</span>
+</span></span><span class="line"><span class="cl">	<span class="s">&#34;fmt&#34;</span>
+</span></span><span class="line"><span class="cl">	<span class="s">&#34;net&#34;</span>
+</span></span><span class="line"><span class="cl">	<span class="s">&#34;os&#34;</span>
+</span></span><span class="line"><span class="cl">	<span class="s">&#34;os/signal&#34;</span>
+</span></span><span class="line"><span class="cl">	<span class="s">&#34;syscall&#34;</span>
+</span></span><span class="line"><span class="cl"><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="kd">func</span> <span class="nf">main</span><span class="p">()</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">conn</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">net</span><span class="p">.</span><span class="nf">Dial</span><span class="p">(</span><span class="s">&#34;tcp&#34;</span><span class="p">,</span> <span class="s">&#34;:8090&#34;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">	<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="nb">panic</span><span class="p">(</span><span class="nx">err</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">n</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">conn</span><span class="p">.</span><span class="nf">Write</span><span class="p">([]</span><span class="nb">byte</span><span class="p">(</span><span class="s">&#34;hello world&#34;</span><span class="p">))</span>
+</span></span><span class="line"><span class="cl">	<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="nb">panic</span><span class="p">(</span><span class="nx">err</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">	<span class="k">go</span> <span class="kd">func</span><span class="p">()</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">b</span> <span class="o">:=</span> <span class="nb">make</span><span class="p">([]</span><span class="kt">byte</span><span class="p">,</span> <span class="mi">100</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">		<span class="k">if</span> <span class="nx">n</span><span class="p">,</span> <span class="nx">err</span> <span class="p">=</span> <span class="nx">conn</span><span class="p">.</span><span class="nf">Read</span><span class="p">(</span><span class="nx">b</span><span class="p">);</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">			<span class="nb">panic</span><span class="p">(</span><span class="nx">err</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">		<span class="p">}</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">fmt</span><span class="p">.</span><span class="nf">Println</span><span class="p">(</span><span class="s">&#34;read data:&#34;</span><span class="p">,</span> <span class="nx">n</span><span class="p">,</span> <span class="nb">string</span><span class="p">(</span><span class="nx">b</span><span class="p">))</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}()</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">	<span class="k">defer</span> <span class="nx">conn</span><span class="p">.</span><span class="nf">Close</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">	<span class="nx">ch</span> <span class="o">:=</span> <span class="nb">make</span><span class="p">(</span><span class="kd">chan</span> <span class="nx">os</span><span class="p">.</span><span class="nx">Signal</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">signal</span><span class="p">.</span><span class="nf">Notify</span><span class="p">(</span><span class="nx">ch</span><span class="p">,</span> <span class="nx">syscall</span><span class="p">.</span><span class="nx">SIGHUP</span><span class="p">,</span> <span class="nx">syscall</span><span class="p">.</span><span class="nx">SIGINT</span><span class="p">,</span> <span class="nx">syscall</span><span class="p">.</span><span class="nx">SIGTERM</span><span class="p">,</span> <span class="nx">syscall</span><span class="p">.</span><span class="nx">SIGQUIT</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">	<span class="o">&lt;-</span><span class="nx">ch</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></div><p>因为之前读者问过一些问题，我计划编写一个从零开始实现的 easyio 系列教程，希望能够帮助一些小白通过实践来加深对这个主题的理解，如果你对这个系列感兴趣，请在下方留言或点赞。</p>
+<p>决定的话，整个系列大概可以拆分成5～6篇文章(当然不收费～)。</p>
+<p>看懂和会写出来是完全不一样的概念。理论与实践是相辅相成的，只有理解了理论并将其应用于实践中，我们才能真正掌握知识。</p>
+<p>最后让这个世界充满爱～～～</p>
+<p>源码地址:https://github.com/wuqinqiang/easyio</p>
+]]></content>
+		</item>
 		
 		<item>
 			<title>nbio原理解析</title>

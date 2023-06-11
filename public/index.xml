@@ -7,14 +7,26 @@
     <generator>Hugo -- gohugo.io</generator>
     <language>zh-hans</language>
     <copyright>This work is licensed under a Creative Commons Attribution-NonCommercial 4.0 International License.</copyright>
-    <lastBuildDate>Tue, 02 May 2023 10:23:52 +0800</lastBuildDate><atom:link href="https://www.syst.top/index.xml" rel="self" type="application/rss+xml" />
+    <lastBuildDate>Sat, 03 Jun 2023 17:06:51 +0800</lastBuildDate><atom:link href="https://www.syst.top/index.xml" rel="self" type="application/rss+xml" />
     <item>
-      <title>Myfriends</title>
-      <link>https://www.syst.top/friends/friends/</link>
-      <pubDate>Wed, 11 Aug 2021 00:00:00 +0000</pubDate>
+      <title>easyio:最小化的netpoll实现</title>
+      <link>https://www.syst.top/posts/go/easyio/</link>
+      <pubDate>Sat, 03 Jun 2023 17:06:51 +0800</pubDate>
       
-      <guid>https://www.syst.top/friends/friends/</guid>
-      <description></description>
+      <guid>https://www.syst.top/posts/go/easyio/</guid>
+      <description>目前Go圈有很多款异步的网络框架:
+ https://github.com/tidwall/evio https://github.com/lesismal/nbio https://github.com/panjf2000/gnet https://github.com/cloudwego/netpoll &amp;hellip;&amp;hellip;.  排名不分先后。
+这里面最早的实现是evio。evio也存在一些问题，之前也写过evio文章介绍过。 其他比如nbio和gnet也写过一些源码分析。
+为什么会出现这些框架？之前也提到过，由于标准库netpoll的一些特性:
+ 一个conn一个goroutine导致利用率低 用户无法感知conn状态 &amp;hellip;..  这些框架在应用层上做了很多优化，比如:Worker Pool,Buffer,Ring Buffer,NoCopy&amp;hellip;&amp;hellip;。
+都分析了好几篇的代码了，那么咋么说也得自己动手搞一个来达成学习目的。
+没错，这就是easyio的由来。
+它是一个最小化的IO框架，只实现最核心的部分，加起来不超过500行代码。
+也没有用户端上层应用的优化，且目前只实现了linux的epoll，以及只能运行tcp协议。
+大概结构如下，具体可以看代码～～，
+简单的demo，
+服务端:
+package main import ( &amp;#34;context&amp;#34; &amp;#34;fmt&amp;#34; &amp;#34;os&amp;#34; &amp;#34;os/signal&amp;#34; &amp;#34;syscall&amp;#34; &amp;#34;github.com/wuqinqiang/easyio&amp;#34; ) var _ easyio.EventHandler = (*Handler)(nil) type Handler struct{} type EasyioKey struct{} type Message struct{ Msg string } var CtxKey EasyioKey func (h Handler) OnOpen(c easyio.Conn) context.Context { return context.WithValue(context.Background(), CtxKey, Message{Msg: &amp;#34;helloword&amp;#34;}) } func (h Handler) OnRead(ctx context.</description>
     </item>
     
     <item>
