@@ -7,7 +7,31 @@
     <generator>Hugo -- gohugo.io</generator>
     <language>zh-hans</language>
     <copyright>This work is licensed under a Creative Commons Attribution-NonCommercial 4.0 International License.</copyright>
-    <lastBuildDate>Sat, 03 Jun 2023 17:06:51 +0800</lastBuildDate><atom:link href="https://www.syst.top/index.xml" rel="self" type="application/rss+xml" />
+    <lastBuildDate>Thu, 29 Jun 2023 15:20:00 +0800</lastBuildDate><atom:link href="https://www.syst.top/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>socks5结合抓包详解</title>
+      <link>https://www.syst.top/posts/go/socks5/</link>
+      <pubDate>Thu, 29 Jun 2023 15:20:00 +0800</pubDate>
+      
+      <guid>https://www.syst.top/posts/go/socks5/</guid>
+      <description>SOCKS5（Socket Secure 5）是一种网络协议，用于在客户端和代理服务器之间进行通信。它是SOCKS协议的第五个版本，SOCKS5协议支持TCP和UDP协议，并提供了认证和加密的功能。
+SOCKS5协议广泛用于代理服务器、xx上网、匿名访问、负载均衡等场景。它提供了一种通用的、灵活的代理解决方案，可以在各种网络环境和应用中使用。
+RFC 1928是关于SOCKS5的协议文档。
+协议解析
+SOCKS5工作在应用层和传输层之间，首先客户端需要和代理服务器进行tcp连接。
+连接完成后，客户端和代理服务器之间进行协商确定认证方式。
+具体就是客户端发送认证方法请求，
+ VER字段占1个字节，表示SOCKS协议的版本号，目前为5（即SOCKS5）。 NMETHODS字段占1个字节，表示客户端支持的认证方法数量。 METHODS字段占N个字节，表示客户端支持的认证方法列表。每个字节代表一种认证方法，取值范围为1到255，对应不同的认证方式。  代理服务器在收到客户端消息，从客户端提供的METHODS字段中选择一种支持的认证方法，并将该方法的标识填充到METHOD字段中。代理服务器通过这个应答消息告知客户端选择的认证方法。
+目前的METHOD包含以下几个值：
+ X&#39;00&amp;rsquo;：NO AUTHENTICATION REQUIRED。表示客户端无需进行任何认证，可以直接进行连接或操作。 X&#39;01&amp;rsquo;：GSSAPI。表示使用GSSAPI（Generic Security Services Application Program Interface）进行认证。 X&#39;02&amp;rsquo;：USERNAME/PASSWORD。表示客户端需要使用用户名和密码进行认证。 X&#39;03&amp;rsquo;到X&#39;7F&amp;rsquo;：由IANA（Internet Assigned Numbers Authority）分配的认证方法。这些方法可能具有特定的定义和用途，可以根据具体的分配情况来确定其含义。 X&#39;80&amp;rsquo;到X&amp;rsquo;FE&amp;rsquo;：保留给私有方法（RESERVED FOR PRIVATE METHODS）。这些方法可能由特定实现或组织自定义，不在通用的认证方法范围内。 X&amp;rsquo;FF&amp;rsquo;：无可接受的方法（NO ACCEPTABLE METHODS）。表示代理服务器无法接受客户端提供的任何认证方法，无法进行连接或操作。  如果返回的方法是X &amp;lsquo;FF&amp;rsquo;，意味着失败了，那么客户端需要关闭连接。
+一旦协商完毕，客户端会发送请求的详细信息，主要包括实际要请求的目的地址和端口号。
+其中各字段含义如下：
+ VER：协议版本，固定为X&#39;05&amp;rsquo;。 CMD：连接命令，指定客户端的操作类型。常见的取值有：  X&#39;01&amp;rsquo;：CONNECT。 X&#39;02&amp;rsquo;：BIND。 X&#39;03&amp;rsquo;：UDP。   RSV：保留字段，固定为X&#39;00&amp;rsquo;。 ATYP：目标地址类型，指定DST.ADDR字段的类型。常见的取值有：  X&#39;01&amp;rsquo;：IPv4地址。 X&#39;03&amp;rsquo;：域名。 X&#39;04&amp;rsquo;：IPv6地址。   DST.ADDR：目标地址，根据ATYP字段的类型来确定具体的格式。 DST.PORT：目标端口，表示客户端要连接的目标服务器的端口号。  代理服务器收到请求后，会发起到DST.ADDR:PORT的连接，并响应客户端结果，
+其中的值有：
+REP:
+ X&#39;00&amp;rsquo; 成功 X&#39;01&amp;rsquo; SOCKS服务器故障 X&#39;02&amp;rsquo; 连接不符合规则 X&#39;03&amp;rsquo; 网络不可达 X&#39;04&amp;rsquo; 主机不可达 X&#39;05&amp;rsquo; 连接被拒绝 X&#39;06&amp;rsquo; TTL 过期 X&#39;07&amp;rsquo; 命令不支持 X&#39;08&amp;rsquo; 地址类型不支持 X&#39;09&amp;rsquo; to X&amp;rsquo;FF&amp;rsquo; 未分配  RSV：预留位，必须设置成X&#39;00&amp;rsquo;。</description>
+    </item>
+    
     <item>
       <title>easyio:最小化的netpoll实现</title>
       <link>https://www.syst.top/posts/go/easyio/</link>
@@ -260,44 +284,6 @@ TC全程接管和更新RM状态。
 Easycar: https://github.com/wuqinqiang/easycar
 Client-go: https://github.com/easycar/client-go
 Examples： https://github.com/easycar/examples</description>
-    </item>
-    
-    <item>
-      <title>一个用go实现的分布式事务框架</title>
-      <link>https://www.syst.top/posts/go/easycar/</link>
-      <pubDate>Mon, 12 Sep 2022 18:11:22 +0800</pubDate>
-      
-      <guid>https://www.syst.top/posts/go/easycar/</guid>
-      <description>开篇 对分布式事务一直感兴趣，之前一直被其他事情(懒)耽搁了，最近终于动手了。
-easycar是什么 easycar 是一个用go实现的支持两阶段提交协议的分布式事务框架。目前还只支持TCC,SAGA 模式，其他模式待开发。
-在介绍easycar 之前，先简单介绍几个角色。
-Transaction Coordinator(TC) 负责全局事务的管理，所有参与分布式事务的分支都会注册到coordinator，回给每个分布式事务分配一个唯一id，
-当然还包括驱动全局 begin / commit /abort(我喜欢称rollback)。
-Transaction Manager (TM) 有些时候也叫 Transaction Client，当然不同的实现也许都会换个名字，但是职责都大差不差。
-一般通过TM对每个参与的RM发起一阶段的请求，如果一阶段的RM全部成功，那么TM会向TC发起commit请求，否则发起rollback。
-Resource Manager(RM) 用户维度的角色，管理本地事务处理的资源。其实你可以这么理解，假设你的订单服务部分接口参与了分布式事务，无论是第一阶段TM调用接口，还是TC第二阶段调用接口，你的订单服务都会去负责本地的事务修改。
-那么 easycar 上述角色有什么不同吗？
-有的。既然TC负责的就是全局事务的管理，那么我把职责都给了它。即由TC像每个参与的RM发起一阶段的请求，然后再根据一阶段的结果，发起二阶段的请求。由TC接管整个分布式事务的生命周期。
-是的，我弱化了上面TM的能力。在我眼里，TM本质上就是一个客户端。客户端只需要做一些数据封装，简便化操作即可。所以即使没有客户端，其他语言的用户也可以直接通过http请求easycar服务接口。
-所以理论上，大部分模式下，不需要客户端也是可以直接使用easycar服务的。
-支持协议和事务模式同时混用 参与分布式事务的服务往往由不同的多个部门维护，或者部分新老项目交错，可能无法保证服务的协议是一致的。
-另外，不同的服务所采用的事务模式具体是由：业务场景以及构造的成本来决定的。所以参与分布式事务之间所使用的事务模式不一定是统一的。
-在这些基础上，easycar支持协议混用(目前支持http和原生的grpc服务)，支持部分事务模式混用(目前支持TCC,Saga)。
-支持并发执行 假如现在有 order，account以及stock三个服务。
-由这三个服务组成一个分布式事务。 当用户下单时，需要经过这三个服务中内部一些接口(account 扣钱，stock减库存，order 创建订单)。
-如果只是同步执行第一阶段，那么第一阶段总执行时间= (account+stock+order)。
-很多场景下，分布式事务之间并不会存在执行依赖先后的关系。所以多个子事务一阶段可以同时并发执行。
-流程就像这样：
-上图我们需要保证创建订单前必须先执行account扣减余额和stock扣减库存服务，才能创建订单order的服务。同时account和stock服务并不需要保证他们的执行顺序。
-那么我们一阶段总执行耗时可以粗略=max(account,stock)+order。
-因此，easycar是支持分层并发执行的。 对参与的RM通过设置的权重做分层，同一层的RM可以并发调用，一层处理完毕再接下一层。在这个基础上，当某个RM发生调用错误时，那么后面一层也不会执行了，整个分布式事务需要回滚。
-异常处理 分布式事务中会出现一些问题，比如
-  空补偿： Cancel请求到来时，Try还没有执行，这时候这样的请求我们不能执行，理应直接返回。
-  悬挂： Try执行时，Cancel已执行完成，不能执行，直接返回。
-  幂等： 所有操作的接口都存在这个问题。
-  这些问题需要用户自己去解决，框架不会自动帮你处理。
-在我看来，这些问题本身就是服务的必要工作，而不是通过外部服务来帮你保证。
-换句话说，前端说它参数做了校验，难道后端就不校验接口了吗？</description>
     </item>
     
   </channel>

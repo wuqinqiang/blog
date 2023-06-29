@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="zh-hans">
+
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<meta http-equiv="X-UA-Compatible" content="ie=edge">
+	<meta name="theme-color" content="#494f5c">
+	<meta name="msapplication-TileColor" content="#494f5c">
+<meta itemprop="name" content="socks5结合抓包详解">
+<meta itemprop="description" content="SOCKS5（Socket Secure 5）是一种网络协议，用于在客户端和代理服务器之间进行通信。它是SOCKS协议的第五个版本，SOCKS5协议支持TCP和UDP协议，并提供了认证和加密的功能。
+SOCKS5协议广泛用于代理服务器、xx上网、匿名访问、负载均衡等场景。它提供了一种通用的、灵活的代理解决方案，可以在各种网络环境和应用中使用。
+RFC 1928是关于SOCKS5的协议文档。
+协议解析
+SOCKS5工作在应用层和传输层之间，首先客户端需要和代理服务器进行tcp连接。
+连接完成后，客户端和代理服务器之间进行协商确定认证方式。
+具体就是客户端发送认证方法请求，
+ VER字段占1个字节，表示SOCKS协议的版本号，目前为5（即SOCKS5）。 NMETHODS字段占1个字节，表示客户端支持的认证方法数量。 METHODS字段占N个字节，表示客户端支持的认证方法列表。每个字节代表一种认证方法，取值范围为1到255，对应不同的认证方式。  代理服务器在收到客户端消息，从客户端提供的METHODS字段中选择一种支持的认证方法，并将该方法的标识填充到METHOD字段中。代理服务器通过这个应答消息告知客户端选择的认证方法。
+目前的METHOD包含以下几个值：
+ X&#39;00&rsquo;：NO AUTHENTICATION REQUIRED。表示客户端无需进行任何认证，可以直接进行连接或操作。 X&#39;01&rsquo;：GSSAPI。表示使用GSSAPI（Generic Security Services Application Program Interface）进行认证。 X&#39;02&rsquo;：USERNAME/PASSWORD。表示客户端需要使用用户名和密码进行认证。 X&#39;03&rsquo;到X&#39;7F&rsquo;：由IANA（Internet Assigned Numbers Authority）分配的认证方法。这些方法可能具有特定的定义和用途，可以根据具体的分配情况来确定其含义。 X&#39;80&rsquo;到X&rsquo;FE&rsquo;：保留给私有方法（RESERVED FOR PRIVATE METHODS）。这些方法可能由特定实现或组织自定义，不在通用的认证方法范围内。 X&rsquo;FF&rsquo;：无可接受的方法（NO ACCEPTABLE METHODS）。表示代理服务器无法接受客户端提供的任何认证方法，无法进行连接或操作。  如果返回的方法是X &lsquo;FF&rsquo;，意味着失败了，那么客户端需要关闭连接。
+一旦协商完毕，客户端会发送请求的详细信息，主要包括实际要请求的目的地址和端口号。
+其中各字段含义如下：
+ VER：协议版本，固定为X&#39;05&rsquo;。 CMD：连接命令，指定客户端的操作类型。常见的取值有：  X&#39;01&rsquo;：CONNECT。 X&#39;02&rsquo;：BIND。 X&#39;03&rsquo;：UDP。   RSV：保留字段，固定为X&#39;00&rsquo;。 ATYP：目标地址类型，指定DST.ADDR字段的类型。常见的取值有：  X&#39;01&rsquo;：IPv4地址。 X&#39;03&rsquo;：域名。 X&#39;04&rsquo;：IPv6地址。   DST.ADDR：目标地址，根据ATYP字段的类型来确定具体的格式。 DST.PORT：目标端口，表示客户端要连接的目标服务器的端口号。  代理服务器收到请求后，会发起到DST.ADDR:PORT的连接，并响应客户端结果，
+其中的值有：
+REP:
+ X&#39;00&rsquo; 成功 X&#39;01&rsquo; SOCKS服务器故障 X&#39;02&rsquo; 连接不符合规则 X&#39;03&rsquo; 网络不可达 X&#39;04&rsquo; 主机不可达 X&#39;05&rsquo; 连接被拒绝 X&#39;06&rsquo; TTL 过期 X&#39;07&rsquo; 命令不支持 X&#39;08&rsquo; 地址类型不支持 X&#39;09&rsquo; to X&rsquo;FF&rsquo; 未分配  RSV：预留位，必须设置成X&#39;00&rsquo;。"><meta itemprop="datePublished" content="2023-06-29T15:20:00+08:00" />
+<meta itemprop="dateModified" content="2023-06-29T15:20:00+08:00" />
+<meta itemprop="wordCount" content="275">
+<meta itemprop="keywords" content="go,net," /><meta property="og:title" content="socks5结合抓包详解" />
+<meta property="og:description" content="SOCKS5（Socket Secure 5）是一种网络协议，用于在客户端和代理服务器之间进行通信。它是SOCKS协议的第五个版本，SOCKS5协议支持TCP和UDP协议，并提供了认证和加密的功能。
+SOCKS5协议广泛用于代理服务器、xx上网、匿名访问、负载均衡等场景。它提供了一种通用的、灵活的代理解决方案，可以在各种网络环境和应用中使用。
+RFC 1928是关于SOCKS5的协议文档。
+协议解析
+SOCKS5工作在应用层和传输层之间，首先客户端需要和代理服务器进行tcp连接。
+连接完成后，客户端和代理服务器之间进行协商确定认证方式。
+具体就是客户端发送认证方法请求，
+ VER字段占1个字节，表示SOCKS协议的版本号，目前为5（即SOCKS5）。 NMETHODS字段占1个字节，表示客户端支持的认证方法数量。 METHODS字段占N个字节，表示客户端支持的认证方法列表。每个字节代表一种认证方法，取值范围为1到255，对应不同的认证方式。  代理服务器在收到客户端消息，从客户端提供的METHODS字段中选择一种支持的认证方法，并将该方法的标识填充到METHOD字段中。代理服务器通过这个应答消息告知客户端选择的认证方法。
+目前的METHOD包含以下几个值：
+ X&#39;00&rsquo;：NO AUTHENTICATION REQUIRED。表示客户端无需进行任何认证，可以直接进行连接或操作。 X&#39;01&rsquo;：GSSAPI。表示使用GSSAPI（Generic Security Services Application Program Interface）进行认证。 X&#39;02&rsquo;：USERNAME/PASSWORD。表示客户端需要使用用户名和密码进行认证。 X&#39;03&rsquo;到X&#39;7F&rsquo;：由IANA（Internet Assigned Numbers Authority）分配的认证方法。这些方法可能具有特定的定义和用途，可以根据具体的分配情况来确定其含义。 X&#39;80&rsquo;到X&rsquo;FE&rsquo;：保留给私有方法（RESERVED FOR PRIVATE METHODS）。这些方法可能由特定实现或组织自定义，不在通用的认证方法范围内。 X&rsquo;FF&rsquo;：无可接受的方法（NO ACCEPTABLE METHODS）。表示代理服务器无法接受客户端提供的任何认证方法，无法进行连接或操作。  如果返回的方法是X &lsquo;FF&rsquo;，意味着失败了，那么客户端需要关闭连接。
+一旦协商完毕，客户端会发送请求的详细信息，主要包括实际要请求的目的地址和端口号。
+其中各字段含义如下：
+ VER：协议版本，固定为X&#39;05&rsquo;。 CMD：连接命令，指定客户端的操作类型。常见的取值有：  X&#39;01&rsquo;：CONNECT。 X&#39;02&rsquo;：BIND。 X&#39;03&rsquo;：UDP。   RSV：保留字段，固定为X&#39;00&rsquo;。 ATYP：目标地址类型，指定DST.ADDR字段的类型。常见的取值有：  X&#39;01&rsquo;：IPv4地址。 X&#39;03&rsquo;：域名。 X&#39;04&rsquo;：IPv6地址。   DST.ADDR：目标地址，根据ATYP字段的类型来确定具体的格式。 DST.PORT：目标端口，表示客户端要连接的目标服务器的端口号。  代理服务器收到请求后，会发起到DST.ADDR:PORT的连接，并响应客户端结果，
+其中的值有：
+REP:
+ X&#39;00&rsquo; 成功 X&#39;01&rsquo; SOCKS服务器故障 X&#39;02&rsquo; 连接不符合规则 X&#39;03&rsquo; 网络不可达 X&#39;04&rsquo; 主机不可达 X&#39;05&rsquo; 连接被拒绝 X&#39;06&rsquo; TTL 过期 X&#39;07&rsquo; 命令不支持 X&#39;08&rsquo; 地址类型不支持 X&#39;09&rsquo; to X&rsquo;FF&rsquo; 未分配  RSV：预留位，必须设置成X&#39;00&rsquo;。" />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="https://www.syst.top/posts/go/socks5/" /><meta property="article:section" content="posts" />
+<meta property="article:published_time" content="2023-06-29T15:20:00+08:00" />
+<meta property="article:modified_time" content="2023-06-29T15:20:00+08:00" />
+
+<meta name="twitter:card" content="summary"/>
+<meta name="twitter:title" content="socks5结合抓包详解"/>
+<meta name="twitter:description" content="SOCKS5（Socket Secure 5）是一种网络协议，用于在客户端和代理服务器之间进行通信。它是SOCKS协议的第五个版本，SOCKS5协议支持TCP和UDP协议，并提供了认证和加密的功能。
+SOCKS5协议广泛用于代理服务器、xx上网、匿名访问、负载均衡等场景。它提供了一种通用的、灵活的代理解决方案，可以在各种网络环境和应用中使用。
+RFC 1928是关于SOCKS5的协议文档。
+协议解析
+SOCKS5工作在应用层和传输层之间，首先客户端需要和代理服务器进行tcp连接。
+连接完成后，客户端和代理服务器之间进行协商确定认证方式。
+具体就是客户端发送认证方法请求，
+ VER字段占1个字节，表示SOCKS协议的版本号，目前为5（即SOCKS5）。 NMETHODS字段占1个字节，表示客户端支持的认证方法数量。 METHODS字段占N个字节，表示客户端支持的认证方法列表。每个字节代表一种认证方法，取值范围为1到255，对应不同的认证方式。  代理服务器在收到客户端消息，从客户端提供的METHODS字段中选择一种支持的认证方法，并将该方法的标识填充到METHOD字段中。代理服务器通过这个应答消息告知客户端选择的认证方法。
+目前的METHOD包含以下几个值：
+ X&#39;00&rsquo;：NO AUTHENTICATION REQUIRED。表示客户端无需进行任何认证，可以直接进行连接或操作。 X&#39;01&rsquo;：GSSAPI。表示使用GSSAPI（Generic Security Services Application Program Interface）进行认证。 X&#39;02&rsquo;：USERNAME/PASSWORD。表示客户端需要使用用户名和密码进行认证。 X&#39;03&rsquo;到X&#39;7F&rsquo;：由IANA（Internet Assigned Numbers Authority）分配的认证方法。这些方法可能具有特定的定义和用途，可以根据具体的分配情况来确定其含义。 X&#39;80&rsquo;到X&rsquo;FE&rsquo;：保留给私有方法（RESERVED FOR PRIVATE METHODS）。这些方法可能由特定实现或组织自定义，不在通用的认证方法范围内。 X&rsquo;FF&rsquo;：无可接受的方法（NO ACCEPTABLE METHODS）。表示代理服务器无法接受客户端提供的任何认证方法，无法进行连接或操作。  如果返回的方法是X &lsquo;FF&rsquo;，意味着失败了，那么客户端需要关闭连接。
+一旦协商完毕，客户端会发送请求的详细信息，主要包括实际要请求的目的地址和端口号。
+其中各字段含义如下：
+ VER：协议版本，固定为X&#39;05&rsquo;。 CMD：连接命令，指定客户端的操作类型。常见的取值有：  X&#39;01&rsquo;：CONNECT。 X&#39;02&rsquo;：BIND。 X&#39;03&rsquo;：UDP。   RSV：保留字段，固定为X&#39;00&rsquo;。 ATYP：目标地址类型，指定DST.ADDR字段的类型。常见的取值有：  X&#39;01&rsquo;：IPv4地址。 X&#39;03&rsquo;：域名。 X&#39;04&rsquo;：IPv6地址。   DST.ADDR：目标地址，根据ATYP字段的类型来确定具体的格式。 DST.PORT：目标端口，表示客户端要连接的目标服务器的端口号。  代理服务器收到请求后，会发起到DST.ADDR:PORT的连接，并响应客户端结果，
+其中的值有：
+REP:
+ X&#39;00&rsquo; 成功 X&#39;01&rsquo; SOCKS服务器故障 X&#39;02&rsquo; 连接不符合规则 X&#39;03&rsquo; 网络不可达 X&#39;04&rsquo; 主机不可达 X&#39;05&rsquo; 连接被拒绝 X&#39;06&rsquo; TTL 过期 X&#39;07&rsquo; 命令不支持 X&#39;08&rsquo; 地址类型不支持 X&#39;09&rsquo; to X&rsquo;FF&rsquo; 未分配  RSV：预留位，必须设置成X&#39;00&rsquo;。"/>
+
+	<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+	<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+	<link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+	<link rel="manifest" href="/site.webmanifest">
+	<link rel="mask-icon" href="/safari-pinned-tab.svg" color="">
+	<link rel="shortcut icon" href="/favicon.ico">
+
+	<title>socks5结合抓包详解</title>
+	<link rel="stylesheet" href="https://www.syst.top/css/style.min.cb0663fd19952012fdb4a1345792a808ae19eb828578bde6eeae217ff1fb1e8b.css">
+	
+</head>
+
+<body id="page">
+	
+	<header id="site-header" class="animated slideInUp faster">
+		<div class="hdr-wrapper section-inner">
+			<div class="hdr-left">
+				<div class="site-branding">
+					<a href="https://www.syst.top">是不是很酷</a>
+				</div>
+				<nav class="site-nav hide-in-mobile">
+					<a href="https://www.syst.top/posts/">文章</a>
+					<a href="https://www.syst.top/leetcode/">刷题</a>
+					<a href="https://www.syst.top/lives/">生活</a>
+					<a href="https://www.syst.top/readings/">读书笔记</a>
+					<a href="https://www.syst.top/friends/">朋友</a>
+					<a href="https://go.aabbccm.com">grpc-shop</a>
+				</nav>
+			</div>
+			<div class="hdr-right hdr-icons">
+				<button id="toc-btn" class="hdr-btn desktop-only-ib" title="Table of Contents"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-list"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3" y2="6"></line><line x1="3" y1="12" x2="3" y2="12"></line><line x1="3" y1="18" x2="3" y2="18"></line></svg></button><span class="hdr-social hide-in-mobile"><a href="https://github.com/wuqinqiang" target="_blank" rel="noopener me" title="Github"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-github"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"></path></svg></a></span><button id="menu-btn" class="hdr-btn" title="Menu"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-menu"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg></button>
+			</div>
+		</div>
+	</header>
+	<div id="mobile-menu" class="animated fast">
+		<ul>
+			<li><a href="https://www.syst.top/posts/">文章</a></li>
+			<li><a href="https://www.syst.top/tags/">标签</a></li>
+			<li><a href="https://www.syst.top/about/">关于</a></li>
+		</ul>
+	</div>
+
+
+	<main class="site-main section-inner animated fadeIn faster">
+		<article class="thin">
+			<header class="post-header">
+				<div class="post-meta"><span>Jun 29, 2023</span></div>
+				<h1>socks5结合抓包详解</h1>
+			</header>
+			<div class="content">
+				<p>SOCKS5（Socket Secure 5）是一种网络协议，用于在客户端和代理服务器之间进行通信。它是SOCKS协议的第五个版本，SOCKS5协议支持TCP和UDP协议，并提供了认证和加密的功能。</p>
+<p>SOCKS5协议广泛用于代理服务器、xx上网、匿名访问、负载均衡等场景。它提供了一种通用的、灵活的代理解决方案，可以在各种网络环境和应用中使用。</p>
+<p>RFC 1928是关于SOCKS5的协议文档。</p>
+<p><strong>协议解析</strong></p>
+<p>SOCKS5工作在应用层和传输层之间，首先客户端需要和代理服务器进行tcp连接。</p>
+<p>连接完成后，客户端和代理服务器之间进行协商确定认证方式。</p>
+<p>具体就是客户端发送认证方法请求，</p>
+<p><img src="https://cdn.syst.top/rfc1928-1.png" alt="截屏2023-06-29 11.19.11"></p>
+<ul>
+<li>VER字段占1个字节，表示SOCKS协议的版本号，目前为5（即SOCKS5）。</li>
+<li>NMETHODS字段占1个字节，表示客户端支持的认证方法数量。</li>
+<li>METHODS字段占N个字节，表示客户端支持的认证方法列表。每个字节代表一种认证方法，取值范围为1到255，对应不同的认证方式。</li>
+</ul>
+<p>代理服务器在收到客户端消息，从客户端提供的METHODS字段中选择一种支持的认证方法，并将该方法的标识填充到METHOD字段中。代理服务器通过这个应答消息告知客户端选择的认证方法。</p>
+<p><img src="https://cdn.syst.top/rfc1928-2.png" alt="截屏2023-06-29 11.34.41"></p>
+<p>目前的METHOD包含以下几个值：</p>
+<ul>
+<li>X'00&rsquo;：NO AUTHENTICATION REQUIRED。表示客户端无需进行任何认证，可以直接进行连接或操作。</li>
+<li>X'01&rsquo;：GSSAPI。表示使用GSSAPI（Generic Security Services Application Program Interface）进行认证。</li>
+<li>X'02&rsquo;：USERNAME/PASSWORD。表示客户端需要使用用户名和密码进行认证。</li>
+<li>X'03&rsquo;到X'7F&rsquo;：由IANA（Internet Assigned Numbers Authority）分配的认证方法。这些方法可能具有特定的定义和用途，可以根据具体的分配情况来确定其含义。</li>
+<li>X'80&rsquo;到X&rsquo;FE&rsquo;：保留给私有方法（RESERVED FOR PRIVATE METHODS）。这些方法可能由特定实现或组织自定义，不在通用的认证方法范围内。</li>
+<li>X&rsquo;FF&rsquo;：无可接受的方法（NO ACCEPTABLE METHODS）。表示代理服务器无法接受客户端提供的任何认证方法，无法进行连接或操作。</li>
+</ul>
+<p>如果返回的方法是X &lsquo;FF&rsquo;，意味着失败了，那么客户端需要关闭连接。</p>
+<p>一旦协商完毕，客户端会发送请求的详细信息，主要包括实际要请求的目的地址和端口号。</p>
+<p><img src="https://cdn.syst.top/rfc1928-3.png" alt="截屏2023-06-29 13.16.06"></p>
+<p>其中各字段含义如下：</p>
+<ul>
+<li>VER：协议版本，固定为X'05&rsquo;。</li>
+<li>CMD：连接命令，指定客户端的操作类型。常见的取值有：
+<ul>
+<li>X'01&rsquo;：CONNECT。</li>
+<li>X'02&rsquo;：BIND。</li>
+<li>X'03&rsquo;：UDP。</li>
+</ul>
+</li>
+<li>RSV：保留字段，固定为X'00&rsquo;。</li>
+<li>ATYP：目标地址类型，指定DST.ADDR字段的类型。常见的取值有：
+<ul>
+<li>X'01&rsquo;：IPv4地址。</li>
+<li>X'03&rsquo;：域名。</li>
+<li>X'04&rsquo;：IPv6地址。</li>
+</ul>
+</li>
+<li>DST.ADDR：目标地址，根据ATYP字段的类型来确定具体的格式。</li>
+<li>DST.PORT：目标端口，表示客户端要连接的目标服务器的端口号。</li>
+</ul>
+<p>代理服务器收到请求后，会发起到DST.ADDR:PORT的连接，并响应客户端结果，</p>
+<p><img src="https://cdn.syst.top/rfc1928-4.png" alt="截屏2023-06-29 13.43.05"></p>
+<p>其中的值有：</p>
+<p>REP:</p>
+<ul>
+<li>X'00&rsquo; 成功</li>
+<li>X'01&rsquo; SOCKS服务器故障</li>
+<li>X'02&rsquo; 连接不符合规则</li>
+<li>X'03&rsquo; 网络不可达</li>
+<li>X'04&rsquo; 主机不可达</li>
+<li>X'05&rsquo; 连接被拒绝</li>
+<li>X'06&rsquo; TTL 过期</li>
+<li>X'07&rsquo; 命令不支持</li>
+<li>X'08&rsquo; 地址类型不支持</li>
+<li>X'09&rsquo; to X&rsquo;FF&rsquo; 未分配</li>
+</ul>
+<p>RSV：预留位，必须设置成X'00&rsquo;。</p>
+<p>BND.ADDR: 服务器绑定的地址</p>
+<p>BND.PORT: 服务器绑定的端口（网络字节序）</p>
+<p>当连接建立后，客户端就可以和正常一样访问目标地址&quot;通信&quot;了。此时通信的数据除了目的地址是发往代理服务器以外，所有内容都是和普通连接一样。对代理服务器而言，后面所有收到的来自客户端的数据都会原样转发到目标服务。</p>
+<p><strong>抓个包看看</strong></p>
+<p>实验涉及到的两个库:</p>
+<ul>
+<li><a href="https://github.com/shadowsocks/go-shadowsocks2">https://github.com/shadowsocks/go-shadowsocks2</a></li>
+<li><a href="https://github.com/haad/proxychains">https://github.com/haad/proxychains</a></li>
+</ul>
+<p>假设我现在有两台服务器，服务器A(上海)和服务器B(伦敦),服务器B上部署了Shadowsocks服务，Shadowsocks 是一个安全的socks5代理。</p>
+<p>我想把机器A对外请求的流量都通过B来代理，并且指定只有发送到A机器的1080端口流量才能被代理。</p>
+<p>通过go-shadowsocks2启动程序，</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl">./shadowsocks2 -c <span class="s1">&#39;ss://AES-256-GCM:password@b机器ip:port&#39;</span> -socks 127.0.0.1:1080 
+</span></span></code></pre></div><p>参数说明，</p>
+<p>-c: 设置Shadowsocks2客户端连接到B机器Shadowsocks的配置。</p>
+<p>-socks:  指定Shadowsocks2客户端在本地监听的SOCKS5代理服务器的地址。在这个例子中，客户端在1080端口上监听代理请求。</p>
+<p>myip.ipip.net是一个用来查询本机公网ip的服务。假设我们直接在服务器A上curl myip.ipip.net，那么请求的结果，</p>
+<p><img src="https://cdn.syst.top/rfc1928-5.png" alt="截屏2023-06-29 15.44.36"></p>
+<p>现在我们要通过上面描述的达到输出的是B服务器伦敦的ip地址。</p>
+<p>我们使用了工具proxychains，配置proxychains，</p>
+<p><img src="https://cdn.syst.top/rfc1928-6.png" alt="截屏2023-06-29 17.09.08"></p>
+<p>执行之前，我们先开启tcpdump，我们只抓本地1080端口的流量，毕竟它是作为本地其他客户端socks5代理服务器。</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl">tcpdump -i lo port <span class="m">1080</span> -w ss.pcap
+</span></span></code></pre></div><p>然后执行，</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl">proxychains4 curl myip.ipip.net
+</span></span></code></pre></div><p><img src="https://cdn.syst.top/rfc1928-7.png" alt="截屏2023-06-29 15.45.12"></p>
+<p>最终获取抓到的包。</p>
+<p><img src="https://cdn.syst.top/rfc1928-8.png" alt="截屏2023-06-29 17.35.59"></p>
+<p>前三个包是tcp的三次握手，这里就不说了。</p>
+<p>包4也就是客户端发送协商认证方法请求给代理服务器，其中包含支持的认证方法列表，这里只支持1种方法:0。也就是客户端无需进行任何认证，可以直接进行连接或操作。</p>
+<p><img src="https://cdn.syst.top/rfc1928-9.png" alt="截屏2023-06-29 17.41.35"></p>
+<p>包6服务端响应，</p>
+<p><img src="https://cdn.syst.top/rfc1928-10.png" alt="截屏2023-06-29 17.41.58"></p>
+<p>此时协商完毕。</p>
+<p>包8是客户端发起请求的详细信息，里面包含了要访问的目标地址和端口。这里的address type=3 表示域名类型。</p>
+<p><img src="https://cdn.syst.top/rfc1928-11.png" alt="截屏2023-06-29 17.46.11"></p>
+<p>包9为服务端响应:</p>
+<p><img src="https://cdn.syst.top/rfc1928-12.png" alt="截屏2023-06-29 17.47.51"></p>
+<p>可以看到 RSV的值表示成功。</p>
+<p>这里要注意的是包8中的CMD参数。上面说到有三个值。当客户端发往代理服务器的数据包的 CMD 字段的值为 0x01 时, 代表 CONNECT, 此时 DST.ADDR 和 DST.PORT 表示客户端所想要访问的目标主机的地址和端口, 代理服务器在收到该请求后建立代理服务器到目标主机的 TCP 连接, 并将代理服务器分配的 IP 地址和端口在返回的数据包中的 BIND.ADDR 和 BIND.PORT 表示。其他CMD值含义自行查看rfc。</p>
+<p>但是包9中在对CONNECT请求回复中，BIND.PORT 和BIND.ADDR都不是预期的值。看了shadowsocks2里面的代码，</p>
+<p><img src="https://cdn.syst.top/rfc1928-13.png" alt="截屏2023-06-29 18.04.55"></p>
+<p>它是直接把ATYP设置成1，BND.ADDR和BND.PORT设置为0。</p>
+<p>因为此时的本地socks5并不是最终的代理服务器，实际请求目标地址的是我们在启动shadowsocks2配置的B机器上的ss服务。本身BND.ADDR和BND.PORT字段是可选的，如果服务器不提供这些信息，客户端可以根据实际情况进行处理。</p>
+<p>当响应成功，客户端开始请求传输数据了，也就是包10，发送了一个http请求。包12是对请求的响应。</p>
+<p><img src="https://cdn.syst.top/rfc1928-14.png" alt="截屏2023-06-29 20.49.48"></p>
+<p>所以实际的流转是,</p>
+<p>local A client &lt;-socks5-&gt; A:1080 &lt;-&gt; b机器Shadowsocks &lt;-&gt; myip.ipip.net</p>
+<p>在Shadowsocks2中，主要通过这个函数来实现双向数据传输:</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="c1">// relay copies between left and right bidirectionally
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="kd">func</span> <span class="nf">relay</span><span class="p">(</span><span class="nx">left</span><span class="p">,</span> <span class="nx">right</span> <span class="nx">net</span><span class="p">.</span><span class="nx">Conn</span><span class="p">)</span> <span class="kt">error</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">	<span class="kd">var</span> <span class="nx">err</span><span class="p">,</span> <span class="nx">err1</span> <span class="kt">error</span>
+</span></span><span class="line"><span class="cl">	<span class="kd">var</span> <span class="nx">wg</span> <span class="nx">sync</span><span class="p">.</span><span class="nx">WaitGroup</span>
+</span></span><span class="line"><span class="cl">	<span class="kd">var</span> <span class="nx">wait</span> <span class="p">=</span> <span class="mi">5</span> <span class="o">*</span> <span class="nx">time</span><span class="p">.</span><span class="nx">Second</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">wg</span><span class="p">.</span><span class="nf">Add</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">	<span class="k">go</span> <span class="kd">func</span><span class="p">()</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="k">defer</span> <span class="nx">wg</span><span class="p">.</span><span class="nf">Done</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">_</span><span class="p">,</span> <span class="nx">err1</span> <span class="p">=</span> <span class="nx">io</span><span class="p">.</span><span class="nf">Copy</span><span class="p">(</span><span class="nx">right</span><span class="p">,</span> <span class="nx">left</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">		<span class="nx">right</span><span class="p">.</span><span class="nf">SetReadDeadline</span><span class="p">(</span><span class="nx">time</span><span class="p">.</span><span class="nf">Now</span><span class="p">().</span><span class="nf">Add</span><span class="p">(</span><span class="nx">wait</span><span class="p">))</span> <span class="c1">// unblock read on right
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="p">}()</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">_</span><span class="p">,</span> <span class="nx">err</span> <span class="p">=</span> <span class="nx">io</span><span class="p">.</span><span class="nf">Copy</span><span class="p">(</span><span class="nx">left</span><span class="p">,</span> <span class="nx">right</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">left</span><span class="p">.</span><span class="nf">SetReadDeadline</span><span class="p">(</span><span class="nx">time</span><span class="p">.</span><span class="nf">Now</span><span class="p">().</span><span class="nf">Add</span><span class="p">(</span><span class="nx">wait</span><span class="p">))</span> <span class="c1">// unblock read on left
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="nx">wg</span><span class="p">.</span><span class="nf">Wait</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">	<span class="k">if</span> <span class="nx">err1</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="o">&amp;&amp;</span> <span class="p">!</span><span class="nx">errors</span><span class="p">.</span><span class="nf">Is</span><span class="p">(</span><span class="nx">err1</span><span class="p">,</span> <span class="nx">os</span><span class="p">.</span><span class="nx">ErrDeadlineExceeded</span><span class="p">)</span> <span class="p">{</span> <span class="c1">// requires Go 1.15+
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>		<span class="k">return</span> <span class="nx">err1</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}</span>
+</span></span><span class="line"><span class="cl">	<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="o">&amp;&amp;</span> <span class="p">!</span><span class="nx">errors</span><span class="p">.</span><span class="nf">Is</span><span class="p">(</span><span class="nx">err</span><span class="p">,</span> <span class="nx">os</span><span class="p">.</span><span class="nx">ErrDeadlineExceeded</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">		<span class="k">return</span> <span class="nx">err</span>
+</span></span><span class="line"><span class="cl">	<span class="p">}</span>
+</span></span><span class="line"><span class="cl">	<span class="k">return</span> <span class="kc">nil</span>
+</span></span></code></pre></div><p>也就是，(client &lt;-socks5-&gt; A:1080 )  &lt;-&gt;  (Shadowsocks &lt;-&gt; myip.ipip.net)</p>
+<p>主要靠的是标准库的io.Copy。</p>
+<p>最后13-16包就是tcp的4次挥手了。</p>
+<p>上图这组包还有一个很基础的tcp知识点，</p>
+<p><img src="https://cdn.syst.top/rfc1928-8.png" alt="截屏2023-06-29 17.35.59"></p>
+<p>首先你图上看到的seq都是从0开始的，那是因为wireshark有个可以开启Relative Sequence Numbers的选项。</p>
+<p>上面的包4截图可以看到包信息:Seq =1,Len=3。再看包5，是对包4的Ack, 包6包7同理。</p>
+<p>但是你再看包8：Seq:4，Len=20。</p>
+<p><img src="https://cdn.syst.top/rfc1928-15.png" alt="截屏2023-06-29 21.16.14"></p>
+<p>但是你在包9看到的也是一个Socks协议的包，并没有看到专门对包8的Ack。</p>
+<p>在TCP通信中，并不一定每个请求都会立即收到相应的ACK确认包。TCP使用了一种称为&quot;累积确认&quot;（Cumulative Acknowledgment）的机制。ACK确认包可能会延迟发送，或者包含在接收方发送的其他数据包中。这是TCP协议的一种优化机制，可以减少网络中的包数量和传输开销。</p>
+<p>那么我们就知道对包8的确认，其实是随着包9的数据一起发送了。Ack=Seq(4)+Len(20)=24</p>
+<p><img src="https://cdn.syst.top/rfc1928-16.png" alt="截屏2023-06-29 21.21.37"></p>
+<p>完结。</p>
+
+			</div>
+			<div class="content"><br><img src="https://cdn.syst.top/wechat2.png"></div>
+			<hr class="post-end">
+			<footer class="post-info">
+				<p>
+					<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-tag meta-icon"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"></path><line x1="7" y1="7" x2="7" y2="7"></line></svg><span class="tag"><a href="https://www.syst.top/tags/go">go</a></span><span class="tag"><a href="https://www.syst.top/tags/net">net</a></span>
+				</p>
+				<p><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-file-text"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>275 Words</p>
+				<p><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-calendar"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>2023-06-29 15:20 &#43;0800</p>
+			</footer>
+		</article>
+		<aside id="toc" class="show-toc">
+			<div class="toc-title">Table of Contents</div>
+			<nav id="TableOfContents"></nav>
+		</aside>
+		<div class="post-nav thin">
+			<a class="prev-post" href="https://www.syst.top/posts/go/easyio/">
+				<span class="post-nav-label">Older&nbsp;<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-arrow-right"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg></span><br><span>easyio:最小化的netpoll实现</span>
+			</a>
+		</div>
+		<div id="comments" class="thin">
+			<script src="https://utteranc.es/client.js"
+        repo="wuqinqiang/blog"
+        issue-term="pathname"
+        theme="github-light"
+        crossorigin="anonymous"
+        async>
+</script>
+		</div>
+	</main>
+
+	<footer id="site-footer" class="section-inner thin animated fadeIn faster">
+		<p>&copy; 2018 - 2023 <a href="https://www.syst.top">Remember</a> &#183; <a href="http://beian.miit.gov.cn/">浙ICP备18028603号-2</a></p>
+		<p>
+			Made with <a href="https://gohugo.io/" target="_blank" rel="noopener">Hugo</a> &#183; Theme <a href="https://github.com/Track3/hermit" target="_blank" rel="noopener">Hermit</a> &#183; <a href="https://www.syst.top/post/index.xml" target="_blank" title="rss"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-rss"><path d="M4 11a9 9 0 0 1 9 9"></path><path d="M4 4a16 16 0 0 1 16 16"></path><circle cx="5" cy="19" r="1"></circle></svg></a>
+		</p>
+	</footer>
+
+
+	<script src="https://www.syst.top/js/main.min.c8a831e54547e9c081939713d77308bf58ae5fed99a75acbcaaa14c5ce45bf89.js"></script>
+<script type="application/javascript">
+var doNotTrack = false;
+if (!doNotTrack) {
+	window.ga=window.ga||function(){(ga.q=ga.q||[]).push(arguments)};ga.l=+new Date;
+	ga('create', 'UA-166045776-1', 'auto');
+	
+	ga('send', 'pageview');
+}
+</script>
+<script async src='https://www.google-analytics.com/analytics.js'></script>
+
+
+</body>
+
+</html>

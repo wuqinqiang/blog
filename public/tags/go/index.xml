@@ -7,7 +7,31 @@
     <generator>Hugo -- gohugo.io</generator>
     <language>zh-hans</language>
     <copyright>This work is licensed under a Creative Commons Attribution-NonCommercial 4.0 International License.</copyright>
-    <lastBuildDate>Sat, 03 Jun 2023 17:06:51 +0800</lastBuildDate><atom:link href="https://www.syst.top/tags/go/index.xml" rel="self" type="application/rss+xml" />
+    <lastBuildDate>Thu, 29 Jun 2023 15:20:00 +0800</lastBuildDate><atom:link href="https://www.syst.top/tags/go/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>socks5结合抓包详解</title>
+      <link>https://www.syst.top/posts/go/socks5/</link>
+      <pubDate>Thu, 29 Jun 2023 15:20:00 +0800</pubDate>
+      
+      <guid>https://www.syst.top/posts/go/socks5/</guid>
+      <description>SOCKS5（Socket Secure 5）是一种网络协议，用于在客户端和代理服务器之间进行通信。它是SOCKS协议的第五个版本，SOCKS5协议支持TCP和UDP协议，并提供了认证和加密的功能。
+SOCKS5协议广泛用于代理服务器、xx上网、匿名访问、负载均衡等场景。它提供了一种通用的、灵活的代理解决方案，可以在各种网络环境和应用中使用。
+RFC 1928是关于SOCKS5的协议文档。
+协议解析
+SOCKS5工作在应用层和传输层之间，首先客户端需要和代理服务器进行tcp连接。
+连接完成后，客户端和代理服务器之间进行协商确定认证方式。
+具体就是客户端发送认证方法请求，
+ VER字段占1个字节，表示SOCKS协议的版本号，目前为5（即SOCKS5）。 NMETHODS字段占1个字节，表示客户端支持的认证方法数量。 METHODS字段占N个字节，表示客户端支持的认证方法列表。每个字节代表一种认证方法，取值范围为1到255，对应不同的认证方式。  代理服务器在收到客户端消息，从客户端提供的METHODS字段中选择一种支持的认证方法，并将该方法的标识填充到METHOD字段中。代理服务器通过这个应答消息告知客户端选择的认证方法。
+目前的METHOD包含以下几个值：
+ X&#39;00&amp;rsquo;：NO AUTHENTICATION REQUIRED。表示客户端无需进行任何认证，可以直接进行连接或操作。 X&#39;01&amp;rsquo;：GSSAPI。表示使用GSSAPI（Generic Security Services Application Program Interface）进行认证。 X&#39;02&amp;rsquo;：USERNAME/PASSWORD。表示客户端需要使用用户名和密码进行认证。 X&#39;03&amp;rsquo;到X&#39;7F&amp;rsquo;：由IANA（Internet Assigned Numbers Authority）分配的认证方法。这些方法可能具有特定的定义和用途，可以根据具体的分配情况来确定其含义。 X&#39;80&amp;rsquo;到X&amp;rsquo;FE&amp;rsquo;：保留给私有方法（RESERVED FOR PRIVATE METHODS）。这些方法可能由特定实现或组织自定义，不在通用的认证方法范围内。 X&amp;rsquo;FF&amp;rsquo;：无可接受的方法（NO ACCEPTABLE METHODS）。表示代理服务器无法接受客户端提供的任何认证方法，无法进行连接或操作。  如果返回的方法是X &amp;lsquo;FF&amp;rsquo;，意味着失败了，那么客户端需要关闭连接。
+一旦协商完毕，客户端会发送请求的详细信息，主要包括实际要请求的目的地址和端口号。
+其中各字段含义如下：
+ VER：协议版本，固定为X&#39;05&amp;rsquo;。 CMD：连接命令，指定客户端的操作类型。常见的取值有：  X&#39;01&amp;rsquo;：CONNECT。 X&#39;02&amp;rsquo;：BIND。 X&#39;03&amp;rsquo;：UDP。   RSV：保留字段，固定为X&#39;00&amp;rsquo;。 ATYP：目标地址类型，指定DST.ADDR字段的类型。常见的取值有：  X&#39;01&amp;rsquo;：IPv4地址。 X&#39;03&amp;rsquo;：域名。 X&#39;04&amp;rsquo;：IPv6地址。   DST.ADDR：目标地址，根据ATYP字段的类型来确定具体的格式。 DST.PORT：目标端口，表示客户端要连接的目标服务器的端口号。  代理服务器收到请求后，会发起到DST.ADDR:PORT的连接，并响应客户端结果，
+其中的值有：
+REP:
+ X&#39;00&amp;rsquo; 成功 X&#39;01&amp;rsquo; SOCKS服务器故障 X&#39;02&amp;rsquo; 连接不符合规则 X&#39;03&amp;rsquo; 网络不可达 X&#39;04&amp;rsquo; 主机不可达 X&#39;05&amp;rsquo; 连接被拒绝 X&#39;06&amp;rsquo; TTL 过期 X&#39;07&amp;rsquo; 命令不支持 X&#39;08&amp;rsquo; 地址类型不支持 X&#39;09&amp;rsquo; to X&amp;rsquo;FF&amp;rsquo; 未分配  RSV：预留位，必须设置成X&#39;00&amp;rsquo;。</description>
+    </item>
+    
     <item>
       <title>easyio:最小化的netpoll实现</title>
       <link>https://www.syst.top/posts/go/easyio/</link>
@@ -273,25 +297,6 @@ Go netpoller Go netpoller 底层就是对I/O多路复用的封装。不同平台
 下面我们通过一个demo开始讲解。
 很简单一个demo，开启一个tcp服务。然后每来一个连接，就启动一个g去处理连接。处理完毕，关闭连接。
 而且我们使用的是同步的模式去编写异步的逻辑，一个连接对应一个g处理，极其简单和易于理解。go标准库中的http.server也是这么干的。</description>
-    </item>
-    
-    <item>
-      <title>一个用go实现的有限状态机 </title>
-      <link>https://www.syst.top/posts/go/easyfsm/</link>
-      <pubDate>Sun, 06 Mar 2022 17:37:22 +0800</pubDate>
-      
-      <guid>https://www.syst.top/posts/go/easyfsm/</guid>
-      <description>easyfsm 之前看过新亮老哥的go-fsm-order，感觉还不错。最近在迁移项目的时候，发现有多处业务存在一些状态的流转，所以就基于go-fsm-order做了重改，让它可以在不同的业务场景下使用。
-为什么不使用looplab/fsm，star挺多的啊。
-不是特别喜欢，每次实例化fsm都需要重新传递对应events(虽然我们可以统一封装)，我更期望在项目启动时把此项目涉及到不同业务状态机流转注册到fsm，对应:不同业务-&amp;gt;[状态]-&amp;gt;[事件]-&amp;gt;处理事件主体(包含handler、params、hooks、observers等)。
-当你开始进行状态流转时，只需要
-fsm:=NewFsm(&amp;#34;业务名称&amp;#34;,&amp;#34;当前状态&amp;#34;) currentState,err:=fsm.Call(&amp;#34;事件名称&amp;#34;,&amp;#34;对应事件所需参数可选项&amp;#34;) 为什么需要区分业务？
-因为绝大多数业务的状态值都是从数据库中获取的，比如订单表的订单状态，商品表中的商品状态，有可能值是相同的。
-同一个业务同一属性对应状态值表达单一，不同业务下属性状态可能会出现值相同，但所表达的含义是不同的。
-整体设计:
-简单解释一下：
- 业务:比如有商品状态业务、订单状态业务&amp;hellip;.. 状态：订单待付款、待发货&amp;hellip;. 事件：对应状态仅可达事件集合。比如待付款状态的可达事件仅有:支付事件和取消事件(取决于自己的业务) 执行事件主体：执行自定义的事件函数,如果有需要，还可以自定义执行事件前后hook，事件订阅者(比如支付事件发生后，异步通知用户等)  使用姿势 go get -u github.com/wuqinqiang/easyfsm 首先自定义业务、状态、事件。
-package main import ( &amp;#34;fmt&amp;#34; &amp;#34;github.com/wuqinqiang/easyfsm&amp;#34; ) var ( // 业务 	businessName easyfsm.BusinessName = &amp;#34;order&amp;#34; // 对应状态 	initState easyfsm.State = 1 // 初始化 	paidState easyfsm.State = 2 // 已付款 	canceled easyfsm.State = 3 // 已取消  //对应事件 	paymentOrderEvent easyfsm.EventName = &amp;#34;paymentOrderEvent&amp;#34; cancelOrderEvent easyfsm.</description>
     </item>
     
   </channel>
