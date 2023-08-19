@@ -2,6 +2,15 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
   xmlns:xhtml="http://www.w3.org/1999/xhtml">
   <url>
+    <loc>https://www.syst.top/lives/</loc>
+    <lastmod>2023-08-19T19:34:52+08:00</lastmod>
+  </url><url>
+    <loc>https://www.syst.top/</loc>
+    <lastmod>2023-08-19T19:34:52+08:00</lastmod>
+  </url><url>
+    <loc>https://www.syst.top/lives/hangzhou/</loc>
+    <lastmod>2023-08-19T19:34:52+08:00</lastmod>
+  </url><url>
     <loc>https://www.syst.top/tags/go/</loc>
     <lastmod>2023-06-29T15:20:00+08:00</lastmod>
   </url><url>
@@ -17,17 +26,11 @@
     <loc>https://www.syst.top/tags/</loc>
     <lastmod>2023-06-29T15:20:00+08:00</lastmod>
   </url><url>
-    <loc>https://www.syst.top/</loc>
-    <lastmod>2023-06-29T15:20:00+08:00</lastmod>
-  </url><url>
     <loc>https://www.syst.top/posts/go/easyio/</loc>
     <lastmod>2023-06-03T17:06:51+08:00</lastmod>
   </url><url>
     <loc>https://www.syst.top/tags/netpoll/</loc>
     <lastmod>2023-06-03T17:06:51+08:00</lastmod>
-  </url><url>
-    <loc>https://www.syst.top/lives/</loc>
-    <lastmod>2023-05-02T10:23:52+08:00</lastmod>
   </url><url>
     <loc>https://www.syst.top/tags/%E6%97%85%E8%A1%8C/</loc>
     <lastmod>2023-05-02T10:23:52+08:00</lastmod>

@@ -25,7 +25,7 @@ SOCKS5工作在应用层和传输层之间，首先客户端需要和代理服�
 REP:
  X&#39;00&rsquo; 成功 X&#39;01&rsquo; SOCKS服务器故障 X&#39;02&rsquo; 连接不符合规则 X&#39;03&rsquo; 网络不可达 X&#39;04&rsquo; 主机不可达 X&#39;05&rsquo; 连接被拒绝 X&#39;06&rsquo; TTL 过期 X&#39;07&rsquo; 命令不支持 X&#39;08&rsquo; 地址类型不支持 X&#39;09&rsquo; to X&rsquo;FF&rsquo; 未分配  RSV：预留位，必须设置成X&#39;00&rsquo;。"><meta itemprop="datePublished" content="2023-06-29T15:20:00+08:00" />
 <meta itemprop="dateModified" content="2023-06-29T15:20:00+08:00" />
-<meta itemprop="wordCount" content="275">
+<meta itemprop="wordCount" content="276">
 <meta itemprop="keywords" content="go,net," /><meta property="og:title" content="socks5结合抓包详解" />
 <meta property="og:description" content="SOCKS5（Socket Secure 5）是一种网络协议，用于在客户端和代理服务器之间进行通信。它是SOCKS协议的第五个版本，SOCKS5协议支持TCP和UDP协议，并提供了认证和加密的功能。
 SOCKS5协议广泛用于代理服务器、xx上网、匿名访问、负载均衡等场景。它提供了一种通用的、灵活的代理解决方案，可以在各种网络环境和应用中使用。
@@ -252,6 +252,7 @@ REP:
 </span></span><span class="line"><span class="cl">		<span class="k">return</span> <span class="nx">err</span>
 </span></span><span class="line"><span class="cl">	<span class="p">}</span>
 </span></span><span class="line"><span class="cl">	<span class="k">return</span> <span class="kc">nil</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
 </span></span></code></pre></div><p>也就是，(client &lt;-socks5-&gt; A:1080 )  &lt;-&gt;  (Shadowsocks &lt;-&gt; myip.ipip.net)</p>
 <p>主要靠的是标准库的io.Copy。</p>
 <p>最后13-16包就是tcp的4次挥手了。</p>
@@ -274,7 +275,7 @@ REP:
 				<p>
 					<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-tag meta-icon"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"></path><line x1="7" y1="7" x2="7" y2="7"></line></svg><span class="tag"><a href="https://www.syst.top/tags/go">go</a></span><span class="tag"><a href="https://www.syst.top/tags/net">net</a></span>
 				</p>
-				<p><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-file-text"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>275 Words</p>
+				<p><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-file-text"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>276 Words</p>
 				<p><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-calendar"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>2023-06-29 15:20 &#43;0800</p>
 			</footer>
 		</article>

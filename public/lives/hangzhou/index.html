@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="zh-hans">
+
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<meta http-equiv="X-UA-Compatible" content="ie=edge">
+	<meta name="theme-color" content="#494f5c">
+	<meta name="msapplication-TileColor" content="#494f5c">
+<meta itemprop="name" content="杭州随机公交之旅">
+<meta itemprop="description" content="图片拍摄于2023-04-27 京都
+上周刷X的时候看到一个老哥blog，注意到一篇文章[1]，当时觉得很有趣，随即把这篇文章加入pocket。
+周末想起这篇文章，是时候把今天的命运交给杭州公交了，开启命运公交之旅。（ps.主要还是太闲了
+挑战规则很简单，从任意的公交站出发，乘坐第一辆进站的公交车，行驶五站后下车，然后继续刚才的逻辑。经过几轮的随机公交大法，看看最终到了哪里。
+当然，还是需要跟程序一样，对特定情况来点特殊的处理。
+  遇到不足五站的，直接在终点站下车
+  遇到全部车辆的终点站，可以附近换站
+  如果来的第一辆是前一次乘坐的车次，不上车
+  其他不做干预。如果发现线路要回环了，不做干预。一直死循环的概率也极低，堪比中彩票。
+除此之外，我给自己限制了八轮车次。也就是说如果一切顺利，结束的时候应该坐了40站的公交车🥹。
+但是因为可能会碰到不足五站的情况，所以真实情况你懂的😉。
+出发前，我的疑问是最大能跨过几个区？看了地图以及我的八轮限制，结论是跨过两个区最多了：余杭》拱墅》西湖。
+我还想着会不会终点在西湖附近，这样结束之后就近去西湖逛逛好了。前几轮过去我也是这么想的，直到后面拐点公交出现，和西湖就彻底无缘了。
+接下来就是朴实无华的流水账了。
+一开始打算从家门口的公交站开始的，不过那条路线比较单一，是条专线，加上肚子也饿了，所以先到附近商场吃了个饭，然后在商城对面坐上了第一辆车。
+第一轮是k389线路的公交车，因为住在近郊，出发行驶的方向当然是进城的方向🤣。
+k389一路并没有转变方向，符合进城的预期。坐了五站来到了铭雅苑，金家渡附近。
+刚拍完照片，k281就来了，直接上车。
+第二轮 k281开始转方向了，五个站转了几个弯，我已经分不清方向了。最终到达花园桥。
+因为自己定的规则限制，不能乘坐上次的车次，所以没得选了，只能是503了。这辆车等的太久太久了。
+第三轮503五站到郭家厍下车后，这时候已经从余杭区跨到拱墅区了。
+然后，戏剧性的一幕发生了，
+好家伙，这个公交站只有k503专线，完全不给随机性机会啊。
+这时候我有两种选择，一种是随机选择一个方向，走到附近的公交站，然后等待第一辆车进站，上车。
+另一种原地等k503，在思考了片刻之后，我选择因为特殊性，而破坏上面的规则，这本身也是一种随机命运。(圆回来了
+然后开始新一轮漫长的等待～。
+有趣的是，中途一个边上的大妈问我等什么车，我回答k503后，大妈说我看你就是从k503下来的，一时语塞&hellip;&hellip;
+第四轮继续k503之旅，这一波到了拱宸桥站，已经靠近拱墅的核心区了，再往上靠靠感觉靠西湖有戏。
+应该是在高架下面，路很窄，也是刚拍完照，马上就来公交了。
+第五轮k1203坐了半天发现一站都没到达，站起来查看了一下，发现这辆公交两站就到终点站大关北站了。然后几个转弯，已经察觉到偏离了🥹。
+第六轮k183在大关北上车后，发现这轮有点凑巧，五站刚好到终点站，拱北小区。上车的时候已经开始小雨了，终点站下了车，看到另一辆车来了，上车后司机拦住了我，说是终点站，不能乘车😅。此时雨已经变成了暴雨，只能先行躲雨了。
+躲雨的时候发现开麻将馆的人都是人才，好一个仙雀会～
+等雨停了，第七轮上了k61，最后到达了平安桥。
+第八轮上的k57，最后本次挑战的终点位于拱墅区的马家门站。
+还好给自己做了轮次的限制，要是这个方向一直下去，好家伙，我觉得我能到德清。
+八轮总耗时2小时13分钟，其中包括躲雨以及等车的间隙。总乘站数37站，总距离划算约等于26公里。
+感觉第五轮是个拐点，因为第五轮上的车拐个弯往西湖反方向开了，后续第六轮没有挽救回来，开始往拱墅区边缘驶去，就再也没有机会了。
+所以最后，八轮只跨了一个区:拱墅区。
+杭州的公交车挺好的，所以回去的时候我坐了地铁。先在终点马家门站滴滴到附近的地铁，然后乘坐地铁五个站就又回到出发点了。所以这两个多钟头我在干嘛？
+如果我选择坐公交回来，相同的条件下，我增加几个变数，
+  允许选择出发的位置
+  允许中途有两次决定车次的机会
+  不知道这种情况下，坐公交车能不到家附近😂
+最后，附上整体路程，可以查看具体的方向，主打的就是随缘。
+[1]https://nano.ac/posts/b56e5c40/
+ 本文使用 文章同步助手 同步
+ "><meta itemprop="datePublished" content="2023-08-19T19:34:52+08:00" />
+<meta itemprop="dateModified" content="2023-08-19T19:34:52+08:00" />
+<meta itemprop="wordCount" content="50">
+<meta itemprop="keywords" content="," /><meta property="og:title" content="杭州随机公交之旅" />
+<meta property="og:description" content="图片拍摄于2023-04-27 京都
+上周刷X的时候看到一个老哥blog，注意到一篇文章[1]，当时觉得很有趣，随即把这篇文章加入pocket。
+周末想起这篇文章，是时候把今天的命运交给杭州公交了，开启命运公交之旅。（ps.主要还是太闲了
+挑战规则很简单，从任意的公交站出发，乘坐第一辆进站的公交车，行驶五站后下车，然后继续刚才的逻辑。经过几轮的随机公交大法，看看最终到了哪里。
+当然，还是需要跟程序一样，对特定情况来点特殊的处理。
+  遇到不足五站的，直接在终点站下车
+  遇到全部车辆的终点站，可以附近换站
+  如果来的第一辆是前一次乘坐的车次，不上车
+  其他不做干预。如果发现线路要回环了，不做干预。一直死循环的概率也极低，堪比中彩票。
+除此之外，我给自己限制了八轮车次。也就是说如果一切顺利，结束的时候应该坐了40站的公交车🥹。
+但是因为可能会碰到不足五站的情况，所以真实情况你懂的😉。
+出发前，我的疑问是最大能跨过几个区？看了地图以及我的八轮限制，结论是跨过两个区最多了：余杭》拱墅》西湖。
+我还想着会不会终点在西湖附近，这样结束之后就近去西湖逛逛好了。前几轮过去我也是这么想的，直到后面拐点公交出现，和西湖就彻底无缘了。
+接下来就是朴实无华的流水账了。
+一开始打算从家门口的公交站开始的，不过那条路线比较单一，是条专线，加上肚子也饿了，所以先到附近商场吃了个饭，然后在商城对面坐上了第一辆车。
+第一轮是k389线路的公交车，因为住在近郊，出发行驶的方向当然是进城的方向🤣。
+k389一路并没有转变方向，符合进城的预期。坐了五站来到了铭雅苑，金家渡附近。
+刚拍完照片，k281就来了，直接上车。
+第二轮 k281开始转方向了，五个站转了几个弯，我已经分不清方向了。最终到达花园桥。
+因为自己定的规则限制，不能乘坐上次的车次，所以没得选了，只能是503了。这辆车等的太久太久了。
+第三轮503五站到郭家厍下车后，这时候已经从余杭区跨到拱墅区了。
+然后，戏剧性的一幕发生了，
+好家伙，这个公交站只有k503专线，完全不给随机性机会啊。
+这时候我有两种选择，一种是随机选择一个方向，走到附近的公交站，然后等待第一辆车进站，上车。
+另一种原地等k503，在思考了片刻之后，我选择因为特殊性，而破坏上面的规则，这本身也是一种随机命运。(圆回来了
+然后开始新一轮漫长的等待～。
+有趣的是，中途一个边上的大妈问我等什么车，我回答k503后，大妈说我看你就是从k503下来的，一时语塞&hellip;&hellip;
+第四轮继续k503之旅，这一波到了拱宸桥站，已经靠近拱墅的核心区了，再往上靠靠感觉靠西湖有戏。
+应该是在高架下面，路很窄，也是刚拍完照，马上就来公交了。
+第五轮k1203坐了半天发现一站都没到达，站起来查看了一下，发现这辆公交两站就到终点站大关北站了。然后几个转弯，已经察觉到偏离了🥹。
+第六轮k183在大关北上车后，发现这轮有点凑巧，五站刚好到终点站，拱北小区。上车的时候已经开始小雨了，终点站下了车，看到另一辆车来了，上车后司机拦住了我，说是终点站，不能乘车😅。此时雨已经变成了暴雨，只能先行躲雨了。
+躲雨的时候发现开麻将馆的人都是人才，好一个仙雀会～
+等雨停了，第七轮上了k61，最后到达了平安桥。
+第八轮上的k57，最后本次挑战的终点位于拱墅区的马家门站。
+还好给自己做了轮次的限制，要是这个方向一直下去，好家伙，我觉得我能到德清。
+八轮总耗时2小时13分钟，其中包括躲雨以及等车的间隙。总乘站数37站，总距离划算约等于26公里。
+感觉第五轮是个拐点，因为第五轮上的车拐个弯往西湖反方向开了，后续第六轮没有挽救回来，开始往拱墅区边缘驶去，就再也没有机会了。
+所以最后，八轮只跨了一个区:拱墅区。
+杭州的公交车挺好的，所以回去的时候我坐了地铁。先在终点马家门站滴滴到附近的地铁，然后乘坐地铁五个站就又回到出发点了。所以这两个多钟头我在干嘛？
+如果我选择坐公交回来，相同的条件下，我增加几个变数，
+  允许选择出发的位置
+  允许中途有两次决定车次的机会
+  不知道这种情况下，坐公交车能不到家附近😂
+最后，附上整体路程，可以查看具体的方向，主打的就是随缘。
+[1]https://nano.ac/posts/b56e5c40/
+ 本文使用 文章同步助手 同步
+ " />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="https://www.syst.top/lives/hangzhou/" /><meta property="article:section" content="lives" />
+<meta property="article:published_time" content="2023-08-19T19:34:52+08:00" />
+<meta property="article:modified_time" content="2023-08-19T19:34:52+08:00" />
+
+<meta name="twitter:card" content="summary"/>
+<meta name="twitter:title" content="杭州随机公交之旅"/>
+<meta name="twitter:description" content="图片拍摄于2023-04-27 京都
+上周刷X的时候看到一个老哥blog，注意到一篇文章[1]，当时觉得很有趣，随即把这篇文章加入pocket。
+周末想起这篇文章，是时候把今天的命运交给杭州公交了，开启命运公交之旅。（ps.主要还是太闲了
+挑战规则很简单，从任意的公交站出发，乘坐第一辆进站的公交车，行驶五站后下车，然后继续刚才的逻辑。经过几轮的随机公交大法，看看最终到了哪里。
+当然，还是需要跟程序一样，对特定情况来点特殊的处理。
+  遇到不足五站的，直接在终点站下车
+  遇到全部车辆的终点站，可以附近换站
+  如果来的第一辆是前一次乘坐的车次，不上车
+  其他不做干预。如果发现线路要回环了，不做干预。一直死循环的概率也极低，堪比中彩票。
+除此之外，我给自己限制了八轮车次。也就是说如果一切顺利，结束的时候应该坐了40站的公交车🥹。
+但是因为可能会碰到不足五站的情况，所以真实情况你懂的😉。
+出发前，我的疑问是最大能跨过几个区？看了地图以及我的八轮限制，结论是跨过两个区最多了：余杭》拱墅》西湖。
+我还想着会不会终点在西湖附近，这样结束之后就近去西湖逛逛好了。前几轮过去我也是这么想的，直到后面拐点公交出现，和西湖就彻底无缘了。
+接下来就是朴实无华的流水账了。
+一开始打算从家门口的公交站开始的，不过那条路线比较单一，是条专线，加上肚子也饿了，所以先到附近商场吃了个饭，然后在商城对面坐上了第一辆车。
+第一轮是k389线路的公交车，因为住在近郊，出发行驶的方向当然是进城的方向🤣。
+k389一路并没有转变方向，符合进城的预期。坐了五站来到了铭雅苑，金家渡附近。
+刚拍完照片，k281就来了，直接上车。
+第二轮 k281开始转方向了，五个站转了几个弯，我已经分不清方向了。最终到达花园桥。
+因为自己定的规则限制，不能乘坐上次的车次，所以没得选了，只能是503了。这辆车等的太久太久了。
+第三轮503五站到郭家厍下车后，这时候已经从余杭区跨到拱墅区了。
+然后，戏剧性的一幕发生了，
+好家伙，这个公交站只有k503专线，完全不给随机性机会啊。
+这时候我有两种选择，一种是随机选择一个方向，走到附近的公交站，然后等待第一辆车进站，上车。
+另一种原地等k503，在思考了片刻之后，我选择因为特殊性，而破坏上面的规则，这本身也是一种随机命运。(圆回来了
+然后开始新一轮漫长的等待～。
+有趣的是，中途一个边上的大妈问我等什么车，我回答k503后，大妈说我看你就是从k503下来的，一时语塞&hellip;&hellip;
+第四轮继续k503之旅，这一波到了拱宸桥站，已经靠近拱墅的核心区了，再往上靠靠感觉靠西湖有戏。
+应该是在高架下面，路很窄，也是刚拍完照，马上就来公交了。
+第五轮k1203坐了半天发现一站都没到达，站起来查看了一下，发现这辆公交两站就到终点站大关北站了。然后几个转弯，已经察觉到偏离了🥹。
+第六轮k183在大关北上车后，发现这轮有点凑巧，五站刚好到终点站，拱北小区。上车的时候已经开始小雨了，终点站下了车，看到另一辆车来了，上车后司机拦住了我，说是终点站，不能乘车😅。此时雨已经变成了暴雨，只能先行躲雨了。
+躲雨的时候发现开麻将馆的人都是人才，好一个仙雀会～
+等雨停了，第七轮上了k61，最后到达了平安桥。
+第八轮上的k57，最后本次挑战的终点位于拱墅区的马家门站。
+还好给自己做了轮次的限制，要是这个方向一直下去，好家伙，我觉得我能到德清。
+八轮总耗时2小时13分钟，其中包括躲雨以及等车的间隙。总乘站数37站，总距离划算约等于26公里。
+感觉第五轮是个拐点，因为第五轮上的车拐个弯往西湖反方向开了，后续第六轮没有挽救回来，开始往拱墅区边缘驶去，就再也没有机会了。
+所以最后，八轮只跨了一个区:拱墅区。
+杭州的公交车挺好的，所以回去的时候我坐了地铁。先在终点马家门站滴滴到附近的地铁，然后乘坐地铁五个站就又回到出发点了。所以这两个多钟头我在干嘛？
+如果我选择坐公交回来，相同的条件下，我增加几个变数，
+  允许选择出发的位置
+  允许中途有两次决定车次的机会
+  不知道这种情况下，坐公交车能不到家附近😂
+最后，附上整体路程，可以查看具体的方向，主打的就是随缘。
+[1]https://nano.ac/posts/b56e5c40/
+ 本文使用 文章同步助手 同步
+ "/>
+
+	<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+	<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+	<link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+	<link rel="manifest" href="/site.webmanifest">
+	<link rel="mask-icon" href="/safari-pinned-tab.svg" color="">
+	<link rel="shortcut icon" href="/favicon.ico">
+
+	<title>杭州随机公交之旅</title>
+	<link rel="stylesheet" href="https://www.syst.top/css/style.min.cb0663fd19952012fdb4a1345792a808ae19eb828578bde6eeae217ff1fb1e8b.css">
+	
+</head>
+
+<body id="page">
+	
+	<header id="site-header" class="animated slideInUp faster">
+		<div class="hdr-wrapper section-inner">
+			<div class="hdr-left">
+				<div class="site-branding">
+					<a href="https://www.syst.top">是不是很酷</a>
+				</div>
+				<nav class="site-nav hide-in-mobile">
+					<a href="https://www.syst.top/posts/">文章</a>
+					<a href="https://www.syst.top/leetcode/">刷题</a>
+					<a href="https://www.syst.top/lives/">生活</a>
+					<a href="https://www.syst.top/readings/">读书笔记</a>
+					<a href="https://www.syst.top/friends/">朋友</a>
+					<a href="https://go.aabbccm.com">grpc-shop</a>
+				</nav>
+			</div>
+			<div class="hdr-right hdr-icons">
+				<button id="toc-btn" class="hdr-btn desktop-only-ib" title="Table of Contents"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-list"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3" y2="6"></line><line x1="3" y1="12" x2="3" y2="12"></line><line x1="3" y1="18" x2="3" y2="18"></line></svg></button><span class="hdr-social hide-in-mobile"><a href="https://github.com/wuqinqiang" target="_blank" rel="noopener me" title="Github"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-github"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"></path></svg></a></span><button id="menu-btn" class="hdr-btn" title="Menu"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-menu"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg></button>
+			</div>
+		</div>
+	</header>
+	<div id="mobile-menu" class="animated fast">
+		<ul>
+			<li><a href="https://www.syst.top/posts/">文章</a></li>
+			<li><a href="https://www.syst.top/tags/">标签</a></li>
+			<li><a href="https://www.syst.top/about/">关于</a></li>
+		</ul>
+	</div>
+
+
+	<main class="site-main section-inner thin animated fadeIn faster">
+		<h1>杭州随机公交之旅</h1>
+		<div class="content">
+			<p><img src="https://mmbiz.qpic.cn/sz_mmbiz_jpg/lkVfNnnUQnle0UKoDDjXicpJKa3QibndJueicD8iaH9WJmckzIPKDcyG1gmEGvLiaxDoryRLo5zddgLY2iagibibfmgQpw/640?wx_fmt=jpeg" alt=""></p>
+<p>图片拍摄于2023-04-27 京都</p>
+<p>上周刷X的时候看到一个老哥blog，注意到一篇文章[1]，当时觉得很有趣，随即把这篇文章加入pocket。</p>
+<p>周末想起这篇文章，是时候把今天的命运交给杭州公交了，开启命运公交之旅。（ps.主要还是太闲了</p>
+<p>挑战规则很简单，从任意的公交站出发，乘坐第一辆进站的公交车，行驶五站后下车，然后继续刚才的逻辑。经过几轮的随机公交大法，看看最终到了哪里。</p>
+<p>当然，还是需要跟程序一样，对特定情况来点特殊的处理。</p>
+<ul>
+<li>
+<p>遇到不足五站的，直接在终点站下车</p>
+</li>
+<li>
+<p>遇到全部车辆的终点站，可以附近换站</p>
+</li>
+<li>
+<p>如果来的第一辆是前一次乘坐的车次，不上车</p>
+</li>
+</ul>
+<p>其他不做干预。如果发现线路要回环了，不做干预。一直死循环的概率也极低，堪比中彩票。</p>
+<p>除此之外，我给自己限制了八轮车次。也就是说如果一切顺利，结束的时候应该坐了40站的公交车🥹。</p>
+<p>但是因为可能会碰到不足五站的情况，所以真实情况你懂的😉。</p>
+<p>出发前，我的疑问是最大能跨过几个区？看了地图以及我的八轮限制，结论是跨过两个区最多了：余杭》拱墅》西湖。</p>
+<p>我还想着会不会终点在西湖附近，这样结束之后就近去西湖逛逛好了。前几轮过去我也是这么想的，直到后面拐点公交出现，和西湖就彻底无缘了。</p>
+<p>接下来就是朴实无华的流水账了。</p>
+<p>一开始打算从家门口的公交站开始的，不过那条路线比较单一，是条专线，加上肚子也饿了，所以先到附近商场吃了个饭，然后在商城对面坐上了第一辆车。</p>
+<p><img src="https://mmbiz.qpic.cn/sz_mmbiz_jpg/lkVfNnnUQnle0UKoDDjXicpJKa3QibndJuD1jW0eHAM5UQa02icIUicIxmwrWQCVjddiaT3mSxwtl0LSJcRsiaYDgtlg/640?wx_fmt=jpeg" alt=""></p>
+<p>第一轮是k389线路的公交车，因为住在近郊，出发行驶的方向当然是进城的方向🤣。</p>
+<p>k389一路并没有转变方向，符合进城的预期。坐了五站来到了<strong>铭雅苑</strong>，金家渡附近。</p>
+<p><img src="https://mmbiz.qpic.cn/sz_mmbiz_jpg/lkVfNnnUQnle0UKoDDjXicpJKa3QibndJuHNIYB3Vyv8AZxuATVCDicgX7FwUPqjIRMouvFMcF8ybgSUAw6icvZtWw/640?wx_fmt=jpeg" alt=""></p>
+<p>刚拍完照片，k281就来了，直接上车。</p>
+<p>第二轮 k281开始转方向了，五个站转了几个弯，我已经分不清方向了。最终到达<strong>花园桥</strong>。</p>
+<p><img src="https://mmbiz.qpic.cn/sz_mmbiz_jpg/lkVfNnnUQnle0UKoDDjXicpJKa3QibndJuOYMOJsleZohiaibnAgwO06H3X6ww5AHhLyRctm8IShE9oYtndBjPta9w/640?wx_fmt=jpeg" alt=""></p>
+<p>因为自己定的规则限制，不能乘坐上次的车次，所以没得选了，只能是503了。这辆车等的太久太久了。</p>
+<p>第三轮503五站到<strong>郭家厍</strong>下车后，这时候已经从余杭区跨到拱墅区了。</p>
+<p>然后，戏剧性的一幕发生了，</p>
+<p><img src="https://mmbiz.qpic.cn/sz_mmbiz_jpg/lkVfNnnUQnle0UKoDDjXicpJKa3QibndJua9LsPdoNhaPNOgaNykE7awH51OJMm5DZKQZy3jJibzRF58Cg7DHFuHQ/640?wx_fmt=jpeg" alt=""></p>
+<p>好家伙，这个公交站只有k503专线，完全不给随机性机会啊。</p>
+<p>这时候我有两种选择，一种是随机选择一个方向，走到附近的公交站，然后等待第一辆车进站，上车。</p>
+<p>另一种原地等k503，在思考了片刻之后，我选择因为特殊性，而破坏上面的规则，这本身也是一种随机命运。(圆回来了</p>
+<p>然后开始新一轮漫长的等待～。</p>
+<p>有趣的是，中途一个边上的大妈问我等什么车，我回答k503后，大妈说我看你就是从k503下来的，一时语塞&hellip;&hellip;</p>
+<p>第四轮继续k503之旅，这一波到了<strong>拱宸桥</strong>站，已经靠近拱墅的核心区了，再往上靠靠感觉靠西湖有戏。</p>
+<p><img src="https://mmbiz.qpic.cn/sz_mmbiz_jpg/lkVfNnnUQnle0UKoDDjXicpJKa3QibndJuzGp6kibUABUGUusrB8HTgerwZhtuXmgicrfxAfn1oEGtY440DP2BVegA/640?wx_fmt=jpeg" alt=""></p>
+<p>应该是在高架下面，路很窄，也是刚拍完照，马上就来公交了。</p>
+<p>第五轮k1203坐了半天发现一站都没到达，站起来查看了一下，发现这辆公交两站就到终点站<strong>大关北站</strong>了。然后几个转弯，已经察觉到偏离了🥹。</p>
+<p>第六轮k183在大关北上车后，发现这轮有点凑巧，五站刚好到终点站，<strong>拱北小区</strong>。上车的时候已经开始小雨了，终点站下了车，看到另一辆车来了，上车后司机拦住了我，说是终点站，不能乘车😅。此时雨已经变成了暴雨，只能先行躲雨了。</p>
+<p>躲雨的时候发现开麻将馆的人都是人才，好一个仙雀会～</p>
+<p><img src="https://mmbiz.qpic.cn/sz_mmbiz_jpg/lkVfNnnUQnle0UKoDDjXicpJKa3QibndJuD8zvfOaSIgwFlGDCFBxJGlQROlSetsoHw0o1VQcpunNgbVHg4tuOzQ/640?wx_fmt=jpeg" alt=""></p>
+<p>等雨停了，第七轮上了k61，最后到达了<strong>平安桥</strong>。</p>
+<p><img src="https://mmbiz.qpic.cn/sz_mmbiz_jpg/lkVfNnnUQnle0UKoDDjXicpJKa3QibndJuh2aS2svPVicer1uAiboGglRJC4rASVut1WcoAMlaib8Oon4XNhYlSle2Q/640?wx_fmt=jpeg" alt=""></p>
+<p>第八轮上的k57，最后本次挑战的终点位于拱墅区的<strong>马家门</strong>站。</p>
+<p>还好给自己做了轮次的限制，要是这个方向一直下去，好家伙，我觉得我能到德清。</p>
+<p>八轮总耗时2小时13分钟，其中包括躲雨以及等车的间隙。总乘站数37站，总距离划算约等于26公里。</p>
+<p><img src="https://mmbiz.qpic.cn/sz_mmbiz_jpg/lkVfNnnUQnle0UKoDDjXicpJKa3QibndJuGltFWzyUyTJic8FPnXmRuJPlGEM8PAGickeue5jsK18AfyXCX8qK9EQg/640?wx_fmt=jpeg" alt=""></p>
+<p>感觉第五轮是个拐点，因为第五轮上的车拐个弯往西湖反方向开了，后续第六轮没有挽救回来，开始往拱墅区边缘驶去，就再也没有机会了。</p>
+<p>所以最后，八轮只跨了一个区:拱墅区。</p>
+<p>杭州的公交车挺好的，所以回去的时候我坐了地铁。先在终点马家门站滴滴到附近的地铁，然后乘坐地铁五个站就又回到出发点了。所以这两个多钟头我在干嘛？</p>
+<p>如果我选择坐公交回来，相同的条件下，我增加几个变数，</p>
+<ul>
+<li>
+<p>允许选择出发的位置</p>
+</li>
+<li>
+<p>允许中途有两次决定车次的机会</p>
+</li>
+</ul>
+<p>不知道这种情况下，坐公交车能不到家附近😂</p>
+<p>最后，附上整体路程，可以查看具体的方向，主打的就是随缘。</p>
+<p><img src="https://mmbiz.qpic.cn/sz_mmbiz_png/lkVfNnnUQnle0UKoDDjXicpJKa3QibndJufan8RoYcpDw5ggzIFa02uUKF9vwgZ6vibRB2icsKm8klQzviaDr9icIBTA/640?wx_fmt=png" alt=""></p>
+<p>[1]https://nano.ac/posts/b56e5c40/</p>
+<blockquote>
+<p>本文使用 <a href="https://juejin.cn/post/6940875049587097631">文章同步助手</a> 同步</p>
+</blockquote>
+
+		</div>
+		<div id="comments" class="thin">
+			<script src="https://utteranc.es/client.js"
+        repo="wuqinqiang/blog"
+        issue-term="pathname"
+        theme="github-light"
+        crossorigin="anonymous"
+        async>
+</script>
+		</div>
+	</main>
+
+	<footer id="site-footer" class="section-inner thin animated fadeIn faster">
+		<p>&copy; 2018 - 2023 <a href="https://www.syst.top">Remember</a> &#183; <a href="http://beian.miit.gov.cn/">浙ICP备18028603号-2</a></p>
+		<p>
+			Made with <a href="https://gohugo.io/" target="_blank" rel="noopener">Hugo</a> &#183; Theme <a href="https://github.com/Track3/hermit" target="_blank" rel="noopener">Hermit</a> &#183; <a href="https://www.syst.top/post/index.xml" target="_blank" title="rss"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-rss"><path d="M4 11a9 9 0 0 1 9 9"></path><path d="M4 4a16 16 0 0 1 16 16"></path><circle cx="5" cy="19" r="1"></circle></svg></a>
+		</p>
+	</footer>
+
+
+	<script src="https://www.syst.top/js/main.min.c8a831e54547e9c081939713d77308bf58ae5fed99a75acbcaaa14c5ce45bf89.js"></script>
+<script type="application/javascript">
+var doNotTrack = false;
+if (!doNotTrack) {
+	window.ga=window.ga||function(){(ga.q=ga.q||[]).push(arguments)};ga.l=+new Date;
+	ga('create', 'UA-166045776-1', 'auto');
+	
+	ga('send', 'pageview');
+}
+</script>
+<script async src='https://www.google-analytics.com/analytics.js'></script>
+
+
+</body>
+
+</html>

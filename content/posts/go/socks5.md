@@ -218,6 +218,7 @@ func relay(left, right net.Conn) error {
 		return err
 	}
 	return nil
+}
 
 ```
 

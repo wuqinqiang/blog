@@ -166,6 +166,7 @@ REP:
 </span></span><span class="line"><span class="cl">		<span class="k">return</span> <span class="nx">err</span>
 </span></span><span class="line"><span class="cl">	<span class="p">}</span>
 </span></span><span class="line"><span class="cl">	<span class="k">return</span> <span class="kc">nil</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
 </span></span></code></pre></div><p>也就是，(client &lt;-socks5-&gt; A:1080 )  &lt;-&gt;  (Shadowsocks &lt;-&gt; myip.ipip.net)</p>
 <p>主要靠的是标准库的io.Copy。</p>
 <p>最后13-16包就是tcp的4次挥手了。</p>
